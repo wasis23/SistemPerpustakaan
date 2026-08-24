@@ -1,0 +1,299 @@
+import React, { useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { BookOpen, Plus, Search, Filter, Printer, FileText, ArrowLeft, Eye, Trash2, Edit } from 'lucide-react';
+import PetugasLayout from '@/Layouts/PetugasLayout';
+
+export default function Index({ books, categories, racks, filters }) {
+    const [search, setSearch] = useState(filters.search || '');
+    const [categoryId, setCategoryId] = useState(filters.category_id || '');
+    const [rackId, setRackId] = useState(filters.rack_id || '');
+    const [showImportModal, setShowImportModal] = useState(false);
+
+    const { data: importData, setData: setImportData, post: postImport, processing: importing } = useForm({
+        csv_data: '',
+    });
+
+    const handleFilter = (e) => {
+        e.preventDefault();
+        router.get('/petugas/books', { search, category_id: categoryId, rack_id: rackId }, { preserveState: true });
+    };
+
+    const handleReset = () => {
+        setSearch('');
+        setCategoryId('');
+        setRackId('');
+        router.get('/petugas/books', {}, { preserveState: true });
+    };
+
+    const handleDelete = (id, title) => {
+        if (confirm(`Apakah Anda yakin ingin menghapus buku "${title}" beserta seluruh eksemplarnya?`)) {
+            router.delete(`/petugas/books/${id}`);
+        }
+    };
+
+    const handleImportSubmit = (e) => {
+        e.preventDefault();
+        postImport('/petugas/books/import-csv', {
+            onSuccess: () => {
+                setShowImportModal(false);
+                setImportData('csv_data', '');
+            },
+        });
+    };
+
+    return (
+        <PetugasLayout activeMenu="books">
+            <Head title="Manajemen Katalog Buku - Petugas" />
+
+            <div className="space-y-6 w-full">
+                {/* Page Title Action Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                    <div>
+                        <h1 className="font-extrabold text-slate-950 text-xl tracking-tight">Manajemen Katalog Buku</h1>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Pengelolaan koleksi & eksemplar fisik berperekat barcode</p>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                        <a
+                            href="/petugas/books/download-template"
+                            className="px-4 py-2.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-2xl text-xs font-bold text-emerald-800 transition-all flex items-center space-x-1.5 shadow-sm"
+                            title="Unduh file contoh format CSV"
+                        >
+                            <FileText className="w-4 h-4 text-emerald-600" />
+                            <span>Download Template CSV</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowImportModal(true)}
+                            className="px-4 py-2.5 bg-white border border-slate-300 hover:border-amber-500 rounded-2xl text-xs font-bold text-slate-700 hover:text-amber-700 transition-all flex items-center space-x-1.5 shadow-sm"
+                        >
+                            <FileText className="w-4 h-4 text-amber-600" />
+                            <span>Impor Massal (CSV)</span>
+                        </button>
+
+                        <Link
+                            href="/petugas/books/create"
+                            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow transition-all flex items-center space-x-1.5"
+                        >
+                            <Plus className="w-4 h-4 stroke-[2.5]" />
+                            <span>Tambah Judul Buku</span>
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Import CSV Modal */}
+                {showImportModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-3xl p-6 max-w-lg w-full border border-amber-900/10 shadow-2xl space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-extrabold text-slate-950">Impor Massal Katalog Buku</h3>
+                                <a
+                                    href="/petugas/books/download-template"
+                                    className="text-xs font-bold text-emerald-700 hover:underline flex items-center space-x-1"
+                                >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>Unduh Template CSV</span>
+                                </a>
+                            </div>
+
+                            <p className="text-xs text-slate-600">
+                                Format per baris CSV: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-900 font-mono font-bold">Judul, Pengarang, ISBN, Penerbit, TahunTerbit, KodeKategoriDDC, KodeRak, JumlahEksemplar</code>
+                            </p>
+
+                            <form onSubmit={handleImportSubmit} className="space-y-4">
+                                <textarea
+                                    value={importData.csv_data}
+                                    onChange={(e) => setImportData('csv_data', e.target.value)}
+                                    rows={6}
+                                    placeholder="Contoh:&#10;Pemrograman Web dengan Laravel 11, Budi Santoso M.Kom, 978-602-8765-43-2, Informatika Press, 2024, 000, RAK-01, 3&#10;Panduan Rekam Medis Modern, Dr. Hendra Wijaya, 978-602-1234-56-7, Airlangga Press, 2023, 600, RAK-02, 2"
+                                    className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 text-xs focus:outline-none focus:border-amber-500 font-mono"
+                                    required
+                                />
+
+                                <div className="flex items-center justify-between">
+                                    <a
+                                        href="/petugas/books/download-template"
+                                        className="px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100"
+                                    >
+                                        Unduh File Template
+                                    </a>
+
+                                    <div className="flex space-x-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowImportModal(false)}
+                                            className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={importing}
+                                            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow"
+                                        >
+                                            {importing ? 'Memproses...' : 'Mulai Impor Buku'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Filter Form */}
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm">
+                    <form onSubmit={handleFilter} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div className="sm:col-span-5 relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <Search className="w-4 h-4" />
+                            </div>
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Cari Judul, Pengarang, atau ISBN..."
+                                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium"
+                            />
+                        </div>
+
+                        <div className="sm:col-span-3">
+                            <select
+                                value={categoryId}
+                                onChange={(e) => setCategoryId(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
+                            >
+                                <option value="">Semua Kategori</option>
+                                {categories.map((c) => (
+                                    <option key={c.id} value={c.id}>[{c.code}] {c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <select
+                                value={rackId}
+                                onChange={(e) => setRackId(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
+                            >
+                                <option value="">Semua Rak</option>
+                                {racks.map((r) => (
+                                    <option key={r.id} value={r.id}>{r.code_rack}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="sm:col-span-2 flex space-x-2">
+                            <button
+                                type="submit"
+                                className="flex-1 py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-xs font-bold flex items-center justify-center space-x-1 shadow"
+                            >
+                                <Filter className="w-3.5 h-3.5" />
+                                <span>Filter</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleReset}
+                                className="py-2.5 px-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl text-xs font-bold"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Book Catalog Table - Full Width */}
+                <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-700">
+                            <thead className="bg-slate-100 text-slate-600 uppercase tracking-wider text-[10px] border-b border-slate-200 font-bold">
+                                <tr>
+                                    <th className="px-6 py-3.5">Detail Buku</th>
+                                    <th className="px-6 py-3.5">Kategori & Rak</th>
+                                    <th className="px-6 py-3.5 text-center">Stok Eksemplar</th>
+                                    <th className="px-6 py-3.5 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {books.data && books.data.length > 0 ? (
+                                    books.data.map((book) => (
+                                        <tr key={book.id} className="hover:bg-slate-50/80 transition-all">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-start space-x-3">
+                                                    {book.cover_image ? (
+                                                        <img src={book.cover_image} alt={book.title} className="w-10 h-14 object-cover rounded-xl border border-amber-200 shrink-0 shadow-sm" />
+                                                    ) : (
+                                                        <div className="w-10 h-14 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-center shrink-0 text-amber-700">
+                                                            <BookOpen className="w-5 h-5" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <Link href={`/petugas/books/${book.id}`} className="font-extrabold text-slate-950 text-sm hover:text-amber-700 transition-colors line-clamp-1">
+                                                            {book.title}
+                                                        </Link>
+                                                        <p className="text-slate-600 text-xs font-medium mt-0.5">Penulis: {book.author}</p>
+                                                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">ISBN: {book.isbn || '-'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="space-y-1">
+                                                    <span className="inline-block bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                                                        {book.category?.name || 'Umum'}
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-600 font-mono font-medium">
+                                                        📍 {book.rack?.code_rack} ({book.rack?.location})
+                                                    </p>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="inline-flex items-center space-x-1.5 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200">
+                                                    <span className="font-extrabold text-emerald-700">{book.available_copies_count}</span>
+                                                    <span className="text-slate-400">/</span>
+                                                    <span className="font-bold text-slate-700">{book.copies_count} Eksemplar</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                <div className="flex items-center justify-end space-x-2">
+                                                    <Link
+                                                        href={`/petugas/books/${book.id}`}
+                                                        className="p-2 text-slate-700 hover:text-amber-700 bg-slate-100 rounded-xl transition-all"
+                                                        title="Lihat Detail & Eksemplar"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Link>
+                                                    <Link
+                                                        href={`/petugas/books/${book.id}/print-barcodes`}
+                                                        target="_blank"
+                                                        className="p-2 text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl transition-all"
+                                                        title="Cetak Label Barcode"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </Link>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDelete(book.id, book.title)}
+                                                        className="p-2 text-rose-600 hover:text-rose-700 bg-rose-50 rounded-xl transition-all"
+                                                        title="Hapus Buku"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="4" className="px-6 py-12 text-center text-slate-500 font-medium">
+                                            Belum ada data buku dalam katalog.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </PetugasLayout>
+    );
+}

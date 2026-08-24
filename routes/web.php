@@ -1,0 +1,86 @@
+<?php
+
+use App\Http\Controllers\Anggota\CatalogController as AnggotaCatalogController;
+use App\Http\Controllers\Anggota\DashboardController as AnggotaDashboardController;
+use App\Http\Controllers\Anggota\TicketController as AnggotaTicketController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\Petugas\BookController as PetugasBookController;
+use App\Http\Controllers\Petugas\CategoryController as PetugasCategoryController;
+use App\Http\Controllers\Petugas\CirculationController as PetugasCirculationController;
+use App\Http\Controllers\Petugas\DashboardController as PetugasDashboardController;
+use App\Http\Controllers\Petugas\LaboratoryController as PetugasLaboratoryController;
+use App\Http\Controllers\Petugas\RackController as PetugasRackController;
+use App\Http\Controllers\Petugas\ReportController as PetugasReportController;
+use Illuminate\Support\Facades\Route;
+
+// Halaman Utama Publik SIMPUS & Katalog Publik
+Route::get('/', [LandingController::class, 'index'])->name('landing');
+Route::get('/katalog', [AnggotaCatalogController::class, 'index'])->name('katalog.index');
+Route::get('/katalog/{book}', [AnggotaCatalogController::class, 'show'])->name('katalog.show');
+
+// Kiosk Presensi Kunjungan Pintu Masuk
+Route::get('/presensi', [AttendanceController::class, 'kiosk'])->name('presensi.kiosk');
+Route::post('/presensi', [AttendanceController::class, 'store'])->name('presensi.store');
+
+// Guest Auth Routes
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+});
+
+// Authenticated Routes
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Role Anggota (Mahasiswa & Dosen)
+    Route::middleware('role:anggota')->prefix('anggota')->name('anggota.')->group(function () {
+        Route::get('/dashboard', [AnggotaDashboardController::class, 'index'])->name('dashboard');
+
+        // Alias Rute Katalog Anggota
+        Route::get('/katalog', [AnggotaCatalogController::class, 'index'])->name('catalog.index');
+        Route::get('/katalog/{book}', [AnggotaCatalogController::class, 'show'])->name('catalog.show');
+
+        // Scanner Barcode HP & Tiket Mandiri 5 Menit
+        Route::get('/scan', [AnggotaTicketController::class, 'showScanner'])->name('scan');
+        Route::post('/ticket', [AnggotaTicketController::class, 'createTicket'])->name('ticket.store');
+        Route::get('/ticket/{ticket}', [AnggotaTicketController::class, 'showTicket'])->name('ticket.show');
+        Route::post('/ticket/{ticket}/cancel', [AnggotaTicketController::class, 'cancelTicket'])->name('ticket.cancel');
+    });
+
+    // Role Petugas (Pustakawan / Administrator)
+    Route::middleware('role:petugas')->prefix('petugas')->name('petugas.')->group(function () {
+        Route::get('/dashboard', [PetugasDashboardController::class, 'index'])->name('dashboard');
+
+        // Rekap Presensi Kunjungan
+        Route::get('/presensi', [AttendanceController::class, 'index'])->name('presensi.index');
+
+        // Manajemen Buku & Barcode Label
+        Route::get('/books/download-template', [PetugasBookController::class, 'downloadTemplate'])->name('books.download-template');
+        Route::post('/books/import-csv', [PetugasBookController::class, 'importCsv'])->name('books.import');
+        Route::get('/books/{book}/print-barcodes', [PetugasBookController::class, 'printBarcodes'])->name('books.print-barcodes');
+        Route::post('/books/{book}/add-copies', [PetugasBookController::class, 'addCopies'])->name('books.add-copies');
+        Route::resource('books', PetugasBookController::class);
+
+        // Manajemen Master Data (Kategori DDC & Lokasi Rak Fisik)
+        Route::resource('categories', PetugasCategoryController::class);
+        Route::resource('racks', PetugasRackController::class);
+
+        // Manajemen Virtual Tour Perpustakaan 360°
+        Route::resource('laboratories', PetugasLaboratoryController::class);
+
+        // Meja Sirkulasi & Validasi Tiket HP / Scan Pengembalian
+        Route::get('/circulations', [PetugasCirculationController::class, 'index'])->name('circulations.index');
+        Route::get('/circulations/scan-ticket', [PetugasCirculationController::class, 'scanTicketForm'])->name('circulations.scan-ticket');
+        Route::post('/circulations/validate-ticket', [PetugasCirculationController::class, 'validateTicket'])->name('circulations.validate-ticket');
+        Route::get('/circulations/scan-return', [PetugasCirculationController::class, 'scanReturnForm'])->name('circulations.scan-return');
+        Route::post('/circulations/process-return', [PetugasCirculationController::class, 'processReturn'])->name('circulations.process-return');
+        Route::post('/circulations/{borrowing}/pay-fine', [PetugasCirculationController::class, 'payFine'])->name('circulations.pay-fine');
+
+        // Laporan & Rekapitulasi Analytics
+        Route::get('/reports', [PetugasReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export-csv', [PetugasReportController::class, 'exportCsv'])->name('reports.export-csv');
+        Route::get('/reports/print-pdf', [PetugasReportController::class, 'printPdf'])->name('reports.print-pdf');
+    });
+});

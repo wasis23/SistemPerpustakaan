@@ -64,6 +64,19 @@ return [
             ]) : [],
         ],
 
+        'siakad' => [
+            'driver' => 'mysql',
+            'host' => env('DB_SIAKAD_HOST', '116.206.197.228'),
+            'port' => env('DB_SIAKAD_PORT', '3306'),
+            'database' => env('DB_SIAKAD_DATABASE', 'siakaddb'),
+            'username' => env('DB_SIAKAD_USERNAME', 'uti-check'),
+            'password' => env('DB_SIAKAD_PASSWORD', 'haamA0iYA6^7aj8e*#'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

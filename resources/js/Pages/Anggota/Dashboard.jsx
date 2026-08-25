@@ -44,7 +44,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                     <span>Scan Barcode Rak Sekarang</span>
                                 </Link>
                                 <Link
-                                    href="/katalog"
+                                    href="/anggota/katalog"
                                     className="px-5 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold rounded-2xl text-xs border border-white/20 transition-all flex items-center space-x-1.5"
                                 >
                                     <Search className="w-4 h-4" />
@@ -61,7 +61,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                 <BookOpen className="w-5 h-5 text-amber-600" />
                                 <span>Koleksi Rekomendasi Populer</span>
                             </h3>
-                            <Link href="/katalog" className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center space-x-1">
+                            <Link href="/anggota/katalog" className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center space-x-1">
                                 <span>Lihat Semua Katalog</span>
                                 <ChevronRight className="w-4 h-4" />
                             </Link>
@@ -69,7 +69,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
 
                         {/* Popular Cards Row */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            <Link href="/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">
+                            <Link href="/anggota/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">
                                 <div className="w-full h-36 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center text-amber-700 mb-3 group-hover:scale-105 transition-all">
                                     <BookOpen className="w-8 h-8" />
                                 </div>
@@ -78,7 +78,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                 <p className="text-[10px] text-slate-500 mt-0.5">Penulis Utama SIMPUS</p>
                             </Link>
 
-                            <Link href="/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">
+                            <Link href="/anggota/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">
                                 <div className="w-full h-36 bg-indigo-50 rounded-2xl border border-indigo-200 flex items-center justify-center text-indigo-700 mb-3 group-hover:scale-105 transition-all">
                                     <BookOpen className="w-8 h-8" />
                                 </div>
@@ -87,7 +87,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                 <p className="text-[10px] text-slate-500 mt-0.5">Fakultas Ilmu Komputer</p>
                             </Link>
 
-                            <Link href="/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">
+                            <Link href="/anggota/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">
                                 <div className="w-full h-36 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-center text-emerald-700 mb-3 group-hover:scale-105 transition-all">
                                     <BookOpen className="w-8 h-8" />
                                 </div>
@@ -193,7 +193,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                             Gunakan Kios Presensi di pintu utama untuk mencatat kunjungan harian & sirkulasi mandiri secara instan.
                         </p>
                         <Link
-                            href="/katalog"
+                            href="/anggota/katalog"
                             className="inline-block px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow transition-all"
                         >
                             Cari Judul Referensi ➔

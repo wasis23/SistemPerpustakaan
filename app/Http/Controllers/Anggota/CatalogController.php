@@ -14,9 +14,65 @@ use Inertia\Response;
 class CatalogController extends Controller
 {
     /**
-     * Pencarian Katalog Buku Interaktif untuk Anggota
+     * Pencarian Katalog Buku untuk Anggota (dengan layout Dashboard Anggota)
      */
     public function index(Request $request): Response
+    {
+        $books = $this->getFilteredBooks($request);
+
+        return Inertia::render('Anggota/Catalog/Index', [
+            'books' => $books,
+            'categories' => Category::select('id', 'code', 'name')->get(),
+            'racks' => Rack::select('id', 'code_rack', 'location')->get(),
+            'filters' => $request->only(['search', 'category_id', 'rack_id']),
+        ]);
+    }
+
+    /**
+     * Detail Buku & Eksemplar Fisik di Rak untuk Anggota
+     */
+    public function show(Book $book): Response
+    {
+        $copies = $this->getBookCopies($book);
+
+        return Inertia::render('Anggota/Catalog/Show', [
+            'book' => $book,
+            'copies' => $copies,
+        ]);
+    }
+
+    /**
+     * Pencarian Katalog Koleksi Publik (untuk Pengunjung / Landing)
+     */
+    public function indexPublic(Request $request): Response
+    {
+        $books = $this->getFilteredBooks($request);
+
+        return Inertia::render('Katalog/Index', [
+            'books' => $books,
+            'categories' => Category::select('id', 'code', 'name')->get(),
+            'racks' => Rack::select('id', 'code_rack', 'location')->get(),
+            'filters' => $request->only(['search', 'category_id', 'rack_id']),
+        ]);
+    }
+
+    /**
+     * Detail Buku Publik (untuk Pengunjung / Landing)
+     */
+    public function showPublic(Book $book): Response
+    {
+        $copies = $this->getBookCopies($book);
+
+        return Inertia::render('Katalog/Show', [
+            'book' => $book,
+            'copies' => $copies,
+        ]);
+    }
+
+    /**
+     * Helper query filter buku
+     */
+    private function getFilteredBooks(Request $request)
     {
         $query = Book::with(['category', 'rack'])
             ->withCount(['copies', 'availableCopies']);
@@ -41,24 +97,17 @@ class CatalogController extends Controller
             $query->where('rack_id', $request->rack_id);
         }
 
-        $books = $query->latest('id')->paginate(12)->withQueryString();
-
-        return Inertia::render('Anggota/Catalog/Index', [
-            'books' => $books,
-            'categories' => Category::select('id', 'code', 'name')->get(),
-            'racks' => Rack::select('id', 'code_rack', 'location')->get(),
-            'filters' => $request->only(['search', 'category_id', 'rack_id']),
-        ]);
+        return $query->latest('id')->paginate(12)->withQueryString();
     }
 
     /**
-     * Detail Buku & Eksemplar Fisik di Rak
+     * Helper mapping eksemplar buku
      */
-    public function show(Book $book): Response
+    private function getBookCopies(Book $book)
     {
         $book->load(['category', 'rack', 'copies']);
 
-        $copies = $book->copies->map(function ($copy) {
+        return $book->copies->map(function ($copy) {
             return [
                 'id' => $copy->id,
                 'copy_code' => $copy->copy_code,
@@ -68,10 +117,5 @@ class CatalogController extends Controller
                 'status' => $copy->status,
             ];
         });
-
-        return Inertia::render('Anggota/Catalog/Show', [
-            'book' => $book,
-            'copies' => $copies,
-        ]);
     }
 }

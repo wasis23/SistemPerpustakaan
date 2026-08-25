@@ -200,7 +200,7 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                             </div>
                             <div className="pt-2 flex justify-center space-x-3">
                                 <Link
-                                    href="/katalog"
+                                    href="/anggota/katalog"
                                     className="px-5 py-2.5 bg-white border border-slate-300 hover:border-amber-500 text-slate-800 font-bold rounded-2xl text-xs shadow-sm transition-all"
                                 >
                                     Jelajahi Katalog

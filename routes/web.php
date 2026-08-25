@@ -21,8 +21,8 @@ use Illuminate\Support\Facades\Route;
 
 // Halaman Utama Publik SIMPUS & Katalog Publik
 Route::get('/', [LandingController::class, 'index'])->name('landing');
-Route::get('/katalog', [AnggotaCatalogController::class, 'index'])->name('katalog.index');
-Route::get('/katalog/{book}', [AnggotaCatalogController::class, 'show'])->name('katalog.show');
+Route::get('/katalog', [AnggotaCatalogController::class, 'indexPublic'])->name('katalog.index');
+Route::get('/katalog/{book}', [AnggotaCatalogController::class, 'showPublic'])->name('katalog.show');
 
 // Kiosk Presensi Kunjungan Pintu Masuk
 Route::get('/presensi', [AttendanceController::class, 'kiosk'])->name('presensi.kiosk');

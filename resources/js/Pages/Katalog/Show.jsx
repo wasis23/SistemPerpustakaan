@@ -1,9 +1,10 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, BookOpen, MapPin, Tag, CheckCircle2, QrCode, Sparkles } from 'lucide-react';
-import AnggotaLayout from '@/Layouts/AnggotaLayout';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ArrowLeft, BookOpen, MapPin, Tag, CheckCircle2, QrCode, Sparkles, LogIn } from 'lucide-react';
 
 export default function Show({ book, copies }) {
+    const { auth } = usePage().props;
+
     const statusBadge = {
         available: { label: 'Tersedia di Rak', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
         ticketed: { label: 'Tertahan Tiket HP', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -13,33 +14,42 @@ export default function Show({ book, copies }) {
     };
 
     return (
-        <AnggotaLayout activeMenu="catalog">
-            <Head title={`Detail Buku: ${book.title}`} />
+        <div className="min-h-screen bg-[#FDFBF7] text-slate-900 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+            <Head title={`Detail Buku - ${book.title}`} />
 
-            <div className="space-y-6 w-full">
-                {/* Header Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+            {/* Header Bar */}
+            <header className="sticky top-0 z-50 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-amber-900/10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <Link href="/anggota/katalog" className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 hover:text-amber-700 hover:bg-slate-100 transition-all shadow-sm">
+                        <Link href="/katalog" className="p-2.5 rounded-2xl bg-white border border-slate-200/80 text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div>
-                            <h1 className="font-extrabold text-slate-950 text-xl tracking-tight line-clamp-1">{book.title}</h1>
+                            <h1 className="font-extrabold text-slate-950 text-lg tracking-tight line-clamp-1">{book.title}</h1>
                             <p className="text-xs text-slate-500 font-medium">Petunjuk Lokasi Rak & Kode Eksemplar Fisik</p>
                         </div>
                     </div>
 
                     <div className="flex items-center space-x-3">
-                        <Link
-                            href="/anggota/scan"
-                            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow transition-all flex items-center space-x-2 shrink-0"
-                        >
-                            <QrCode className="w-4 h-4 stroke-[2.5]" />
-                            <span>Scan Pinjam Buku Ini</span>
-                        </Link>
+                        {auth && auth.user ? (
+                            <Link 
+                                href={auth.user.role === 'petugas' ? '/petugas/dashboard' : '/anggota/dashboard'} 
+                                className="px-5 py-2.5 bg-slate-950 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-full shadow transition-all"
+                            >
+                                Dashboard Saya
+                            </Link>
+                        ) : (
+                            <Link href="/login" className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-full shadow transition-all flex items-center space-x-1.5">
+                                <LogIn className="w-4 h-4 stroke-[2.5]" />
+                                <span>Masuk / Login</span>
+                            </Link>
+                        )}
                     </div>
                 </div>
+            </header>
 
+            {/* Main Content */}
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
                 {/* Book Info Panel */}
                 <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div className="md:col-span-3 flex justify-center">
@@ -72,17 +82,29 @@ export default function Show({ book, copies }) {
                         <p className="text-sm text-slate-600 font-medium">Penulis: <strong className="text-slate-950 font-bold">{book.author}</strong></p>
                         <p className="text-xs text-slate-500 font-medium">Penerbit: {book.publisher || '-'} ({book.publish_year || '-'})</p>
 
-                        <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl text-xs text-slate-700 flex items-start space-x-3">
-                            <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                            <div className="space-y-1.5">
-                                <p className="font-extrabold text-slate-950 text-sm">Cara Meminjam Mandiri Langsung dari Rak:</p>
-                                <ol className="list-decimal list-inside space-y-1 text-slate-700 font-medium">
-                                    <li>Kunjungi rak fisik <strong className="text-amber-800 font-extrabold">{book.rack?.code_rack}</strong> ({book.rack?.location}).</li>
-                                    <li>Pilih salah satu eksemplar buku di bawah yang berstatus <strong>Tersedia</strong>.</li>
-                                    <li>Buka Kamera HP Anda di menu <Link href="/anggota/scan" className="underline font-bold text-amber-800">Scan Barcode Rak</Link>, lalu scan stiker barcode fisik di punggung buku.</li>
-                                </ol>
+                        {auth && auth.user ? (
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl text-xs text-slate-700 flex items-start space-x-3">
+                                <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-extrabold text-slate-950 text-sm">Cara Meminjam Mandiri via HP:</p>
+                                    <ol className="list-decimal list-inside space-y-1 mt-1 text-slate-700 font-medium">
+                                        <li>Cari rak fisik <strong className="text-amber-800 font-extrabold">{book.rack?.code_rack}</strong> ({book.rack?.location}).</li>
+                                        <li>Pilih salah satu eksemplar buku di bawah yang berstatus <strong>Tersedia</strong>.</li>
+                                        <li>Buka Kamera HP Anda di menu <Link href="/anggota/scan" className="underline font-bold text-amber-800">Scan Barcode HP</Link>, lalu pindai Barcode Fisik yang terempel pada buku tersebut.</li>
+                                    </ol>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl text-xs text-slate-700 flex items-center justify-between gap-4">
+                                <div className="flex items-center space-x-3">
+                                    <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
+                                    <span>Ingin meminjam buku ini langsung dari rak tanpa antre? Silakan masuk ke akun anggota Anda.</span>
+                                </div>
+                                <Link href="/login" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shrink-0 shadow">
+                                    Login Sekarang
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -127,7 +149,7 @@ export default function Show({ book, copies }) {
                         })}
                     </div>
                 </div>
-            </div>
-        </AnggotaLayout>
+            </main>
+        </div>
     );
 }

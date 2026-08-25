@@ -20,7 +20,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
-            router.get('/katalog', { search: searchQuery });
+            router.get('/anggota/katalog', { search: searchQuery });
         }
     };
 
@@ -48,7 +48,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
     const navItems = [
         { key: 'dashboard', label: 'Dashboard Utama', href: '/anggota/dashboard', icon: Compass },
         { key: 'borrowings', label: 'Buku Dipinjam Saya', href: '/anggota/borrowings', icon: BookmarkCheck },
-        { key: 'katalog', label: 'Katalog Buku', href: '/katalog', icon: BookOpen },
+        { key: 'catalog', label: 'Katalog Buku', href: '/anggota/katalog', icon: BookOpen },
         { key: 'scan', label: 'Scan Barcode Rak', href: '/anggota/scan', icon: QrCode },
         { key: 'profile', label: 'Profil & Password', href: '/anggota/profile', icon: UserCog },
     ];

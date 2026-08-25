@@ -243,132 +243,160 @@ export default function Scan({ activeTicket, error }) {
                     </div>
                 )}
 
-                {/* Main Interactive Scanner Container */}
-                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
-                    {/* Instructions Banner */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3">
-                        <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                        <div className="text-xs text-amber-900 leading-relaxed font-medium">
-                            <p className="font-bold">Panduan Pemindaian Stiker Rak:</p>
-                            <p className="mt-0.5">
-                                Klik tombol <strong>Nyalakan Kamera</strong> lalu arahkan kamera ke stiker barcode fisik / QR Code di buku, atau ketikkan Kode Eksemplar secara manual.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Alert Errors */}
-                    {currentError && (
-                        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center space-x-3 text-rose-800 text-xs font-bold shadow-sm">
-                            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-                            <span>{currentError}</span>
-                        </div>
-                    )}
-
-                    {/* Camera Scanner Container */}
-                    <div className="relative w-full rounded-3xl overflow-hidden bg-slate-950 border-4 border-amber-500/30 shadow-inner flex flex-col items-center justify-center min-h-[300px] text-white">
-                        {/* Target DOM Element for Html5Qrcode */}
-                        <div 
-                            id="interactive-scanner-box" 
-                            className={`w-full ${scannerActive ? 'block' : 'hidden'}`}
-                            style={{ minHeight: '300px' }}
-                        />
-
-                        {/* Standby / Placeholder Screen when Camera is Stopped */}
-                        {!scannerActive && (
-                            <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center">
-                                <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg">
-                                    <QrCode className="w-10 h-10 text-amber-400" />
+                {/* Side-by-Side on Desktop/Tablet, Stacked on Mobile */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+                    {/* Left Column: Scanner Kamera (Atas pada Mobile, Kiri pada Desktop) */}
+                    <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-5">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div className="flex items-center space-x-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-sm">
+                                    <Camera className="w-4 h-4 stroke-[2.5]" />
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="font-extrabold text-sm text-slate-100">Kamera Scanner Siap Digunakan</p>
-                                    <p className="text-xs text-slate-400 max-w-xs">
-                                        Izinkan akses kamera untuk mendeteksi stiker barcode buku secara otomatis
-                                    </p>
+                                <div>
+                                    <h2 className="font-extrabold text-sm sm:text-base text-slate-950">Pemindai Barcode Kamera</h2>
+                                    <p className="text-[11px] text-slate-500">Arahkan kamera ke stiker barcode fisik di punggung buku</p>
                                 </div>
+                            </div>
+                        </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => startScanner(selectedCameraId)}
-                                    disabled={cameraLoading || processing}
-                                    className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
-                                >
-                                    <Camera className="w-4 h-4" />
-                                    <span>{cameraLoading ? 'Menghubungkan Kamera...' : 'Nyalakan Kamera Scanner'}</span>
-                                </button>
+                        {/* Alert Errors */}
+                        {currentError && (
+                            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center space-x-3 text-rose-800 text-xs font-bold shadow-sm">
+                                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                                <span>{currentError}</span>
                             </div>
                         )}
 
-                        {/* Scanner Overlay Controls when Active */}
-                        {scannerActive && (
-                            <div className="w-full bg-slate-900/90 border-t border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 z-20">
-                                <div className="flex items-center space-x-2">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                                    <span className="text-[11px] font-bold text-emerald-400 font-mono">SCANNER LIVE</span>
-                                </div>
+                        {/* Camera Scanner Container */}
+                        <div className="relative w-full rounded-3xl overflow-hidden bg-slate-950 border-4 border-amber-500/30 shadow-inner flex flex-col items-center justify-center min-h-[300px] text-white">
+                            {/* Target DOM Element for Html5Qrcode */}
+                            <div 
+                                id="interactive-scanner-box" 
+                                className={`w-full ${scannerActive ? 'block' : 'hidden'}`}
+                                style={{ minHeight: '300px' }}
+                            />
 
-                                <div className="flex items-center space-x-2">
-                                    {cameras.length > 1 && (
-                                        <select
-                                            value={selectedCameraId || ''}
-                                            onChange={(e) => {
-                                                setSelectedCameraId(e.target.value);
-                                                startScanner(e.target.value);
-                                            }}
-                                            className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none"
-                                        >
-                                            {cameras.map((cam, idx) => (
-                                                <option key={cam.id} value={cam.id}>
-                                                    {cam.label || `Kamera ${idx + 1}`}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    )}
+                            {/* Standby / Placeholder Screen when Camera is Stopped */}
+                            {!scannerActive && (
+                                <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center">
+                                    <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-lg">
+                                        <QrCode className="w-10 h-10 text-amber-400" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="font-extrabold text-sm text-slate-100">Kamera Scanner Siap Digunakan</p>
+                                        <p className="text-xs text-slate-400 max-w-xs">
+                                            Izinkan akses kamera browser untuk mendeteksi stiker barcode buku secara otomatis
+                                        </p>
+                                    </div>
 
                                     <button
                                         type="button"
-                                        onClick={stopScanner}
-                                        className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                                        onClick={() => startScanner(selectedCameraId)}
+                                        disabled={cameraLoading || processing}
+                                        className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
                                     >
-                                        <CameraOff className="w-3.5 h-3.5" />
-                                        <span>Matikan</span>
+                                        <Camera className="w-4 h-4" />
+                                        <span>{cameraLoading ? 'Menghubungkan Kamera...' : 'Nyalakan Kamera Scanner'}</span>
                                     </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {/* Scanner Overlay Controls when Active */}
+                            {scannerActive && (
+                                <div className="w-full bg-slate-900/90 border-t border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 z-20">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                        <span className="text-[11px] font-bold text-emerald-400 font-mono">SCANNER LIVE</span>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                        {cameras.length > 1 && (
+                                            <select
+                                                value={selectedCameraId || ''}
+                                                onChange={(e) => {
+                                                    setSelectedCameraId(e.target.value);
+                                                    startScanner(e.target.value);
+                                                }}
+                                                className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none"
+                                            >
+                                                {cameras.map((cam, idx) => (
+                                                    <option key={cam.id} value={cam.id}>
+                                                        {cam.label || `Kamera ${idx + 1}`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            onClick={stopScanner}
+                                            className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                                        >
+                                            <CameraOff className="w-3.5 h-3.5" />
+                                            <span>Matikan</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Input Fallback Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-                        <div>
-                            <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
-                                Atau Input Manual Kode Eksemplar / Barcode:
-                            </label>
-                            <div className="relative">
+                    {/* Right Column: Input Manual (Bawah pada Mobile, Kanan pada Desktop) */}
+                    <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-5">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div className="flex items-center space-x-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold shadow-sm">
+                                    <QrCode className="w-4 h-4 stroke-[2.5]" />
+                                </div>
+                                <div>
+                                    <h2 className="font-extrabold text-sm sm:text-base text-slate-950">Input Manual Eksemplar</h2>
+                                    <p className="text-[11px] text-slate-500">Alternatif jika kamera tidak dapat membaca barcode</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Instructions Banner */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3">
+                            <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="text-xs text-amber-900 leading-relaxed font-medium">
+                                <p className="font-bold">Panduan Input Manual:</p>
+                                <p className="mt-0.5">
+                                    Ketikkan <strong>Kode Eksemplar</strong> (contoh: <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[10px] font-bold">BK-IT-001-A</code>) atau <strong>Barcode Hash</strong> buku yang tertera di label.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Input Form */}
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
+                                    Kode Eksemplar / Barcode Fisik:
+                                </label>
                                 <input
                                     type="text"
                                     value={data.copy_code}
                                     onChange={(e) => {
                                         setData({
-                                            copy_code: e.target.value,
-                                            barcode_hash: e.target.value,
+                                            copy_code: e.target.value.toUpperCase(),
+                                            barcode_hash: e.target.value.toUpperCase(),
                                         });
                                     }}
                                     placeholder="Contoh: BK-IT-001-A atau BC-GMNR8YM5"
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 font-mono font-bold text-sm focus:outline-none focus:border-amber-500"
+                                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 font-mono font-bold text-sm focus:outline-none focus:border-amber-500 placeholder-slate-400"
                                     required
                                 />
                             </div>
-                        </div>
 
-                        <button
-                            type="submit"
-                            disabled={processing}
-                            className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-extrabold text-xs shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-                        >
-                            <QrCode className="w-4 h-4 stroke-[2.5]" />
-                            <span>{processing ? 'Memproses Poin Barcode...' : 'Proses Tiket Pinjam Mandiri'}</span>
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-extrabold text-xs shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                            >
+                                <QrCode className="w-4 h-4 stroke-[2.5]" />
+                                <span>{processing ? 'Memproses Poin Barcode...' : 'Proses Tiket Pinjam Mandiri'}</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </AnggotaLayout>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
 use App\Models\User;
+use App\Services\SiakadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -33,7 +34,7 @@ class AttendanceController extends Controller
     /**
      * Simpan Log Presensi Kehadiran Pengunjung Kios
      */
-    public function store(Request $request)
+    public function store(Request $request, SiakadService $siakadService)
     {
         $request->validate([
             'username' => ['required', 'string'],
@@ -45,11 +46,19 @@ class AttendanceController extends Controller
             'visit_purpose.required' => 'Pilih tujuan kunjungan Anda.',
         ]);
 
-        // Cari pengguna berdasarkan username atau email
-        $loginType = filter_var($request->username, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        $user = User::where($loginType, $request->username)->first();
+        $inputUsername = trim($request->username);
+        $inputPassword = $request->password;
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        // 1. Coba verifikasi akun lokal terlebih dahulu
+        $loginType = filter_var($inputUsername, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $user = User::where($loginType, $inputUsername)->first();
+
+        if (! $user || ! Hash::check($inputPassword, $user->password)) {
+            // 2. Fallback: Verifikasi ke SIAKAD & auto-sync
+            $user = $siakadService->authenticate($inputUsername, $inputPassword);
+        }
+
+        if (! $user) {
             return back()->withErrors([
                 'username' => 'NIM/Username atau kata sandi tidak valid.',
             ]);

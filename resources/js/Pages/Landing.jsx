@@ -240,7 +240,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                                         ) : (
                                             /* Sample Default Perpustakaan 360 Cards */
                                             <>
-                                                <div className="p-4 rounded-2xl bg-slate-950 text-white flex items-center justify-between shadow-md">
+                                                <div className="p-4 rounded-2xl bg-slate-950 text-white flex items-center justify-between shadow-md hover:-translate-y-0.5 transition-transform">
                                                     <div className="flex items-center space-x-3 min-w-0 pr-2">
                                                         <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                                                             <Compass className="w-4 h-4 text-amber-400" />
@@ -250,13 +250,18 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                                                             <p className="text-[10px] sm:text-xs text-amber-400 line-clamp-1 font-medium mt-0.5">📍 Kampus 1 • Ruang baca ber-AC & spot diskusi</p>
                                                         </div>
                                                     </div>
-                                                    <span className="px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold bg-amber-500 text-slate-950 shadow flex items-center space-x-1 shrink-0">
+                                                    <a
+                                                        href="https://kuula.co/share/collection/7l7Q1?logo=1&card=1&info=0&logosize=40&fs=1&vr=1&sd=1&initload=0&thumbs=1"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow flex items-center space-x-1 shrink-0 transition-all cursor-pointer"
+                                                    >
                                                         <span>Tour 360°</span>
                                                         <ExternalLink className="w-3 h-3" />
-                                                    </span>
+                                                    </a>
                                                 </div>
 
-                                                <div className="p-4 rounded-2xl bg-amber-600 text-slate-950 flex items-center justify-between shadow-md">
+                                                <div className="p-4 rounded-2xl bg-amber-600 text-slate-950 flex items-center justify-between shadow-md hover:-translate-y-0.5 transition-transform">
                                                     <div className="flex items-center space-x-3 min-w-0 pr-2">
                                                         <div className="w-8 h-8 rounded-xl bg-slate-950/20 flex items-center justify-center shrink-0">
                                                             <Compass className="w-4 h-4 text-slate-950" />
@@ -266,10 +271,15 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                                                             <p className="text-[10px] sm:text-xs text-amber-950 line-clamp-1 font-semibold mt-0.5">📍 Kampus 2 • Spot membaca tenang & e-library</p>
                                                         </div>
                                                     </div>
-                                                    <span className="px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold bg-slate-950 text-amber-300 shadow flex items-center space-x-1 shrink-0">
+                                                    <a
+                                                        href="https://kuula.co/share/collection/7v2P3?logo=1&card=1&info=0&logosize=40&fs=1&vr=1&sd=1&initload=0&thumbs=1"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold bg-slate-950 hover:bg-slate-800 text-amber-300 shadow flex items-center space-x-1 shrink-0 transition-all cursor-pointer"
+                                                    >
                                                         <span>Tour 360°</span>
                                                         <ExternalLink className="w-3 h-3" />
-                                                    </span>
+                                                    </a>
                                                 </div>
                                             </>
                                         )}

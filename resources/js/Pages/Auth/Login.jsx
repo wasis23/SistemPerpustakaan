@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, Head, Link } from '@inertiajs/react';
-import { BookOpen, User, Lock, ArrowRight, ShieldCheck, Sparkles, ArrowLeft } from 'lucide-react';
+import { BookOpen, User, Lock, ArrowRight, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
+    const [showPassword, setShowPassword] = useState(false);
     const { data, setData, post, processing, errors } = useForm({
         username: '',
         password: '',
@@ -46,6 +47,7 @@ export default function Login() {
 
                 {/* Login Card */}
                 <div className="bg-white rounded-3xl p-8 border border-amber-900/10 shadow-2xl space-y-6">
+
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Username/NIM Input */}
                         <div>
@@ -60,7 +62,7 @@ export default function Login() {
                                     type="text"
                                     value={data.username}
                                     onChange={(e) => setData('username', e.target.value)}
-                                    placeholder="Masukkan NIM atau Nama Pengguna"
+                                    placeholder="Contoh: pustakawan atau mhs12345"
                                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
                                     required
                                 />
@@ -80,13 +82,20 @@ export default function Login() {
                                     <Lock className="w-4 h-4" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
                                     value={data.password}
                                     onChange={(e) => setData('password', e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
+                                    className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
                             </div>
                             {errors.password && (
                                 <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.password}</p>
@@ -129,3 +138,4 @@ export default function Login() {
         </div>
     );
 }
+

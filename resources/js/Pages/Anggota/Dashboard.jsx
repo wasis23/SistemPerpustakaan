@@ -148,22 +148,27 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
 
                         {activeTickets && activeTickets.length > 0 ? (
                             <div className="space-y-3">
-                                {activeTickets.map((ticket) => (
-                                    <div key={ticket.id} className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
-                                        <div>
-                                            <p className="font-extrabold text-slate-950 text-xs line-clamp-1">{ticket.copy?.book?.title}</p>
-                                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">
-                                                Kode: <span className="font-bold text-emerald-800">{ticket.ticket_code}</span>
-                                            </p>
+                                {activeTickets.map((ticket) => {
+                                    const title = ticket.bookCopy?.book?.title || ticket.copy?.book?.title || 'Judul Buku';
+                                    const copyCode = ticket.bookCopy?.copy_code || '';
+                                    return (
+                                        <div key={ticket.id} className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
+                                            <div>
+                                                <p className="font-extrabold text-slate-950 text-xs line-clamp-1">{title}</p>
+                                                <p className="text-[10px] text-slate-600 font-mono mt-0.5">
+                                                    Kode: <span className="font-bold text-emerald-800">{ticket.ticket_code}</span>
+                                                    {copyCode && <span> ({copyCode})</span>}
+                                                </p>
+                                            </div>
+                                            <Link
+                                                href={`/anggota/ticket/${ticket.id}`}
+                                                className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow text-center block"
+                                            >
+                                                Tampilkan Barcode HP ➔
+                                            </Link>
                                         </div>
-                                        <Link
-                                            href={`/anggota/ticket/${ticket.id}`}
-                                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow text-center block"
-                                        >
-                                            Tampilkan Barcode HP ➔
-                                        </Link>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="text-center py-6 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
@@ -204,17 +209,31 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
 
                         {activeBorrowings && activeBorrowings.length > 0 ? (
                             <div className="space-y-3">
-                                {activeBorrowings.map((b) => (
-                                    <div key={b.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center space-x-3">
-                                        <div className="w-10 h-12 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
-                                            <BookOpen className="w-5 h-5" />
+                                {activeBorrowings.map((b) => {
+                                    const title = b.bookCopy?.book?.title || b.copy?.book?.title || 'Judul Buku';
+                                    const copyCode = b.bookCopy?.copy_code || '';
+                                    const isOverdue = b.due_date && new Date(b.due_date) < new Date();
+                                    const formattedDueDate = b.due_date ? new Date(b.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+                                    return (
+                                        <div key={b.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center space-x-3">
+                                            <div className="w-10 h-12 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
+                                                <BookOpen className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-slate-950 text-xs truncate">{title}</p>
+                                                <div className="flex items-center justify-between mt-1 text-[10px]">
+                                                    <span className="text-slate-500 font-mono">
+                                                        {copyCode || b.borrowing_code}
+                                                    </span>
+                                                    <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${isOverdue ? 'bg-rose-100 text-rose-800' : 'text-slate-600'}`}>
+                                                        Kembali: {formattedDueDate}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-slate-950 text-xs truncate">{b.copy?.book?.title}</p>
-                                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">Tgl Kembali: {b.due_date}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="text-center py-6 text-xs text-slate-500 font-medium">

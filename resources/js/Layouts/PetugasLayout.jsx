@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { 
-    Shield, 
     BookOpen, 
-    Users, 
-    LogOut, 
+    Shield, 
     ArrowRightLeft, 
+    Users, 
     FileSpreadsheet, 
-    Monitor, 
+    LogOut, 
     Search,
     Compass,
-    Sparkles,
+    Monitor,
     Library,
     Tag,
-    MapPin
+    MapPin,
+    UserCheck,
+    UserCog
 } from 'lucide-react';
 
 export default function PetugasLayout({ children, activeMenu, todayVisitsCount }) {
@@ -29,6 +30,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
 
     const navItems = [
         { key: 'dashboard', label: 'Dashboard Utama', href: '/petugas/dashboard', icon: Compass },
+        { key: 'members', label: 'Data Anggota', href: '/petugas/members', icon: UserCheck },
         { key: 'books', label: 'Katalog Buku', href: '/petugas/books', icon: BookOpen },
         { key: 'categories', label: 'Kategori DDC', href: '/petugas/categories', icon: Tag },
         { key: 'racks', label: 'Lokasi Rak Fisik', href: '/petugas/racks', icon: MapPin },
@@ -36,6 +38,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
         { key: 'presensi', label: 'Rekap Presensi', href: '/petugas/presensi', icon: Users },
         { key: 'reports', label: 'Laporan Analytics', href: '/petugas/reports', icon: FileSpreadsheet },
         { key: 'laboratories', label: 'Perpustakaan 360°', href: '/petugas/laboratories', icon: Library },
+        { key: 'profile', label: 'Profil Pustakawan', href: '/petugas/profile', icon: UserCog },
     ];
 
     return (
@@ -133,26 +136,31 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
 
                     {/* Right User Utility */}
                     <div className="flex items-center space-x-3">
-                        <div className="hidden sm:flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-700">
-                            <Shield className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Pustakawan:</span>
-                            <span className="font-mono text-amber-800">{auth.user.username}</span>
-                        </div>
+                        <Link
+                            href="/petugas/profile"
+                            className="flex items-center space-x-2.5 p-1.5 hover:bg-amber-100/50 rounded-2xl border border-slate-200/80 bg-white transition-all text-left group shadow-sm"
+                            title="Klik untuk ubah profil & password"
+                        >
+                            <div className="w-8 h-8 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center font-bold text-xs shadow group-hover:scale-105 transition-all">
+                                {auth.user.name.charAt(0)}
+                            </div>
 
-                        <div className="w-9 h-9 rounded-full bg-slate-950 text-amber-400 flex items-center justify-center font-bold text-xs shadow">
-                            {auth.user.name.charAt(0)}
-                        </div>
-
-                        <div className="text-left hidden lg:block">
-                            <p className="text-xs font-extrabold text-slate-950 leading-tight">{auth.user.name}</p>
-                            <p className="text-[10px] text-slate-500">Administrator Pustakawan</p>
-                        </div>
+                            <div className="hidden lg:block pr-2">
+                                <p className="text-xs font-extrabold text-slate-950 leading-tight group-hover:text-amber-800 transition-colors">
+                                    {auth.user.name}
+                                </p>
+                                <p className="text-[10px] text-amber-800 font-semibold flex items-center space-x-1">
+                                    <UserCog className="w-3 h-3 text-amber-600" />
+                                    <span>Ubah Profil</span>
+                                </p>
+                            </div>
+                        </Link>
 
                         <Link
                             href="/logout"
                             method="post"
                             as="button"
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
+                            className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl border border-slate-200 bg-white transition-all shadow-sm"
                             title="Keluar"
                         >
                             <LogOut className="w-4 h-4" />

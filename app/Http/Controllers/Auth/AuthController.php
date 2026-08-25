@@ -13,8 +13,16 @@ class AuthController extends Controller
     /**
      * Tampilkan halaman Login
      */
-    public function showLogin(): Response
+    public function showLogin()
     {
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user->role === 'petugas') {
+                return redirect()->route('petugas.dashboard');
+            }
+            return redirect()->route('anggota.dashboard');
+        }
+
         return Inertia::render('Auth/Login');
     }
 
@@ -46,12 +54,12 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Redirect berdasarkan peran (petugas vs anggota)
+            // Redirect langsung ke dashboard berdasarkan peran (petugas vs anggota)
             if ($user->role === 'petugas') {
-                return redirect()->intended(route('petugas.dashboard'))->with('success', 'Selamat datang kembali, Petugas!');
+                return redirect()->route('petugas.dashboard')->with('success', 'Selamat datang kembali, Petugas!');
             }
 
-            return redirect()->intended(route('anggota.dashboard'))->with('success', 'Selamat datang di SIMPUS!');
+            return redirect()->route('anggota.dashboard')->with('success', 'Selamat datang di SIMPUS!');
         }
 
         return back()->withErrors([

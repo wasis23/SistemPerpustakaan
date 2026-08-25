@@ -42,10 +42,25 @@ class HandleInertiaRequests extends Middleware
                     'status' => $request->user()->status,
                 ] : null,
             ],
+            'active_ticket_id' => fn () => $request->user() && $request->user()->role === 'anggota'
+                ? \App\Models\BorrowTicket::where('user_id', $request->user()->id)
+                    ->where('status', 'pending')
+                    ->where('expires_at', '>', now())
+                    ->value('id')
+                : null,
+            'active_tickets_count' => fn () => $request->user() && $request->user()->role === 'anggota'
+                ? \App\Models\BorrowTicket::where('user_id', $request->user()->id)
+                    ->where('status', 'pending')
+                    ->where('expires_at', '>', now())
+                    ->count()
+                : 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'info' => fn () => $request->session()->get('info'),
+                'success_borrowing' => fn () => $request->session()->get('success_borrowing'),
+                'success_return' => fn () => $request->session()->get('success_return'),
+                'success_visitor' => fn () => $request->session()->get('success_visitor'),
             ],
         ]);
     }

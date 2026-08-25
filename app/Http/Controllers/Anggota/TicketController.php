@@ -47,17 +47,19 @@ class TicketController extends Controller
      */
     public function createTicket(Request $request)
     {
-        $request->validate([
-            'barcode_hash' => ['required', 'string'],
-        ], [
-            'barcode_hash.required' => 'Scan atau masukkan barcode hash buku.',
-        ]);
+        $input = trim($request->input('barcode_hash') ?? $request->input('copy_code') ?? '');
+
+        if (empty($input)) {
+            return back()->withErrors([
+                'copy_code' => 'Scan atau masukkan barcode / kode eksemplar buku.',
+                'barcode_hash' => 'Scan atau masukkan barcode / kode eksemplar buku.',
+            ]);
+        }
 
         // 1. Sapu tiket kadaluarsa
         BorrowTicket::releaseExpiredTickets();
 
         $user = $request->user();
-        $barcodeHash = trim($request->barcode_hash);
 
         // 2. Cek apakah anggota sudah punya tiket pending aktif
         $existingTicket = BorrowTicket::where('user_id', $user->id)
@@ -67,6 +69,7 @@ class TicketController extends Controller
 
         if ($existingTicket) {
             return back()->withErrors([
+                'copy_code' => 'Anda masih memiliki tiket aktif yang belum divalidasi. Selesaikan atau batalkan tiket tersebut terlebih dahulu.',
                 'barcode_hash' => 'Anda masih memiliki tiket aktif yang belum divalidasi. Selesaikan atau batalkan tiket tersebut terlebih dahulu.',
             ]);
         }
@@ -78,19 +81,23 @@ class TicketController extends Controller
 
         if ($activeBorrowingsCount >= 3) {
             return back()->withErrors([
+                'copy_code' => 'Anda telah mencapai batas maksimal 3 peminjaman buku aktif. Kembalikan buku fisik sebelumnya terlebih dahulu.',
                 'barcode_hash' => 'Anda telah mencapai batas maksimal 3 peminjaman buku aktif. Kembalikan buku fisik sebelumnya terlebih dahulu.',
             ]);
         }
 
         try {
-            $ticket = DB::transaction(function () use ($user, $barcodeHash) {
-                // Lock row eksemplar buku untuk mencegah race condition penahanan stok ilusi
-                $copy = BookCopy::where('barcode_hash', $barcodeHash)
-                    ->lockForUpdate()
-                    ->first();
+            $ticket = DB::transaction(function () use ($user, $input) {
+                // Lock row eksemplar buku berdasarkan barcode_hash atau copy_code
+                $copy = BookCopy::where(function ($q) use ($input) {
+                    $q->where('barcode_hash', $input)
+                      ->orWhere('copy_code', $input);
+                })
+                ->lockForUpdate()
+                ->first();
 
                 if (! $copy) {
-                    throw new \Exception('Barcode buku tidak ditemukan dalam sistem.');
+                    throw new \Exception("Barcode atau Kode Eksemplar '{$input}' tidak ditemukan dalam sistem.");
                 }
 
                 if ($copy->status !== 'available') {
@@ -123,6 +130,7 @@ class TicketController extends Controller
 
         } catch (\Exception $e) {
             return back()->withErrors([
+                'copy_code' => $e->getMessage(),
                 'barcode_hash' => $e->getMessage(),
             ]);
         }

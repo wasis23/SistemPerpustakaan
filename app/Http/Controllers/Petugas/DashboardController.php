@@ -18,8 +18,10 @@ class DashboardController extends Controller
             'stats' => [
                 'today_visits' => AttendanceLog::whereDate('checked_in_at', today())->count(),
                 'active_loans' => Borrowing::where('status', 'active')->count(),
+                'active_borrowings' => Borrowing::where('status', 'active')->count(),
                 'pending_tickets' => BorrowTicket::where('status', 'pending')->where('expires_at', '>', now())->count(),
                 'overdue_books' => Borrowing::where('status', 'active')->where('due_date', '<', now())->count(),
+                'overdue_borrowings' => Borrowing::where('status', 'active')->where('due_date', '<', now())->count(),
             ],
         ]);
     }

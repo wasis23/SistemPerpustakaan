@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'ahmad.rizky@student.indonusa.ac.id',
                 'password' => Hash::make('password'),
                 'role' => 'anggota',
-                'prodi' => 'Teknik Informatika',
+                'prodi' => 'D4 Teknologi Rekayasa Perangkat Lunak',
                 'phone' => '089876543210',
                 'status' => 'active',
             ]
@@ -49,14 +49,15 @@ class DatabaseSeeder extends Seeder
                 'email' => 'indah.permata@indonusa.ac.id',
                 'password' => Hash::make('password'),
                 'role' => 'anggota',
-                'prodi' => 'Sistem Informasi',
+                'prodi' => 'D4 Manajemen Informasi Kesehatan',
                 'phone' => '081122334455',
                 'status' => 'active',
             ]
         );
 
-        // 4. Seeder Master Data (Kategori, Rak, Buku, Eksemplar)
+        // 4. Seeder Master Data (Laboratorium/Perpustakaan 360, Kategori, Rak, Buku, Eksemplar)
         $this->call([
+            LaboratorySeeder::class,
             CategorySeeder::class,
             RackSeeder::class,
             BookSeeder::class,

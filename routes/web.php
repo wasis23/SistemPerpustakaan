@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Anggota\BorrowingController as AnggotaBorrowingController;
 use App\Http\Controllers\Anggota\CatalogController as AnggotaCatalogController;
 use App\Http\Controllers\Anggota\DashboardController as AnggotaDashboardController;
+use App\Http\Controllers\Anggota\ProfileController as AnggotaProfileController;
 use App\Http\Controllers\Anggota\TicketController as AnggotaTicketController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthController;
@@ -11,6 +13,8 @@ use App\Http\Controllers\Petugas\CategoryController as PetugasCategoryController
 use App\Http\Controllers\Petugas\CirculationController as PetugasCirculationController;
 use App\Http\Controllers\Petugas\DashboardController as PetugasDashboardController;
 use App\Http\Controllers\Petugas\LaboratoryController as PetugasLaboratoryController;
+use App\Http\Controllers\Petugas\MemberController as PetugasMemberController;
+use App\Http\Controllers\Petugas\ProfileController as PetugasProfileController;
 use App\Http\Controllers\Petugas\RackController as PetugasRackController;
 use App\Http\Controllers\Petugas\ReportController as PetugasReportController;
 use Illuminate\Support\Facades\Route;
@@ -38,9 +42,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:anggota')->prefix('anggota')->name('anggota.')->group(function () {
         Route::get('/dashboard', [AnggotaDashboardController::class, 'index'])->name('dashboard');
 
+        // Buku Sedang Dipinjam & Riwayat Pinjam Anggota
+        Route::get('/borrowings', [AnggotaBorrowingController::class, 'index'])->name('borrowings.index');
+
         // Alias Rute Katalog Anggota
         Route::get('/katalog', [AnggotaCatalogController::class, 'index'])->name('catalog.index');
         Route::get('/katalog/{book}', [AnggotaCatalogController::class, 'show'])->name('catalog.show');
+
+        // Profil & Ganti Password Anggota (Mahasiswa / Dosen)
+        Route::get('/profile', [AnggotaProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [AnggotaProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [AnggotaProfileController::class, 'updatePassword'])->name('profile.password.update');
 
         // Scanner Barcode HP & Tiket Mandiri 5 Menit
         Route::get('/scan', [AnggotaTicketController::class, 'showScanner'])->name('scan');
@@ -52,6 +64,18 @@ Route::middleware('auth')->group(function () {
     // Role Petugas (Pustakawan / Administrator)
     Route::middleware('role:petugas')->prefix('petugas')->name('petugas.')->group(function () {
         Route::get('/dashboard', [PetugasDashboardController::class, 'index'])->name('dashboard');
+
+        // Manajemen Profil & Ganti Password Pustakawan
+        Route::get('/profile', [PetugasProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [PetugasProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [PetugasProfileController::class, 'updatePassword'])->name('profile.password.update');
+
+        // Manajemen Anggota Perpustakaan (Mahasiswa & Dosen)
+        Route::get('/members', [PetugasMemberController::class, 'index'])->name('members.index');
+        Route::post('/members', [PetugasMemberController::class, 'store'])->name('members.store');
+        Route::put('/members/{member}', [PetugasMemberController::class, 'update'])->name('members.update');
+        Route::put('/members/{member}/password', [PetugasMemberController::class, 'updatePassword'])->name('members.password.update');
+        Route::delete('/members/{member}', [PetugasMemberController::class, 'destroy'])->name('members.destroy');
 
         // Rekap Presensi Kunjungan
         Route::get('/presensi', [AttendanceController::class, 'index'])->name('presensi.index');
@@ -70,7 +94,7 @@ Route::middleware('auth')->group(function () {
         // Manajemen Virtual Tour Perpustakaan 360°
         Route::resource('laboratories', PetugasLaboratoryController::class);
 
-        // Meja Sirkulasi & Validasi Tiket HP / Scan Pengembalian
+        // Meja Sirkulasi & Validasi Transaksi Peminjaman / Pengembalian
         Route::get('/circulations', [PetugasCirculationController::class, 'index'])->name('circulations.index');
         Route::get('/circulations/scan-ticket', [PetugasCirculationController::class, 'scanTicketForm'])->name('circulations.scan-ticket');
         Route::post('/circulations/validate-ticket', [PetugasCirculationController::class, 'validateTicket'])->name('circulations.validate-ticket');

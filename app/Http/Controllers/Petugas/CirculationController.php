@@ -213,11 +213,14 @@ class CirculationController extends Controller
                 return [
                     'borrowing_code' => $borrowing->borrowing_code,
                     'user_name' => $borrowing->user->name,
+                    'user_nim' => $borrowing->user->username,
                     'book_title' => $borrowing->bookCopy->book->title,
                     'copy_code' => $borrowing->bookCopy->copy_code,
+                    'late_days' => $overdueDays,
                     'overdue_days' => $overdueDays,
                     'fine_amount' => $fineAmount,
                     'fine_status' => $fineStatus,
+                    'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d M Y (H:i)') : '-',
                     'returned_at' => $returnedAt->format('d M Y (H:i)'),
                 ];
             });

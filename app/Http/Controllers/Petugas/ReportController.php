@@ -75,6 +75,7 @@ class ReportController extends Controller
             'attendances' => $attendances,
             'topBooks' => $topBooks,
             'categories' => Category::select('id', 'code', 'name')->get(),
+            'prodiList' => \App\Http\Controllers\Petugas\MemberController::PRODI_LIST,
             'summary' => $summary,
             'filters' => [
                 'start_date' => $startDate,

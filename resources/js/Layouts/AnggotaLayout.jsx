@@ -5,15 +5,18 @@ import {
     QrCode, 
     BookmarkCheck, 
     LogOut, 
-    Search,
-    Compass,
-    Sparkles,
-    UserCog
+    Search, 
+    Compass, 
+    Sparkles, 
+    UserCog,
+    Menu,
+    X
 } from 'lucide-react';
 
 export default function AnggotaLayout({ children, activeMenu, activeTicketsCount }) {
     const { auth, active_ticket_id, active_tickets_count } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const effectiveTicketsCount = activeTicketsCount ?? active_tickets_count ?? 0;
 
@@ -55,7 +58,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-slate-900 flex font-sans selection:bg-amber-500 selection:text-slate-950">
-            {/* Left Vertical Sidebar */}
+            {/* Desktop Left Vertical Sidebar */}
             <aside className="w-64 bg-white border-r border-amber-900/10 hidden md:flex flex-col justify-between p-6 shrink-0 min-h-screen sticky top-0 h-screen z-30">
                 <div className="space-y-8">
                     {/* Brand Header */}
@@ -125,41 +128,155 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
                 </div>
             </aside>
 
+            {/* Mobile Drawer / Slide-Over Sidebar */}
+            {mobileMenuOpen && (
+                <div className="fixed inset-0 z-50 md:hidden flex">
+                    {/* Backdrop Overlay */}
+                    <div 
+                        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
+
+                    {/* Drawer Panel */}
+                    <div className="relative w-72 max-w-[85vw] bg-white h-full p-6 flex flex-col justify-between shadow-2xl z-10 overflow-y-auto animate-fade-in">
+                        <div className="space-y-6">
+                            {/* Drawer Header */}
+                            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                                <Link 
+                                    href="/" 
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center space-x-2.5"
+                                >
+                                    <div className="w-9 h-9 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-md">
+                                        <BookOpen className="w-5 h-5 stroke-[2.5]" />
+                                    </div>
+                                    <div>
+                                        <span className="font-extrabold text-lg text-slate-950 tracking-tight">SIMPUS.</span>
+                                        <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-1.5 font-bold uppercase">Anggota</span>
+                                    </div>
+                                </Link>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+                                    aria-label="Tutup Menu"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Mobile Nav Links */}
+                            <nav className="space-y-1.5">
+                                {navItems.map((item) => {
+                                    const Icon = item.icon;
+                                    const isActive = activeMenu === item.key;
+                                    return (
+                                        <Link
+                                            key={item.key}
+                                            href={item.href}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className={`flex items-center space-x-3 px-4 py-3 font-bold rounded-2xl text-xs transition-all ${
+                                                isActive
+                                                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                                    : 'text-slate-600 hover:text-amber-800 hover:bg-amber-50'
+                                            }`}
+                                        >
+                                            <Icon className="w-4 h-4 stroke-[2.5]" />
+                                            <span>{item.label}</span>
+                                        </Link>
+                                    );
+                                })}
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        setMobileMenuOpen(false);
+                                        handleTicketClick(e);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-slate-600 hover:text-amber-800 hover:bg-amber-50 font-semibold rounded-2xl text-xs transition-all cursor-pointer text-left"
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <BookmarkCheck className="w-4 h-4" />
+                                        <span>Tiket Pinjam Saya</span>
+                                    </div>
+                                    {effectiveTicketsCount > 0 && (
+                                        <span className="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse">
+                                            {effectiveTicketsCount} Aktif
+                                        </span>
+                                    )}
+                                </button>
+                            </nav>
+                        </div>
+
+                        {/* Drawer Bottom Widget */}
+                        <div className="pt-6 border-t border-slate-100 space-y-3">
+                            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/60">
+                                <p className="text-xs font-extrabold text-slate-950">{auth.user.name}</p>
+                                <p className="text-[10px] text-amber-800 font-medium">{auth.user.prodi || 'Anggota Perpustakaan'}</p>
+                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">NIM: {auth.user.username}</p>
+                            </div>
+
+                            <Link
+                                href="/logout"
+                                method="post"
+                                as="button"
+                                className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold rounded-2xl text-xs transition-all flex items-center justify-center space-x-2"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                <span>Keluar dari Akun</span>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main Area */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Top Header Bar */}
-                <header className="sticky top-0 z-20 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-amber-900/10 px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
-                    {/* Mobile Brand Link */}
-                    <Link href="/" className="md:hidden flex items-center space-x-2">
-                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black">
-                            <BookOpen className="w-4 h-4" />
-                        </div>
-                        <span className="font-extrabold text-base text-slate-950">SIMPUS</span>
-                    </Link>
+                <header className="sticky top-0 z-20 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-amber-900/10 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-3">
+                    {/* Left: Mobile Hamburger Button & Brand */}
+                    <div className="flex items-center space-x-2.5">
+                        <button
+                            type="button"
+                            onClick={() => setMobileMenuOpen(true)}
+                            className="md:hidden p-2 text-slate-700 hover:text-amber-800 bg-white border border-slate-200/80 rounded-2xl shadow-sm transition-all focus:outline-none"
+                            aria-label="Buka Menu"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+
+                        <Link href="/" className="md:hidden flex items-center space-x-2">
+                            <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm">
+                                <BookOpen className="w-4 h-4" />
+                            </div>
+                            <span className="font-extrabold text-base text-slate-950 tracking-tight">SIMPUS</span>
+                        </Link>
+                    </div>
 
                     {/* Search Bar Center */}
-                    <form onSubmit={handleSearch} className="max-w-md w-full relative">
+                    <form onSubmit={handleSearch} className="max-w-md w-full relative hidden sm:block">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari judul buku, penulis, DDC..."
-                            className="w-full pl-11 pr-24 py-2.5 bg-white border border-slate-300 rounded-full text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm"
+                            className="w-full pl-11 pr-24 py-2 bg-white border border-slate-300 rounded-full text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm"
                         />
                         <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                         <button
                             type="submit"
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-bold rounded-full transition-all"
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-bold rounded-full transition-all"
                         >
                             Cari
                         </button>
                     </form>
 
                     {/* Right User Utility */}
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                         <Link
                             href="/anggota/profile"
-                            className="flex items-center space-x-2.5 p-1.5 hover:bg-amber-100/50 rounded-2xl border border-slate-200/80 bg-white transition-all text-left group shadow-sm"
+                            className="flex items-center space-x-2 p-1 sm:p-1.5 hover:bg-amber-100/50 rounded-2xl border border-slate-200/80 bg-white transition-all text-left group shadow-sm"
                             title="Klik untuk ubah data diri & password"
                         >
                             <div className="w-8 h-8 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center font-bold text-xs shadow group-hover:scale-105 transition-all">
@@ -182,7 +299,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
                             href="/logout"
                             method="post"
                             as="button"
-                            className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl border border-slate-200 bg-white transition-all shadow-sm"
+                            className="p-2 sm:p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl border border-slate-200 bg-white transition-all shadow-sm"
                             title="Keluar"
                         >
                             <LogOut className="w-4 h-4" />

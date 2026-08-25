@@ -21,7 +21,7 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
         <AnggotaLayout activeMenu="borrowings">
             <Head title="Buku Sedang Dipinjam - Anggota" />
 
-            <div className="space-y-8 w-full max-w-6xl mx-auto">
+            <div className="space-y-6 w-full">
                 {/* 1. Header Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm">
                     <div className="space-y-1">

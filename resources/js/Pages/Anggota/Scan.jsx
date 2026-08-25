@@ -199,7 +199,7 @@ export default function Scan({ activeTicket, error }) {
         <AnggotaLayout activeMenu="scan">
             <Head title="Scan Barcode Rak Fisik - Anggota" />
 
-            <div className="max-w-3xl mx-auto space-y-6 w-full">
+            <div className="space-y-6 w-full">
                 {/* Header Title Card */}
                 <div className="flex items-center space-x-3 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
                     <Link 

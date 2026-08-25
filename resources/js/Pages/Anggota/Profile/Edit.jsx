@@ -55,7 +55,7 @@ export default function Edit({ user, prodiList }) {
         <AnggotaLayout activeMenu="profile">
             <Head title="Pengaturan Profil & Password Saya" />
 
-            <div className="max-w-5xl mx-auto space-y-8 w-full">
+            <div className="space-y-6 w-full">
                 {/* Header Page */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm">
                     <div className="flex items-center space-x-4">

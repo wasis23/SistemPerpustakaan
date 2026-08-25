@@ -46,7 +46,7 @@ export default function Show({ ticket, qrSvg }) {
         <AnggotaLayout activeMenu="dashboard">
             <Head title={`Tiket Digital - ${ticket.ticket_code}`} />
 
-            <div className="max-w-xl mx-auto space-y-6 w-full">
+            <div className="space-y-6 w-full">
                 {/* Header Card */}
                 <div className="flex items-center space-x-3 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
                     <Link href="/anggota/dashboard" className="p-2.5 text-slate-600 hover:text-amber-700 bg-slate-50 border border-slate-200 rounded-2xl transition-all">

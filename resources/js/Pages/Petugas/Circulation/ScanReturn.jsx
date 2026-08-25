@@ -33,7 +33,7 @@ export default function ScanReturn() {
         <PetugasLayout activeMenu="circulations">
             <Head title="Meja Sirkulasi - Scan Pengembalian Buku" />
 
-            <div className="max-w-4xl mx-auto space-y-6 w-full">
+            <div className="space-y-6 w-full">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
                     <div className="flex items-center space-x-3">

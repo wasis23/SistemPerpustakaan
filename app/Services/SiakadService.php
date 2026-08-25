@@ -22,40 +22,72 @@ class SiakadService
         $cleanNim = strtoupper(trim($username));
         $mahasiswaData = null;
 
-        // 1. Coba via HTTP API SIAKAD External
-        $apiUrl = config('services.siakad.url', 'https://siakad.poltekindonusa.ac.id/api/mahasiswa_external.php');
-        $apiKey = config('services.siakad.api_key', 'INDONUSA_SECRET_API_KEY_2026_X7Z');
+        // 1. Coba via HTTP API SIAKAD External (POST verify-login)
+        $apiUrl = config('services.siakad.url', 'https://siakadv2.poltekindonusa.ac.id/api/verify-login');
+        $apiKey = config('services.siakad.api_key', 'e844f45c5100479b91c0eb97793a84b8b85cc2fe21f50caf38807ff72408e143');
 
-        try {
-            $response = Http::timeout(3)
-                ->withHeaders([
-                    'X-Api-Key' => $apiKey,
-                    'Accept' => 'application/json',
-                ])
-                ->get($apiUrl, [
-                    'nim' => $cleanNim,
-                ]);
-
-            if ($response->successful()) {
-                $payload = $response->json();
-                if (!empty($payload['status']) && isset($payload['data']['password_hash'])) {
-                    $mhs = $payload['data'];
-                    if (password_verify($password, $mhs['password_hash'])) {
-                        $mahasiswaData = [
-                            'nim' => $mhs['nim'] ?? $cleanNim,
-                            'nama' => $mhs['nama'] ?? $cleanNim,
-                            'email' => $mhs['email_institusi'] ?? ($cleanNim . '@poltekindonusa.ac.id'),
-                            'prodi' => $mhs['prodi'] ?? null,
-                            'phone' => $mhs['no_hp'] ?? null,
-                        ];
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Gagal menghubungi HTTP API SIAKAD: ' . $e->getMessage());
+        // Daftar target URL yang dicoba (baik tanpa .php maupun dengan .php)
+        $endpoints = [$apiUrl];
+        if (!str_ends_with($apiUrl, '.php')) {
+            $endpoints[] = $apiUrl . '.php';
         }
 
-        // 2. Fallback: Direct Database Connection ke SIAKAD DB
+        foreach ($endpoints as $url) {
+            try {
+                $response = Http::timeout(3)
+                    ->withHeaders([
+                        'X-Api-Key' => $apiKey,
+                        'Accept' => 'application/json',
+                    ])
+                    ->asJson()
+                    ->post($url, [
+                        'username' => $cleanNim,
+                        'password' => $password,
+                    ]);
+
+                if ($response->successful()) {
+                    $payload = $response->json();
+
+                    // Format 1: Status success langsung dengan payload data
+                    if (
+                        !empty($payload) &&
+                        (
+                            (isset($payload['status']) && in_array(strtolower((string)$payload['status']), ['success', 'true', 'ok', '1'])) ||
+                            (!empty($payload['success']) && $payload['success'] === true)
+                        )
+                    ) {
+                        $mhs = $payload['data'] ?? $payload['user'] ?? $payload['mahasiswa'] ?? $payload;
+                        $mahasiswaData = [
+                            'nim' => $mhs['nim'] ?? $mhs['nipd'] ?? $mhs['username'] ?? $cleanNim,
+                            'nama' => $mhs['nama'] ?? $mhs['name'] ?? $mhs['nm_pd'] ?? $cleanNim,
+                            'email' => $mhs['email'] ?? $mhs['email_institusi'] ?? $mhs['email_poltek'] ?? ($cleanNim . '@poltekindonusa.ac.id'),
+                            'prodi' => $mhs['prodi'] ?? $mhs['nm_lemb'] ?? $mhs['program_studi'] ?? null,
+                            'phone' => $mhs['no_hp'] ?? $mhs['phone'] ?? $mhs['telepon_seluler'] ?? null,
+                        ];
+                        break;
+                    }
+
+                    // Format 2: Response mengembalikan password_hash untuk diverifikasi lokal
+                    if (!empty($payload['status']) && isset($payload['data']['password_hash'])) {
+                        $mhs = $payload['data'];
+                        if (password_verify($password, $mhs['password_hash'])) {
+                            $mahasiswaData = [
+                                'nim' => $mhs['nim'] ?? $cleanNim,
+                                'nama' => $mhs['nama'] ?? $cleanNim,
+                                'email' => $mhs['email_institusi'] ?? ($cleanNim . '@poltekindonusa.ac.id'),
+                                'prodi' => $mhs['prodi'] ?? null,
+                                'phone' => $mhs['no_hp'] ?? null,
+                            ];
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gagal menghubungi HTTP API SIAKAD di ' . $url . ': ' . $e->getMessage());
+            }
+        }
+
+        // 2. Fallback: Direct Database Connection ke Database SIAKAD (siakaddb)
         if (!$mahasiswaData) {
             try {
                 $student = DB::connection('siakad')

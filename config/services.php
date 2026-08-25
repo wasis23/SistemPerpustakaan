@@ -36,7 +36,7 @@ return [
     ],
 
     'siakad' => [
-        'url' => env('SIAKAD_API_URL', 'https://siakad.poltekindonusa.ac.id/api/mahasiswa_external.php'),
-        'api_key' => env('SIAKAD_API_KEY', 'INDONUSA_SECRET_API_KEY_2026_X7Z'),
+        'url' => env('SIAKAD_API_URL', 'https://siakadv2.poltekindonusa.ac.id/api/verify-login'),
+        'api_key' => env('SIAKAD_API_KEY', 'e844f45c5100479b91c0eb97793a84b8b85cc2fe21f50caf38807ff72408e143'),
     ],
 ];

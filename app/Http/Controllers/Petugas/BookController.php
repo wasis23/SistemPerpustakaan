@@ -582,101 +582,310 @@ class BookController extends Controller
     }
 
     /**
-     * Impor Massal Buku via CSV / Text Input
+     * Impor Massal Buku via File Upload (CSV, XLSX, XLSM)
      */
     public function importCsv(Request $request)
     {
         $request->validate([
-            'csv_data' => ['required', 'string'],
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls,xlsm', 'max:20480'],
         ]);
 
-        $lines = explode("\n", trim($request->csv_data));
-        $importedCount = 0;
+        $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $filePath = $file->getRealPath();
+
+        $rowsData = [];
+
+        if (in_array($extension, ['xlsx', 'xlsm', 'zip'])) {
+            $rowsData = $this->parseExcelXml($filePath);
+        } else {
+            // Processing CSV / TXT
+            $handle = fopen($filePath, 'r');
+            if ($handle) {
+                while (($data = fgetcsv($handle, 4096, ',')) !== false) {
+                    if (!empty(array_filter($data))) {
+                        $rowsData[] = array_map('trim', $data);
+                    }
+                }
+                fclose($handle);
+            }
+        }
+
+        if (empty($rowsData)) {
+            return back()->with('error', 'File yang diunggah kosong atau formatnya tidak didukung.');
+        }
 
         $defaultCat = Category::first();
         $defaultRack = Rack::first();
-        $runningInventory = BarcodeService::getNextInventoryNumber(0);
 
-        foreach ($lines as $line) {
-            $cols = str_getcsv(trim($line));
+        $parsedRows = [];
+        
+        // Buang header jika ada
+        if (isset($rowsData[0][1]) && in_array(strtolower(trim($rowsData[0][1])), ['judul', 'title'])) {
+            array_shift($rowsData);
+        }
+
+        foreach ($rowsData as $cols) {
             if (count($cols) < 2) continue;
 
-            $title = trim($cols[0]);
-            // Skip CSV Header if present
-            if (strtolower($title) === 'judul') continue;
+            $col0 = trim($cols[0] ?? '');
+            if (strtolower($col0) === 'no' || strtolower($col0) === 'judul') continue;
 
-            $author = trim($cols[1]);
-            $isbn = isset($cols[2]) && trim($cols[2]) !== '' ? trim($cols[2]) : null;
-            $publisher = isset($cols[3]) && trim($cols[3]) !== '' ? trim($cols[3]) : 'Penerbit Impor';
-            $publishYear = isset($cols[4]) && is_numeric(trim($cols[4])) ? (int)trim($cols[4]) : (int)date('Y');
+            // Deteksi format berdasarkan jumlah kolom (Format Stock Opname Memiliki 11-13 Kolom)
+            if (count($cols) >= 11) {
+                // Stock Opname: [0]NO, [1]JUDUL, [2]KODE, [3]PENGARANG, [4]PENERBIT, [5]KOTA TERBIT, [6]TAHUN, [7]ASAL, [8]ISBN, [9]EKS, [10]INVENTARIS, [11]BARCODE, [12]KET
+                $title = trim($cols[1] ?? $cols[0]);
+                $kode = trim($cols[2] ?? '');
+                $author = trim($cols[3] ?? 'Penulis Tidak Diketahui');
+                $publisher = trim($cols[4] ?? 'Penerbit Impor');
+                // Kota Terbit (cols[5]) diabaikan sesuai instruksi
+                $publishYear = isset($cols[6]) && is_numeric(trim($cols[6])) ? (int)trim($cols[6]) : (int)date('Y');
+                $asal = trim($cols[7] ?? '');
+                $isbn = isset($cols[8]) ? preg_replace('/[^0-9X]/i', '', trim($cols[8])) : null;
+                $inventaris = trim($cols[10] ?? '');
+                $barcode = trim($cols[11] ?? '');
+                $ket = trim($cols[12] ?? '');
 
-            // Cek apakah kolom 5 adalah TahunPengadaan (format 4 digit angka) atau KodeKategoriDDC
-            $hasProcurementCol = isset($cols[5]) && is_numeric(trim($cols[5])) && strlen(trim($cols[5])) === 4 && count($cols) >= 9;
+                // Ekstraksi Tahun Pengadaan dari BARCODE (2 angka setelah kata INDO, misal INDO12001 -> 2012)
+                $procurementYear = (int)date('Y');
+                if (preg_match('/INDO(\d{2})/i', $barcode, $matches)) {
+                    $procurementYear = 2000 + (int)$matches[1];
+                } elseif (preg_match('/20\d{2}/', $asal, $matches)) {
+                    $procurementYear = (int)$matches[0];
+                }
 
-            if ($hasProcurementCol) {
-                $procurementYear = (int)trim($cols[5]);
+                if (!empty($title)) {
+                    $parsedRows[] = [
+                        'title' => $title,
+                        'author' => !empty($author) ? $author : 'Penulis Tidak Diketahui',
+                        'publisher' => !empty($publisher) ? $publisher : 'Penerbit Impor',
+                        'publish_year' => $publishYear,
+                        'procurement_year' => $procurementYear,
+                        'isbn' => $isbn ?: null,
+                        'kode' => $kode,
+                        'inventaris' => $inventaris,
+                        'barcode' => $barcode,
+                        'ket' => $ket,
+                        'type' => 'stock_opname',
+                    ];
+                }
+            } else {
+                // Format Standard CSV: Judul, Pengarang, ISBN, Penerbit, TahunTerbit, TahunPengadaan, KodeKategoriDDC, KodeRak, JumlahEksemplar
+                $title = trim($cols[0]);
+                $author = trim($cols[1] ?? 'Penulis Tidak Diketahui');
+                $isbn = isset($cols[2]) ? preg_replace('/[^0-9X]/i', '', trim($cols[2])) : null;
+                $publisher = isset($cols[3]) && trim($cols[3]) !== '' ? trim($cols[3]) : 'Penerbit Impor';
+                $publishYear = isset($cols[4]) && is_numeric(trim($cols[4])) ? (int)trim($cols[4]) : (int)date('Y');
+                $procurementYear = isset($cols[5]) && is_numeric(trim($cols[5])) ? (int)trim($cols[5]) : (int)date('Y');
                 $categoryCode = isset($cols[6]) ? trim($cols[6]) : null;
                 $rackCode = isset($cols[7]) ? trim($cols[7]) : null;
                 $copiesCount = isset($cols[8]) && is_numeric(trim($cols[8])) ? (int)trim($cols[8]) : 1;
-            } else {
-                $procurementYear = (int)date('Y');
-                $categoryCode = isset($cols[5]) ? trim($cols[5]) : null;
-                $rackCode = isset($cols[6]) ? trim($cols[6]) : null;
-                $copiesCount = isset($cols[7]) && is_numeric(trim($cols[7])) ? (int)trim($cols[7]) : 1;
-            }
 
+                if (!empty($title)) {
+                    $parsedRows[] = [
+                        'title' => $title,
+                        'author' => $author,
+                        'publisher' => $publisher,
+                        'publish_year' => $publishYear,
+                        'procurement_year' => $procurementYear,
+                        'isbn' => $isbn ?: null,
+                        'category_code' => $categoryCode,
+                        'rack_code' => $rackCode,
+                        'copies_count' => $copiesCount,
+                        'type' => 'standard',
+                    ];
+                }
+            }
+        }
+
+        // Grouping data berdasarkan ISBN (jika ada) atau Judul + Penulis
+        $grouped = [];
+        foreach ($parsedRows as $row) {
+            if (!empty($row['isbn'])) {
+                $groupKey = 'ISBN_' . $row['isbn'];
+            } else {
+                $groupKey = 'TITLE_' . strtolower(preg_replace('/[^A-Za-z0-9]/', '', $row['title'] . $row['author']));
+            }
+            $grouped[$groupKey][] = $row;
+        }
+
+        $importedBooks = 0;
+        $importedCopies = 0;
+
+        foreach ($grouped as $groupKey => $itemRows) {
+            $firstRow = $itemRows[0];
+
+            // Penentuan Kategori & DDC
             $category = null;
-            if ($categoryCode) {
-                $category = Category::where('code', $categoryCode)->orWhere('id', $categoryCode)->first();
+            if (!empty($firstRow['category_code'])) {
+                $category = Category::where('code', $firstRow['category_code'])->orWhere('id', $firstRow['category_code'])->first();
+            }
+            if (!$category && !empty($firstRow['kode']) && preg_match('/^(\d{3}(?:\.\d+)?)/', $firstRow['kode'], $matches)) {
+                $ddcCode = $matches[1];
+                $category = Category::where('code', $ddcCode)->first();
+                if (!$category) {
+                    $category = Category::create([
+                        'code' => $ddcCode,
+                        'name' => "Kategori DDC " . $ddcCode,
+                        'description' => "Otomatis dibuat dari impor file Stock Opname",
+                    ]);
+                }
             }
             $categoryId = $category ? $category->id : ($defaultCat ? $defaultCat->id : 1);
 
+            // Penentuan Rak
             $rack = null;
-            if ($rackCode) {
-                $rack = Rack::where('code_rack', $rackCode)->orWhere('id', $rackCode)->first();
+            if (!empty($firstRow['rack_code'])) {
+                $rack = Rack::where('code_rack', $firstRow['rack_code'])->orWhere('id', $firstRow['rack_code'])->first();
             }
             $rackId = $rack ? $rack->id : ($defaultRack ? $defaultRack->id : 1);
 
-            if (empty($title) || empty($author)) continue;
+            // Call Number
+            $callNumber = !empty($firstRow['kode']) ? $firstRow['kode'] : null;
+            $coverUrl = !empty($firstRow['isbn']) ? "https://covers.openlibrary.org/b/isbn/{$firstRow['isbn']}-L.jpg" : null;
 
-            $book = Book::create([
-                'isbn' => $isbn,
-                'title' => $title,
-                'author' => $author,
-                'publisher' => $publisher,
-                'publish_year' => $publishYear,
-                'procurement_year' => $procurementYear,
-                'category_id' => $categoryId,
-                'rack_id' => $rackId,
-                'total_copies' => $copiesCount,
-            ]);
+            // Cari atau Buat Buku Induk
+            $book = null;
+            if (!empty($firstRow['isbn'])) {
+                $book = Book::where('isbn', $firstRow['isbn'])->first();
+            }
+            if (!$book) {
+                $book = Book::where('title', $firstRow['title'])
+                    ->where('author', $firstRow['author'])
+                    ->first();
+            }
 
-            $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $title), 0, 4));
-            $yy = substr((string)$procurementYear, -2);
+            $totalCopiesInGroup = 0;
+            foreach ($itemRows as $r) {
+                $totalCopiesInGroup += ($r['type'] === 'standard') ? ($r['copies_count'] ?? 1) : 1;
+            }
 
-            for ($i = 1; $i <= $copiesCount; $i++) {
-                $runningInventory++;
-                $suffix = chr(64 + $i);
-                $copyCode = "IMP-{$shortTitle}-{$book->id}-{$suffix}";
-                $barcode = BarcodeService::generateCopyBarcode($yy, $runningInventory);
-
-                BookCopy::create([
-                    'book_id' => $book->id,
-                    'copy_code' => $copyCode,
-                    'barcode_hash' => $barcode,
-                    'condition' => 'good',
-                    'status' => 'available',
+            if (!$book) {
+                $book = Book::create([
+                    'isbn' => $firstRow['isbn'],
+                    'title' => $firstRow['title'],
+                    'author' => $firstRow['author'],
+                    'publisher' => $firstRow['publisher'],
+                    'publish_year' => $firstRow['publish_year'],
+                    'procurement_year' => $firstRow['procurement_year'],
+                    'category_id' => $categoryId,
+                    'rack_id' => $rackId,
+                    'call_number' => $callNumber,
+                    'cover_image' => $coverUrl,
+                    'total_copies' => $totalCopiesInGroup,
+                ]);
+                $importedBooks++;
+            } else {
+                $book->update([
+                    'total_copies' => $book->total_copies + $totalCopiesInGroup,
                 ]);
             }
 
-            $importedCount++;
+            // Simpan Eksemplar Fisik
+            foreach ($itemRows as $idx => $r) {
+                if ($r['type'] === 'stock_opname') {
+                    $copyCode = !empty($r['inventaris']) ? $r['inventaris'] : "INV-{$book->id}-" . ($idx + 1);
+                    $barcodeHash = !empty($r['barcode']) ? $r['barcode'] : "BC-{$book->id}-" . str_pad($idx + 1, 4, '0', STR_PAD_LEFT);
+                    $condition = str_contains(strtolower($r['ket'] ?? ''), 'rusak') ? 'damaged' : 'good';
+
+                    BookCopy::firstOrCreate(
+                        ['barcode_hash' => $barcodeHash],
+                        [
+                            'book_id' => $book->id,
+                            'copy_code' => $copyCode,
+                            'condition' => $condition,
+                            'status' => $condition === 'damaged' ? 'damaged' : 'available',
+                        ]
+                    );
+                    $importedCopies++;
+                } else {
+                    $cnt = $r['copies_count'] ?? 1;
+                    $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
+                    for ($i = 1; $i <= $cnt; $i++) {
+                        $suffix = chr(64 + $i);
+                        $copyCode = "IMP-{$shortTitle}-{$book->id}-{$suffix}-" . Str::random(3);
+                        $barcodeHash = "BC-" . strtoupper(Str::random(8));
+
+                        BookCopy::create([
+                            'book_id' => $book->id,
+                            'copy_code' => $copyCode,
+                            'barcode_hash' => $barcodeHash,
+                            'condition' => 'good',
+                            'status' => 'available',
+                        ]);
+                        $importedCopies++;
+                    }
+                }
+            }
         }
 
-        return back()->with('success', "Berhasil mengimpor {$importedCount} judul buku massal!");
+        return back()->with('success', "Berhasil mengimpor {$importedBooks} judul buku induk & {$importedCopies} eksemplar fisik!");
     }
 
     /**
-     * Unduh Template CSV Impor Massal
+     * Parser XML bawaan untuk membaca sheet file Excel (.xlsx / .xlsm)
+     */
+    private function parseExcelXml($filePath)
+    {
+        $rows = [];
+        $zip = new \ZipArchive();
+        if ($zip->open($filePath) === true) {
+            $sharedStrings = [];
+            if (($index = $zip->locateName('xl/sharedStrings.xml')) !== false) {
+                $xmlStr = $zip->getFromIndex($index);
+                if ($xmlStr) {
+                    $xml = simplexml_load_string($xmlStr);
+                    if ($xml && isset($xml->si)) {
+                        foreach ($xml->si as $si) {
+                            $text = '';
+                            if (isset($si->t)) {
+                                $text = (string)$si->t;
+                            } elseif (isset($si->r)) {
+                                foreach ($si->r as $r) {
+                                    $text .= (string)$r->t;
+                                }
+                            }
+                            $sharedStrings[] = $text;
+                        }
+                    }
+                }
+            }
+
+            $sheetXmlStr = null;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                if (str_contains($stat['name'], 'xl/worksheets/sheet')) {
+                    $sheetXmlStr = $zip->getFromIndex($i);
+                    break;
+                }
+            }
+
+            if ($sheetXmlStr) {
+                $xml = simplexml_load_string($sheetXmlStr);
+                if ($xml && isset($xml->sheetData->row)) {
+                    foreach ($xml->sheetData->row as $row) {
+                        $rowVals = [];
+                        foreach ($row->c as $c) {
+                            $cellType = (string)$c['t'];
+                            $v = isset($c->v) ? (string)$c->v : '';
+                            if ($cellType === 's' && is_numeric($v) && isset($sharedStrings[(int)$v])) {
+                                $v = $sharedStrings[(int)$v];
+                            }
+                            $rowVals[] = trim($v);
+                        }
+                        if (!empty(array_filter($rowVals))) {
+                            $rows[] = $rowVals;
+                        }
+                    }
+                }
+            }
+            $zip->close();
+        }
+        return $rows;
+    }
+
+    /**
+     * Unduh Template CSV Impor Massal Format Stock Opname Terbaru
      */
     public function downloadTemplate()
     {
@@ -687,9 +896,12 @@ class BookController extends Controller
 
         $callback = function () {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Judul', 'Pengarang', 'ISBN', 'Penerbit', 'TahunTerbit', 'TahunPengadaan', 'KodeKategoriDDC', 'KodeRak', 'JumlahEksemplar']);
-            fputcsv($file, ['Pemrograman Web dengan Laravel 11', 'Budi Santoso M.Kom', '978-602-8765-43-2', 'Informatika Press', '2022', '2026', '000', 'RAK-01', '3']);
-            fputcsv($file, ['Panduan Rekam Medis Modern', 'Dr. Hendra Wijaya', '978-602-1234-56-7', 'Airlangga Press', '2020', '2024', '600', 'RAK-02', '2']);
+            // Header persis format Stock Opname
+            fputcsv($file, ['NO', 'JUDUL', 'KODE', 'PENGARANG', 'PENERBIT', 'KOTA TERBIT', 'TAHUN', 'ASAL', 'ISBN', 'EKS', 'INVENTARIS', 'BARCODE', 'KET']);
+            // Contoh baris 1
+            fputcsv($file, ['1', 'Pemrograman Web dengan Laravel 11 & React', '005.1 BUD p', 'Budi Santoso M.Kom', 'Informatika Press', 'Bandung', '2023', 'PB 2024', '978-602-8765-43-2', '1', '0001/PERPUSINDO/TO/2024', 'INDO240001', 'Bagus']);
+            // Contoh baris 2
+            fputcsv($file, ['2', 'Panduan Rekam Medis & Manajemen Kesehatan', '610 HEN p', 'Dr. Hendra Wijaya', 'Airlangga Press', 'Surabaya', '2021', 'PB 2024', '978-602-1234-56-7', '1', '0002/PERPUSINDO/TO/2024', 'INDO240002', 'Bagus']);
             fclose($file);
         };
 

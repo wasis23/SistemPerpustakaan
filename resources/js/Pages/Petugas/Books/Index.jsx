@@ -9,8 +9,8 @@ export default function Index({ books, categories, racks, filters }) {
     const [rackId, setRackId] = useState(filters.rack_id || '');
     const [showImportModal, setShowImportModal] = useState(false);
 
-    const { data: importData, setData: setImportData, post: postImport, processing: importing } = useForm({
-        csv_data: '',
+    const { data: importData, setData: setImportData, post: postImport, processing: importing, errors: importErrors, reset: resetImport } = useForm({
+        file: null,
     });
 
     const handleFilter = (e) => {
@@ -33,10 +33,16 @@ export default function Index({ books, categories, racks, filters }) {
 
     const handleImportSubmit = (e) => {
         e.preventDefault();
+        if (!importData.file) {
+            alert('Silakan pilih file CSV/Excel terlebih dahulu.');
+            return;
+        }
+
         postImport('/petugas/books/import-csv', {
+            forceFormData: true,
             onSuccess: () => {
                 setShowImportModal(false);
-                setImportData('csv_data', '');
+                resetImport();
             },
         });
     };
@@ -57,7 +63,7 @@ export default function Index({ books, categories, racks, filters }) {
                         <a
                             href="/petugas/books/download-template"
                             className="px-4 py-2.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-2xl text-xs font-bold text-emerald-800 transition-all flex items-center space-x-1.5 shadow-sm"
-                            title="Unduh file contoh format CSV"
+                            title="Unduh file contoh format Stock Opname CSV"
                         >
                             <FileText className="w-4 h-4 text-emerald-600" />
                             <span>Download Template CSV</span>
@@ -69,7 +75,7 @@ export default function Index({ books, categories, racks, filters }) {
                             className="px-4 py-2.5 bg-white border border-slate-300 hover:border-amber-500 rounded-2xl text-xs font-bold text-slate-700 hover:text-amber-700 transition-all flex items-center space-x-1.5 shadow-sm"
                         >
                             <FileText className="w-4 h-4 text-amber-600" />
-                            <span>Impor Massal (CSV)</span>
+                            <span>Impor File (Excel/CSV)</span>
                         </button>
 
                         <Link
@@ -82,7 +88,7 @@ export default function Index({ books, categories, racks, filters }) {
                     </div>
                 </div>
 
-                {/* Import CSV Modal */}
+                {/* Import File Modal */}
                 {showImportModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
                         <div className="bg-white rounded-3xl p-6 max-w-lg w-full border border-amber-900/10 shadow-2xl space-y-4">
@@ -97,42 +103,65 @@ export default function Index({ books, categories, racks, filters }) {
                                 </a>
                             </div>
 
-                            <p className="text-xs text-slate-600">
-                                Format per baris CSV: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-900 font-mono font-bold">Judul, Pengarang, ISBN, Penerbit, TahunTerbit, KodeKategoriDDC, KodeRak, JumlahEksemplar</code>
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                                Unggah dokumen Excel (<code>.xlsm</code>, <code>.xlsx</code>, <code>.xls</code>) atau file <code>.csv</code> berisi data Stock Opname.
                             </p>
 
                             <form onSubmit={handleImportSubmit} className="space-y-4">
-                                <textarea
-                                    value={importData.csv_data}
-                                    onChange={(e) => setImportData('csv_data', e.target.value)}
-                                    rows={6}
-                                    placeholder="Contoh:&#10;Pemrograman Web dengan Laravel 11, Budi Santoso M.Kom, 978-602-8765-43-2, Informatika Press, 2024, 000, RAK-01, 3&#10;Panduan Rekam Medis Modern, Dr. Hendra Wijaya, 978-602-1234-56-7, Airlangga Press, 2023, 600, RAK-02, 2"
-                                    className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 text-xs focus:outline-none focus:border-amber-500 font-mono"
-                                    required
-                                />
+                                <div className="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl p-6 text-center bg-slate-50 hover:bg-amber-50/50 transition-all cursor-pointer">
+                                    <input
+                                        type="file"
+                                        id="import-file-input"
+                                        accept=".csv,.xlsx,.xls,.xlsm"
+                                        onChange={(e) => setImportData('file', e.target.files[0])}
+                                        className="hidden"
+                                    />
+                                    <label htmlFor="import-file-input" className="cursor-pointer block space-y-2">
+                                        <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
+                                            <FileText className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-900 block">
+                                                {importData.file ? importData.file.name : 'Klik untuk memilih file Excel / CSV'}
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 block mt-0.5">
+                                                {importData.file
+                                                    ? `${(importData.file.size / 1024).toFixed(1)} KB`
+                                                    : 'Format didukung: .xlsm, .xlsx, .xls, .csv (Maksimal 20 MB)'}
+                                            </span>
+                                        </div>
+                                    </label>
+                                </div>
 
-                                <div className="flex items-center justify-between">
+                                {importErrors.file && (
+                                    <p className="text-xs font-bold text-rose-600">{importErrors.file}</p>
+                                )}
+
+                                <div className="flex items-center justify-between pt-2">
                                     <a
                                         href="/petugas/books/download-template"
-                                        className="px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100"
+                                        className="px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all"
                                     >
-                                        Unduh File Template
+                                        Unduh Format Template
                                     </a>
 
                                     <div className="flex space-x-3">
                                         <button
                                             type="button"
-                                            onClick={() => setShowImportModal(false)}
-                                            className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold"
+                                            onClick={() => {
+                                                setShowImportModal(false);
+                                                resetImport();
+                                            }}
+                                            className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all"
                                         >
                                             Batal
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={importing}
-                                            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow"
+                                            disabled={importing || !importData.file}
+                                            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 rounded-xl text-xs font-bold shadow transition-all"
                                         >
-                                            {importing ? 'Memproses...' : 'Mulai Impor Buku'}
+                                            {importing ? 'Mengunggah & Memproses...' : 'Upload & Impor Buku'}
                                         </button>
                                     </div>
                                 </div>

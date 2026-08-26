@@ -66,7 +66,7 @@ class BookController extends Controller
     }
 
     /**
-     * Fetch Data Katalog Global (Open Library API + Google Books Fallback)
+     * Fetch Data Katalog Global via ISBN (Open Library API -> Indonesia OneSearch Fallback)
      */
     public function fetchExternalMetadata(Request $request)
     {
@@ -74,22 +74,57 @@ class BookController extends Controller
         if (empty($query)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Parameter ISBN atau Judul buku tidak boleh kosong.'
+                'message' => 'Nomor ISBN tidak boleh kosong.'
             ], 400);
         }
 
-        $isIsbn = (bool) preg_match('/^[0-9xX\-]{9,}$/', $query);
-        $cleanQuery = preg_replace('/[^0-9X]/i', '', $query);
+        // HANYA MENDUKUNG PENCARIAN BERDASARKAN ISBN
+        $cleanIsbn = preg_replace('/[^0-9X]/i', '', $query);
+        $isIsbn = (bool) preg_match('/^[0-9]{9}[0-9X]$|^[0-9]{13}$/i', $cleanIsbn);
+
+        if (!$isIsbn && strlen($cleanIsbn) < 9) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pencarian katalog otomatis hanya mendukung scan barcode / nomor ISBN valid (10 atau 13 digit angka).'
+            ], 422);
+        }
+
+        $classifyDdc = function ($text) {
+            $text = strtolower($text);
+            if (preg_match('/fiction|novel|literature|sastra|cerpen|komik|poetry|drama|fiksi|bumi|hujan|matahari|bintang|komet|negeri/i', $text)) {
+                return '800';
+            } elseif (preg_match('/computer|programming|software|coding|web development|database|python|javascript|php|informatics|rekayasa perangkat lunak|laravel|java|react/i', $text)) {
+                return '004';
+            } elseif (preg_match('/health|medical|kedokteran|kesehatan|rekam medis|nursing|pharmacy|farmasi|mental health|medicine|anatomi|kebidanan|gizi/i', $text)) {
+                return '610';
+            } elseif (preg_match('/business|management|accounting|akuntansi|ekonomi|marketing|manajemen|finance|keuangan|bisnis/i', $text)) {
+                return '650';
+            } elseif (preg_match('/social|law|hukum|politik|sosiologi|education|pendidikan|kriminologi|pancasila|kewarganegaraan/i', $text)) {
+                return '300';
+            } elseif (preg_match('/technology|engineering|teknik|mesin|industri|arsitektur|elektro|otomotif|sipil/i', $text)) {
+                return '600';
+            } elseif (preg_match('/religion|agama|islam|kristen|hindu|buddha|teologi|fiqih|hadis|al-quran|tasawuf/i', $text)) {
+                return '200';
+            } elseif (preg_match('/psychology|psikologi|filsafat|philosophy|etika|stoik|teras/i', $text)) {
+                return '100';
+            } elseif (preg_match('/history|geography|sejarah|geografi|biography|biografi|pahlawan/i', $text)) {
+                return '900';
+            } elseif (preg_match('/art|music|seni|musik|desain|fotografi|gambar/i', $text)) {
+                return '700';
+            } elseif (preg_match('/science|matematika|math|fisika|kimia|biologi|kalkulus/i', $text)) {
+                return '500';
+            } elseif (preg_match('/language|bahasa|linguistik|kamus|english|indonesia/i', $text)) {
+                return '400';
+            }
+            return '000';
+        };
 
         $bookData = null;
         $source = '';
 
-        // 1. Try Open Library API
+        // 1. CARI PERTAMA: Open Library API menggunakan ISBN
         try {
-            $olUrl = $isIsbn 
-                ? "https://openlibrary.org/search.json?isbn=" . urlencode($cleanQuery)
-                : "https://openlibrary.org/search.json?title=" . urlencode($query);
-
+            $olUrl = "https://openlibrary.org/search.json?isbn=" . urlencode($cleanIsbn);
             $response = Http::timeout(6)->get($olUrl);
 
             if ($response->successful()) {
@@ -100,29 +135,55 @@ class BookController extends Controller
                     $authors = isset($doc['author_name']) && is_array($doc['author_name']) ? implode(', ', $doc['author_name']) : ($doc['author_name'] ?? '');
                     $publisher = isset($doc['publisher']) && is_array($doc['publisher']) ? $doc['publisher'][0] : ($doc['publisher'] ?? '');
                     $publishYear = $doc['first_publish_year'] ?? ($doc['publish_year'][0] ?? null);
-                    $isbn = isset($doc['isbn']) && is_array($doc['isbn']) ? $doc['isbn'][0] : ($isIsbn ? $query : null);
+                    $isbn = isset($doc['isbn']) && is_array($doc['isbn']) ? $doc['isbn'][0] : $cleanIsbn;
 
-                    $ddc = null;
-                    if (!empty($doc['ddc'][0])) {
-                        $ddc = (string)$doc['ddc'][0];
-                    } elseif (!empty($doc['dewey_decimal_class'][0])) {
-                        $ddc = (string)$doc['dewey_decimal_class'][0];
+                    $ddc = !empty($doc['ddc'][0]) ? (string)$doc['ddc'][0] : (!empty($doc['dewey_decimal_class'][0]) ? (string)$doc['dewey_decimal_class'][0] : null);
+
+                    // Ambil detail edisi jika Penerbit, ISBN, atau DDC belum lengkap
+                    $editionKey = $doc['cover_edition_key'] ?? ($doc['edition_key'][0] ?? null);
+                    if ($editionKey && (empty($publisher) || empty($isbn) || empty($ddc))) {
+                        try {
+                            $edRes = Http::timeout(3)->get("https://openlibrary.org/books/{$editionKey}.json");
+                            if ($edRes->successful()) {
+                                $edJson = $edRes->json();
+                                if (empty($publisher) && !empty($edJson['publishers'])) {
+                                    $publisher = is_array($edJson['publishers']) ? $edJson['publishers'][0] : (string)$edJson['publishers'];
+                                }
+                                if (empty($isbn)) {
+                                    $isbn = $edJson['isbn_13'][0] ?? ($edJson['isbn_10'][0] ?? $cleanIsbn);
+                                }
+                                if (empty($ddc) && !empty($edJson['dewey_decimal_class'][0])) {
+                                    $ddc = (string)$edJson['dewey_decimal_class'][0];
+                                }
+                            }
+                        } catch (\Throwable $e) {}
                     }
 
-                    $coverUrl = null;
-                    if (!empty($doc['cover_i'])) {
-                        $coverUrl = "https://covers.openlibrary.org/b/id/{$doc['cover_i']}-L.jpg";
-                    } elseif ($isbn) {
-                        $coverUrl = "https://covers.openlibrary.org/b/isbn/{$isbn}-L.jpg";
+                    if (empty($ddc)) {
+                        $subjects = is_array($doc['subject'] ?? null) ? array_map('strtolower', $doc['subject']) : [];
+                        if (empty($subjects) && !empty($doc['key'])) {
+                            try {
+                                $workRes = Http::timeout(3)->get("https://openlibrary.org{$doc['key']}.json");
+                                if ($workRes->successful()) {
+                                    $workJson = $workRes->json();
+                                    $subjects = is_array($workJson['subjects'] ?? null) ? array_map('strtolower', $workJson['subjects']) : [];
+                                }
+                            } catch (\Throwable $e) {}
+                        }
+                        $ddc = $classifyDdc(implode(' ', $subjects) . ' ' . $title);
                     }
+
+                    $coverUrl = !empty($doc['cover_i'])
+                        ? "https://covers.openlibrary.org/b/id/{$doc['cover_i']}-L.jpg"
+                        : "https://covers.openlibrary.org/b/isbn/{$cleanIsbn}-L.jpg";
 
                     if ($title) {
                         $bookData = [
                             'title' => $title,
                             'author' => $authors ?: 'Penulis Tidak Diketahui',
-                            'publisher' => $publisher,
-                            'publish_year' => $publishYear,
-                            'isbn' => $isbn,
+                            'publisher' => $publisher ?: '',
+                            'publish_year' => $publishYear ?: (int)date('Y'),
+                            'isbn' => $isbn ?: $cleanIsbn,
                             'ddc' => $ddc,
                             'cover_url' => $coverUrl,
                         ];
@@ -130,71 +191,88 @@ class BookController extends Controller
                     }
                 }
             }
-        } catch (\Throwable $e) {
-            // Silence exception to proceed to Google Books fallback
-        }
+        } catch (\Throwable $e) {}
 
-        // 2. Fallback to Google Books API
+        // 2. CARI KEDUA: Indonesia OneSearch (onesearch.id) jika tidak ada di Open Library
         if (!$bookData) {
             try {
-                $gbUrl = $isIsbn
-                    ? "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode($cleanQuery)
-                    : "https://www.googleapis.com/books/v1/volumes?q=" . urlencode($query);
+                $osUrl = "https://onesearch.id/Search/Results?lookfor=" . urlencode($cleanIsbn) . "&view=rss";
+                $osResponse = Http::timeout(6)->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                ])->get($osUrl);
 
-                $response = Http::timeout(6)->get($gbUrl);
+                if ($osResponse->successful()) {
+                    $xml = @simplexml_load_string($osResponse->body());
+                    if ($xml && !empty($xml->channel->item[0])) {
+                        $item = $xml->channel->item[0];
+                        $namespaces = $item->getNamespaces(true);
+                        $dc = $item->children($namespaces['dc'] ?? 'http://purl.org/dc/elements/1.1/');
 
-                if ($response->successful()) {
-                    $json = $response->json();
-                    if (!empty($json['items'][0]['volumeInfo'])) {
-                        $info = $json['items'][0]['volumeInfo'];
-                        $title = $info['title'] ?? null;
-                        $authors = isset($info['authors']) && is_array($info['authors']) ? implode(', ', $info['authors']) : '';
-                        $publisher = $info['publisher'] ?? '';
-                        
-                        $publishYear = null;
-                        if (!empty($info['publishedDate'])) {
-                            $publishYear = (int)substr($info['publishedDate'], 0, 4);
+                        $rawTitle = (string)$item->title;
+                        if (strpos($rawTitle, ' / ') !== false) {
+                            $rawTitle = explode(' / ', $rawTitle)[0];
                         }
 
-                        $isbn = null;
-                        if (!empty($info['industryIdentifiers']) && is_array($info['industryIdentifiers'])) {
-                            foreach ($info['industryIdentifiers'] as $idItem) {
-                                if (in_array($idItem['type'] ?? '', ['ISBN_13', 'ISBN_10'])) {
-                                    $isbn = $idItem['identifier'];
-                                    break;
+                        $author = (string)($dc->creator ?: $item->author);
+                        $year = (string)$dc->date;
+                        $link = (string)$item->link;
+                        $publisher = '';
+
+                        // Tarik metadata detail RIS Export untuk nama penerbit & pengarang lengkap
+                        if (!empty($link)) {
+                            try {
+                                $exportUrl = rtrim($link, '/') . '/Export?style=RIS';
+                                $expRes = Http::timeout(3)->withHeaders([
+                                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                                ])->get($exportUrl);
+
+                                if ($expRes->successful()) {
+                                    $lines = explode("\n", $expRes->body());
+                                    foreach ($lines as $line) {
+                                        $line = trim($line);
+                                        if (str_starts_with($line, 'TI  - ') && empty($rawTitle)) {
+                                            $rawTitle = substr($line, 6);
+                                        } elseif (str_starts_with($line, 'AU  - ') && (empty($author) || str_contains($author, ','))) {
+                                            $author = substr($line, 6);
+                                        } elseif (str_starts_with($line, 'PB  - ')) {
+                                            $publisher = substr($line, 6);
+                                        } elseif (str_starts_with($line, 'PY  - ') && empty($year)) {
+                                            $year = substr($line, 6);
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                        if (!$isbn && $isIsbn) $isbn = $query;
-
-                        $coverUrl = null;
-                        if (!empty($info['imageLinks']['thumbnail'])) {
-                            $coverUrl = str_replace('http://', 'https://', $info['imageLinks']['thumbnail']);
+                            } catch (\Throwable $e) {}
                         }
 
-                        if ($title) {
+                        // Format penulisan jika nama pengarang 'NamaBelakang, NamaDepan'
+                        if (strpos($author, ',') !== false) {
+                            $parts = explode(',', $author);
+                            $author = trim($parts[1] ?? '') . ' ' . trim($parts[0] ?? '');
+                        }
+
+                        if (!empty($rawTitle)) {
+                            $ddc = $classifyDdc($rawTitle . ' ' . $author . ' ' . $publisher);
+
                             $bookData = [
-                                'title' => $title,
-                                'author' => $authors ?: 'Penulis Tidak Diketahui',
-                                'publisher' => $publisher,
-                                'publish_year' => $publishYear,
-                                'isbn' => $isbn,
-                                'ddc' => null,
-                                'cover_url' => $coverUrl,
+                                'title' => trim($rawTitle),
+                                'author' => trim($author) ?: 'Penulis Tidak Diketahui',
+                                'publisher' => trim($publisher) ?: '',
+                                'publish_year' => is_numeric(trim($year)) ? (int)trim($year) : (int)date('Y'),
+                                'isbn' => $cleanIsbn,
+                                'ddc' => $ddc,
+                                'cover_url' => "https://covers.openlibrary.org/b/isbn/{$cleanIsbn}-L.jpg",
                             ];
-                            $source = 'Google Books API (Fallback)';
+                            $source = 'Indonesia OneSearch (onesearch.id)';
                         }
                     }
                 }
-            } catch (\Throwable $e) {
-                // Silence exception
-            }
+            } catch (\Throwable $e) {}
         }
 
         if (!$bookData) {
             return response()->json([
                 'success' => false,
-                'message' => 'Buku tidak ditemukan di Open Library maupun Google Books API.'
+                'message' => 'Buku dengan nomor ISBN ' . $query . ' tidak ditemukan di Open Library maupun Indonesia OneSearch. Silakan lengkapi form manual.'
             ], 404);
         }
 
@@ -210,7 +288,22 @@ class BookController extends Controller
         }
 
         if (!$category) {
-            $categoryName = "Kategori DDC " . $ddcCode;
+            $standardNames = [
+                '000' => 'Karya Umum & Komputer',
+                '004' => 'Pemrograman & Rekayasa Perangkat Lunak',
+                '100' => 'Filsafat & Psikologi',
+                '200' => 'Agama & Kepercayaan',
+                '300' => 'Ilmu Sosial & Hukum',
+                '400' => 'Bahasa & Linguistik',
+                '500' => 'Sains & Matematika',
+                '600' => 'Teknologi & Ilmu Terapan',
+                '610' => 'Kesehatan & Rekam Medis',
+                '650' => 'Manajemen & Akuntansi',
+                '700' => 'Kesenian & Olahraga',
+                '800' => 'Kesusastraan & Novel',
+                '900' => 'Sejarah & Geografi',
+            ];
+            $categoryName = $standardNames[$ddcCode] ?? "Kategori DDC " . $ddcCode;
             $category = Category::create([
                 'code' => $ddcCode,
                 'name' => $categoryName,
@@ -262,6 +355,7 @@ class BookController extends Controller
             'author' => ['required', 'string', 'max:255'],
             'publisher' => ['nullable', 'string', 'max:255'],
             'publish_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
+            'procurement_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
             'category_id' => ['required', 'exists:categories,id'],
             'rack_id' => ['required', 'exists:racks,id'],
             'call_number' => ['nullable', 'string', 'max:100'],
@@ -296,12 +390,17 @@ class BookController extends Controller
             $callNumber = "{$catCode} {$authorCode} {$titleCode}";
         }
 
+        $procurementYear = !empty($validated['procurement_year']) 
+            ? (int)$validated['procurement_year'] 
+            : (int)date('Y');
+
         $book = Book::create([
             'isbn' => $validated['isbn'],
             'title' => $validated['title'],
             'author' => $validated['author'],
             'publisher' => $validated['publisher'],
             'publish_year' => $validated['publish_year'],
+            'procurement_year' => $procurementYear,
             'category_id' => $validated['category_id'],
             'rack_id' => $validated['rack_id'],
             'cover_image' => $coverPath,
@@ -313,11 +412,15 @@ class BookController extends Controller
         $category = Category::find($validated['category_id']);
         $catCode = $category ? $category->code : 'GEN';
         $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $validated['title']), 0, 4));
+        $yy = substr((string)$procurementYear, -2);
+
+        $baseInventoryNumber = BarcodeService::getNextInventoryNumber(0);
 
         for ($i = 1; $i <= $validated['initial_copies']; $i++) {
             $suffix = chr(64 + $i);
             $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
-            $barcode = "BC-" . strtoupper(Str::random(8));
+            $invNumber = $baseInventoryNumber + $i;
+            $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
 
             BookCopy::create([
                 'book_id' => $book->id,
@@ -381,6 +484,7 @@ class BookController extends Controller
             'author' => ['required', 'string', 'max:255'],
             'publisher' => ['nullable', 'string', 'max:255'],
             'publish_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
+            'procurement_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
             'category_id' => ['required', 'exists:categories,id'],
             'rack_id' => ['required', 'exists:racks,id'],
             'call_number' => ['nullable', 'string', 'max:100'],
@@ -425,13 +529,19 @@ class BookController extends Controller
 
         $category = $book->category;
         $catCode = $category ? $category->code : 'GEN';
-        $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
+        $procurementYear = !empty($book->procurement_year) 
+            ? (int)$book->procurement_year 
+            : (!empty($book->publish_year) ? (int)$book->publish_year : (int)date('Y'));
+        $yy = substr((string)$procurementYear, -2);
+
+        $baseInventoryNumber = BarcodeService::getNextInventoryNumber(0);
 
         for ($i = 1; $i <= $request->count; $i++) {
             $num = $currentCount + $i;
             $suffix = $num <= 26 ? chr(64 + $num) : "X{$num}";
             $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
-            $barcode = "BC-" . strtoupper(Str::random(8));
+            $invNumber = $baseInventoryNumber + $i;
+            $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
 
             BookCopy::create([
                 'book_id' => $book->id,
@@ -485,6 +595,7 @@ class BookController extends Controller
 
         $defaultCat = Category::first();
         $defaultRack = Rack::first();
+        $runningInventory = BarcodeService::getNextInventoryNumber(0);
 
         foreach ($lines as $line) {
             $cols = str_getcsv(trim($line));
@@ -499,21 +610,32 @@ class BookController extends Controller
             $publisher = isset($cols[3]) && trim($cols[3]) !== '' ? trim($cols[3]) : 'Penerbit Impor';
             $publishYear = isset($cols[4]) && is_numeric(trim($cols[4])) ? (int)trim($cols[4]) : (int)date('Y');
 
-            $categoryCode = isset($cols[5]) ? trim($cols[5]) : null;
+            // Cek apakah kolom 5 adalah TahunPengadaan (format 4 digit angka) atau KodeKategoriDDC
+            $hasProcurementCol = isset($cols[5]) && is_numeric(trim($cols[5])) && strlen(trim($cols[5])) === 4 && count($cols) >= 9;
+
+            if ($hasProcurementCol) {
+                $procurementYear = (int)trim($cols[5]);
+                $categoryCode = isset($cols[6]) ? trim($cols[6]) : null;
+                $rackCode = isset($cols[7]) ? trim($cols[7]) : null;
+                $copiesCount = isset($cols[8]) && is_numeric(trim($cols[8])) ? (int)trim($cols[8]) : 1;
+            } else {
+                $procurementYear = (int)date('Y');
+                $categoryCode = isset($cols[5]) ? trim($cols[5]) : null;
+                $rackCode = isset($cols[6]) ? trim($cols[6]) : null;
+                $copiesCount = isset($cols[7]) && is_numeric(trim($cols[7])) ? (int)trim($cols[7]) : 1;
+            }
+
             $category = null;
             if ($categoryCode) {
                 $category = Category::where('code', $categoryCode)->orWhere('id', $categoryCode)->first();
             }
             $categoryId = $category ? $category->id : ($defaultCat ? $defaultCat->id : 1);
 
-            $rackCode = isset($cols[6]) ? trim($cols[6]) : null;
             $rack = null;
             if ($rackCode) {
                 $rack = Rack::where('code_rack', $rackCode)->orWhere('id', $rackCode)->first();
             }
             $rackId = $rack ? $rack->id : ($defaultRack ? $defaultRack->id : 1);
-
-            $copiesCount = isset($cols[7]) && is_numeric(trim($cols[7])) ? (int)trim($cols[7]) : 1;
 
             if (empty($title) || empty($author)) continue;
 
@@ -523,17 +645,20 @@ class BookController extends Controller
                 'author' => $author,
                 'publisher' => $publisher,
                 'publish_year' => $publishYear,
+                'procurement_year' => $procurementYear,
                 'category_id' => $categoryId,
                 'rack_id' => $rackId,
                 'total_copies' => $copiesCount,
             ]);
 
             $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $title), 0, 4));
+            $yy = substr((string)$procurementYear, -2);
 
             for ($i = 1; $i <= $copiesCount; $i++) {
+                $runningInventory++;
                 $suffix = chr(64 + $i);
                 $copyCode = "IMP-{$shortTitle}-{$book->id}-{$suffix}";
-                $barcode = "BC-" . strtoupper(Str::random(8));
+                $barcode = BarcodeService::generateCopyBarcode($yy, $runningInventory);
 
                 BookCopy::create([
                     'book_id' => $book->id,
@@ -562,9 +687,9 @@ class BookController extends Controller
 
         $callback = function () {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Judul', 'Pengarang', 'ISBN', 'Penerbit', 'TahunTerbit', 'KodeKategoriDDC', 'KodeRak', 'JumlahEksemplar']);
-            fputcsv($file, ['Pemrograman Web dengan Laravel 11', 'Budi Santoso M.Kom', '978-602-8765-43-2', 'Informatika Press', '2024', '000', 'RAK-01', '3']);
-            fputcsv($file, ['Panduan Rekam Medis Modern', 'Dr. Hendra Wijaya', '978-602-1234-56-7', 'Airlangga Press', '2023', '600', 'RAK-02', '2']);
+            fputcsv($file, ['Judul', 'Pengarang', 'ISBN', 'Penerbit', 'TahunTerbit', 'TahunPengadaan', 'KodeKategoriDDC', 'KodeRak', 'JumlahEksemplar']);
+            fputcsv($file, ['Pemrograman Web dengan Laravel 11', 'Budi Santoso M.Kom', '978-602-8765-43-2', 'Informatika Press', '2022', '2026', '000', 'RAK-01', '3']);
+            fputcsv($file, ['Panduan Rekam Medis Modern', 'Dr. Hendra Wijaya', '978-602-1234-56-7', 'Airlangga Press', '2020', '2024', '600', 'RAK-02', '2']);
             fclose($file);
         };
 

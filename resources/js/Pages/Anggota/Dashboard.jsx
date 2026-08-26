@@ -190,7 +190,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                             Penuhi Kebutuhan Literasi Akademik Anda!
                         </h3>
                         <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                            Gunakan Kios Presensi di pintu utama untuk mencatat kunjungan harian & sirkulasi mandiri secara instan.
+                            Gunakan Presensi di pintu utama untuk mencatat kunjungan harian & sirkulasi mandiri secara instan.
                         </p>
                         <Link
                             href="/anggota/katalog"

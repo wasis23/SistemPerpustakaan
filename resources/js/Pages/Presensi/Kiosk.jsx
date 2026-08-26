@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { BookOpen, User, Lock, CheckCircle2, Clock, Sparkles, BookMarked, Library, Monitor, GraduationCap, ShieldCheck, ArrowRight } from 'lucide-react';
+import { BookOpen, User, Lock, CheckCircle2, Clock, Sparkles, BookMarked, Library, FileText, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export default function Kiosk({ recentVisitors, todayCount }) {
     const { flash } = usePage().props;
@@ -73,21 +73,15 @@ export default function Kiosk({ recentVisitors, todayCount }) {
         },
         {
             id: 'research',
-            title: 'Penyusunan Riset',
-            desc: 'Penelitian tugas akhir / skripsi',
-            icon: GraduationCap,
-        },
-        {
-            id: 'computer',
-            title: 'Akses Komputer',
-            desc: 'Penggunaan komputer & perpustakaan digital',
-            icon: Monitor,
+            title: 'Pemberkasan',
+            desc: 'Penyerahan berkas tugas akhir & bebas pustaka',
+            icon: FileText,
         },
     ];
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-slate-900 flex flex-col justify-between p-4 sm:p-8 relative overflow-hidden select-none font-sans">
-            <Head title="Kios Presensi Kunjungan Perpustakaan" />
+            <Head title="Presensi Kunjungan Perpustakaan" />
 
             {/* Ambient Background Glows */}
             <div className="absolute -top-32 -left-32 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
@@ -165,7 +159,7 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                             </h2>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                             {purposes.map((p) => {
                                 const Icon = p.icon;
                                 const isSelected = data.visit_purpose === p.id;
@@ -174,18 +168,18 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                                         key={p.id}
                                         type="button"
                                         onClick={() => setData('visit_purpose', p.id)}
-                                        className={`p-4 rounded-2xl text-left transition-all flex items-start space-x-3.5 border ${
+                                        className={`p-4 sm:p-5 rounded-2xl text-left transition-all flex items-start space-x-3.5 sm:flex-col sm:space-x-0 sm:space-y-3 border cursor-pointer ${
                                             isSelected
-                                                ? 'bg-amber-500/15 border-amber-500 text-slate-950 shadow'
-                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-amber-400'
+                                                ? 'bg-amber-500/15 border-amber-500 text-slate-950 shadow-md ring-1 ring-amber-500'
+                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-amber-400 hover:bg-slate-100/60'
                                         }`}
                                     >
-                                        <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                                        <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-slate-500 border border-slate-200 shadow-sm'}`}>
                                             <Icon className="w-5 h-5" />
                                         </div>
                                         <div>
                                             <p className="font-extrabold text-sm text-slate-950">{p.title}</p>
-                                            <p className="text-xs text-slate-500 mt-0.5 font-medium">{p.desc}</p>
+                                            <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">{p.desc}</p>
                                         </div>
                                     </button>
                                 );
@@ -300,7 +294,7 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                     <div className="mt-6 pt-4 border-t border-slate-100 text-center">
                         <div className="inline-flex items-center space-x-2 text-[11px] text-slate-500 font-medium">
                             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                            <span>Terminal Kios Mandiri - Tanpa Sesi Login Permanen</span>
+                            <span>Presensi Mandiri - Tanpa Sesi Login Permanen</span>
                         </div>
                     </div>
                 </div>

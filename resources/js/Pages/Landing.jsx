@@ -61,7 +61,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                                 SIMPUS<span className="text-amber-600">.</span>
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase block">
-                                UPT Perpustakaan Polindo
+                                Politeknik Indonusa Surakarta
                             </span>
                         </div>
                     </Link>
@@ -79,7 +79,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                         </Link>
                         <Link href="/presensi" target="_blank" className="hover:text-amber-600 transition-colors flex items-center space-x-1">
                             <Monitor className="w-4 h-4 text-amber-500" />
-                            <span>Kios Presensi</span>
+                            <span>Presensi</span>
                         </Link>
                         <Link href="#fitur" className="hover:text-amber-600 transition-colors">
                             Keunggulan
@@ -465,9 +465,9 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                                 <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Monitor className="w-6 h-6" />
                                 </div>
-                                <h3 className="font-extrabold text-sm text-slate-950">Kios Presensi Pintu</h3>
+                                <h3 className="font-extrabold text-sm text-slate-950">Presensi Pintu Masuk</h3>
                                 <p className="text-xs text-slate-600 leading-relaxed">
-                                    Terminal presensi terautentikasi otomatis di pintu masuk perpustakaan untuk pencatatan riwayat kunjungan.
+                                    Presensi mandiri terautentikasi otomatis di pintu masuk perpustakaan untuk pencatatan riwayat kunjungan.
                                 </p>
                             </div>
                         </div>
@@ -524,7 +524,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                             <ul className="space-y-2 text-xs">
                                 <li><Link href="/" className="hover:text-amber-400">Beranda</Link></li>
                                 <li><Link href="/katalog" className="hover:text-amber-400">Katalog Buku</Link></li>
-                                <li><Link href="/presensi" target="_blank" className="hover:text-amber-400">Kios Presensi Pintu</Link></li>
+                                <li><Link href="/presensi" target="_blank" className="hover:text-amber-400">Presensi</Link></li>
                                 <li><Link href="/login" className="hover:text-amber-400">Portal Login</Link></li>
                             </ul>
                         </div>

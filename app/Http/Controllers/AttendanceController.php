@@ -80,7 +80,7 @@ class AttendanceController extends Controller
         $purposeLabels = [
             'reading' => 'Membaca Mandiri',
             'borrowing' => 'Peminjaman / Pengembalian Koleksi',
-            'research' => 'Penyusunan Riset / Tugas Akhir',
+            'research' => 'Pemberkasan',
             'computer' => 'Akses Komputer & Digital Library',
         ];
 

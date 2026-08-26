@@ -78,7 +78,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                             className="flex items-center space-x-3 px-4 py-3 text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold rounded-2xl text-xs transition-all border border-amber-200"
                         >
                             <Monitor className="w-4 h-4" />
-                            <span>Terminal Kios</span>
+                            <span>Presensi</span>
                         </Link>
                     </nav>
                 </div>
@@ -153,7 +153,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                                     className="flex items-center space-x-3 px-4 py-3 text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold rounded-2xl text-xs transition-all border border-amber-200"
                                 >
                                     <Monitor className="w-4 h-4" />
-                                    <span>Terminal Kios Presensi</span>
+                                    <span>Presensi</span>
                                 </Link>
                             </nav>
                         </div>

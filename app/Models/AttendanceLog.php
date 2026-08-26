@@ -21,6 +21,24 @@ class AttendanceLog extends Model
         'checked_in_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'purpose_label',
+    ];
+
+    /**
+     * Label Tujuan Kunjungan
+     */
+    public function getPurposeLabelAttribute(): string
+    {
+        return match ($this->visit_purpose) {
+            'reading' => 'Membaca Mandiri',
+            'borrowing' => 'Peminjaman / Pengembalian Koleksi',
+            'research' => 'Pemberkasan',
+            'computer' => 'Akses Komputer',
+            default => $this->visit_purpose ?? '-',
+        };
+    }
+
     /**
      * Relasi ke Pengunjung / Anggota
      */

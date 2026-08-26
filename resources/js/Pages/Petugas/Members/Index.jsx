@@ -42,7 +42,7 @@ export default function Index({ members, prodiList, filters, stats }) {
         name: '',
         email: '',
         password: '',
-        prodi: '',
+        prodi: 'Anggota External',
         phone: '',
         status: 'active',
     });
@@ -451,7 +451,7 @@ export default function Index({ members, prodiList, filters, stats }) {
                                     </div>
                                     <div>
                                         <h3 className="font-extrabold text-base text-slate-950">Tambah Anggota Baru</h3>
-                                        <p className="text-[11px] text-slate-500">Registrasi akun mahasiswa atau dosen</p>
+                                        <p className="text-[11px] text-slate-500">Registrasi akun anggota perpustakaan</p>
                                     </div>
                                 </div>
                                 <button
@@ -500,23 +500,6 @@ export default function Index({ members, prodiList, filters, stats }) {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">Program Studi <span className="text-rose-500">*</span></label>
-                                        <select
-                                            value={createForm.data.prodi}
-                                            onChange={(e) => createForm.setData('prodi', e.target.value)}
-                                            className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:border-amber-500"
-                                            required
-                                        >
-                                            <option value="">-- Pilih Program Studi --</option>
-                                            {prodiList && prodiList.map((p, idx) => (
-                                                <option key={idx} value={p}>{p}</option>
-                                            ))}
-                                        </select>
-                                        {createForm.errors.prodi && (
-                                            <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.prodi}</p>
-                                        )}
-                                    </div>
-                                    <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1">No. HP / WA</label>
                                         <input
                                             type="text"
@@ -525,24 +508,27 @@ export default function Index({ members, prodiList, filters, stats }) {
                                             placeholder="081234567890"
                                             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:border-amber-500"
                                         />
+                                        {createForm.errors.phone && (
+                                            <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.phone}</p>
+                                        )}
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1">Email (Opsional)</label>
                                         <input
                                             type="email"
                                             value={createForm.data.email}
                                             onChange={(e) => createForm.setData('email', e.target.value)}
-                                            placeholder="mhs@email.com"
+                                            placeholder="anggota@email.com"
                                             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:border-amber-500"
                                         />
                                         {createForm.errors.email && (
                                             <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.email}</p>
                                         )}
                                     </div>
+                                </div>
 
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1">Status Akun</label>
                                         <select
@@ -554,23 +540,23 @@ export default function Index({ members, prodiList, filters, stats }) {
                                             <option value="suspended">Ditangguhkan</option>
                                         </select>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                                        Password Akun <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={createForm.data.password}
-                                        onChange={(e) => createForm.setData('password', e.target.value)}
-                                        placeholder="Minimal 6 karakter (default: password)"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:border-amber-500"
-                                        required
-                                    />
-                                    {createForm.errors.password && (
-                                        <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.password}</p>
-                                    )}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                                            Password Akun <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={createForm.data.password}
+                                            onChange={(e) => createForm.setData('password', e.target.value)}
+                                            placeholder="Minimal 6 karakter"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:border-amber-500"
+                                            required
+                                        />
+                                        {createForm.errors.password && (
+                                            <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.password}</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="pt-3 flex space-x-3">

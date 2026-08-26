@@ -139,14 +139,14 @@ export default function Dashboard({ stats }) {
                         <div className="flex items-center justify-between">
                             <h3 className="font-extrabold text-sm text-slate-950 flex items-center space-x-2">
                                 <Monitor className="w-4 h-4 text-amber-600" />
-                                <span>Terminal Kios Presensi</span>
+                                <span>Presensi</span>
                             </h3>
                             <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
                                 Online
                             </span>
                         </div>
                         <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                            Jalankan antarmuka Kiosk Layar Sentuh di PC Pintu Utama untuk mencatat presensi terautentikasi NIM mahasiswa.
+                            Jalankan antarmuka presensi di PC Pintu Utama untuk mencatat kehadiran pengunjung secara mandiri.
                         </p>
                         <Link
                             href="/presensi"
@@ -154,7 +154,7 @@ export default function Dashboard({ stats }) {
                             className="w-full py-3 bg-slate-950 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold shadow text-center flex items-center justify-center space-x-2"
                         >
                             <Monitor className="w-4 h-4 text-amber-400" />
-                            <span>Buka Layar Kiosk Kunjungan ➔</span>
+                            <span>Buka Presensi ➔</span>
                         </Link>
                     </div>
 

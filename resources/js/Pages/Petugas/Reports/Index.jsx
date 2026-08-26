@@ -287,7 +287,7 @@ export default function Index({
                                                 </td>
                                                 <td className="px-4 py-3 text-right whitespace-nowrap">
                                                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-full text-[10px] font-bold">
-                                                        {v.visit_purpose}
+                                                        {v.purpose_label || v.visit_purpose}
                                                     </span>
                                                 </td>
                                             </tr>

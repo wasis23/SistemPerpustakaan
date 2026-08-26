@@ -46,7 +46,7 @@ export default function PrintBarcodes({ book, labels }) {
                     </div>
                     <h2 className="text-lg font-extrabold text-slate-950 tracking-tight">{book.title}</h2>
                     <p className="text-xs text-slate-600 font-semibold mt-0.5">
-                        Penulis: {book.author} | Kategori: DDC {book.category?.code || '-'} | Rak: {book.rack?.code_rack || '-'}
+                        Penulis: {book.author} | DDC {book.category?.code || '-'} | Rak: {book.rack?.code_rack || '-'} | Pengadaan: {book.procurement_year || book.publish_year || '-'}
                     </p>
                 </div>
 

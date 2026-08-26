@@ -17,6 +17,7 @@ class Book extends Model
         'author',
         'publisher',
         'publish_year',
+        'procurement_year',
         'category_id',
         'rack_id',
         'cover_image',

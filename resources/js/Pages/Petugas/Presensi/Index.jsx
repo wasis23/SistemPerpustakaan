@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Users, Search, Filter, BookOpen, GraduationCap, Monitor, Library } from 'lucide-react';
+import { Users, Search, Filter, BookOpen, FileText, Monitor, Library } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
 export default function Index({ logs, filters, stats }) {
@@ -24,7 +24,7 @@ export default function Index({ logs, filters, stats }) {
     const purposeMap = {
         reading: { label: 'Membaca Mandiri', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
         borrowing: { label: 'Peminjaman Koleksi', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-        research: { label: 'Penyusunan Riset', color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+        research: { label: 'Pemberkasan', color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
         computer: { label: 'Akses Komputer', color: 'bg-amber-100 text-amber-800 border-amber-200' },
     };
 
@@ -47,13 +47,13 @@ export default function Index({ logs, filters, stats }) {
                             className="px-4 py-2.5 bg-slate-950 hover:bg-slate-800 text-amber-400 font-bold rounded-2xl text-xs shadow transition-all flex items-center space-x-2"
                         >
                             <Monitor className="w-4 h-4" />
-                            <span>Buka Terminal Kios</span>
+                            <span>Buka Presensi</span>
                         </Link>
                     </div>
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-500 font-bold uppercase">Total Pengunjung</span>
@@ -77,17 +77,10 @@ export default function Index({ logs, filters, stats }) {
                     </div>
                     <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500 font-bold uppercase">Penyusunan Riset</span>
-                            <GraduationCap className="w-4 h-4 text-cyan-600" />
+                            <span className="text-xs text-slate-500 font-bold uppercase">Pemberkasan</span>
+                            <FileText className="w-4 h-4 text-cyan-600" />
                         </div>
                         <p className="text-2xl font-extrabold text-cyan-700 mt-2">{stats.research_total}</p>
-                    </div>
-                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500 font-bold uppercase">Akses Komputer</span>
-                            <Monitor className="w-4 h-4 text-amber-600" />
-                        </div>
-                        <p className="text-2xl font-extrabold text-amber-800 mt-2">{stats.computer_total}</p>
                     </div>
                 </div>
 
@@ -116,8 +109,7 @@ export default function Index({ logs, filters, stats }) {
                                 <option value="">Semua Tujuan Kunjungan</option>
                                 <option value="reading">Membaca Mandiri</option>
                                 <option value="borrowing">Peminjaman Koleksi</option>
-                                <option value="research">Penyusunan Riset</option>
-                                <option value="computer">Akses Komputer</option>
+                                <option value="research">Pemberkasan</option>
                             </select>
                         </div>
 

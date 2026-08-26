@@ -29,6 +29,7 @@ export default function Create({ categories: initialCategories, racks }) {
         author: '',
         publisher: '',
         publish_year: new Date().getFullYear(),
+        procurement_year: new Date().getFullYear(),
         category_id: categories[0]?.id || '',
         rack_id: racks[0]?.id || '',
         call_number: '',
@@ -82,16 +83,30 @@ export default function Create({ categories: initialCategories, racks }) {
         }
     };
 
-    // Fetch data dari Open Library API (+ Google Books Fallback)
+    // Fetch data dari Open Library API -> Indonesia OneSearch Fallback (Hanya via ISBN)
     const handleFetchGlobalKatalog = async (e) => {
         e?.preventDefault();
-        if (!searchQuery.trim()) return;
+        const cleanQuery = searchQuery.replace(/[^0-9X]/gi, '');
+        if (!cleanQuery) return;
+
+        if (cleanQuery.length < 9) {
+            setSearchResultInfo({
+                type: 'error',
+                message: 'Silakan masukkan nomor barcode ISBN yang valid (10 atau 13 digit angka).',
+            });
+            return;
+        }
 
         setIsSearching(true);
         setSearchResultInfo(null);
 
         try {
-            const res = await fetch(`/petugas/books/fetch-api?query=${encodeURIComponent(searchQuery)}`);
+            const res = await fetch(`/petugas/books/fetch-api?query=${encodeURIComponent(cleanQuery)}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             const json = await res.json();
 
             if (json.success) {
@@ -106,7 +121,7 @@ export default function Create({ categories: initialCategories, racks }) {
                     author: b.author || prev.author,
                     publisher: b.publisher || prev.publisher,
                     publish_year: b.publish_year || prev.publish_year,
-                    isbn: b.isbn || prev.isbn,
+                    isbn: b.isbn || cleanQuery || prev.isbn,
                     category_id: b.category_id || prev.category_id,
                     call_number: b.call_number || calculateCallNumber(b.title, b.author, b.category_id),
                     cover_url: b.cover_url || prev.cover_url,
@@ -119,18 +134,18 @@ export default function Create({ categories: initialCategories, racks }) {
 
                 setSearchResultInfo({
                     type: 'success',
-                    message: `Berhasil mengimpor data otomatis via ${json.source}!`,
+                    message: `Berhasil menemukan data buku via ${json.source}!`,
                 });
             } else {
                 setSearchResultInfo({
                     type: 'error',
-                    message: json.message || 'Buku tidak ditemukan di katalog global. Silakan lengkapi form manual.',
+                    message: json.message || 'Buku tidak ditemukan di Open Library maupun Indonesia OneSearch.',
                 });
             }
         } catch (err) {
             setSearchResultInfo({
                 type: 'error',
-                message: 'Gagal terhubung ke layanan API global. Silakan isi form secara manual.',
+                message: 'Gagal terhubung ke layanan API katalog. Silakan isi form secara manual.',
             });
         } finally {
             setIsSearching(false);
@@ -154,25 +169,22 @@ export default function Create({ categories: initialCategories, racks }) {
                     </Link>
                     <div>
                         <h1 className="font-extrabold text-slate-950 text-xl tracking-tight">Tambah Judul Buku & Eksemplar</h1>
-                        <p className="text-xs text-slate-500 font-medium">Input data induk koleksi, auto-fill API global, dan generasi barcode fisik otomatis</p>
+                        <p className="text-xs text-slate-500 font-medium">Input data induk koleksi, auto-fill ISBN Open Library & OneSearch, dan generasi barcode fisik otomatis</p>
                     </div>
                 </div>
 
-                {/* Top Widget: Auto-Fill Scanner via Open Library & Google Books API */}
+                {/* Top Widget: Auto-Fill Scanner via Open Library & Indonesia OneSearch */}
                 <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white p-6 sm:p-8 rounded-3xl border border-amber-900/40 shadow-xl space-y-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="relative z-10 space-y-2">
                         <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
                             <Globe className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Auto-Fill Katalog Global (Open Library & Google Books API)</span>
+                            <span>Auto-Fill Barcode ISBN (Open Library & Indonesia OneSearch)</span>
                         </div>
                         <h2 className="text-lg font-black tracking-tight">
-                            Pindai Barcode ISBN atau Ketik Judul Buku
+                            Pindai Barcode ISBN Buku
                         </h2>
-                        <p className="text-xs text-slate-300 max-w-2xl leading-relaxed font-medium">
-                            Sistem akan otomatis mengambil metadata buku (Judul, Pengarang, Penerbit, DDC, Cover, dan Call Number <span className="text-amber-300 font-bold">DDC+3HurufPenulis+1HurufJudul</span>).
-                        </p>
                     </div>
 
                     <form onSubmit={handleFetchGlobalKatalog} className="relative z-10 flex flex-col sm:flex-row gap-3 pt-2">
@@ -181,8 +193,8 @@ export default function Create({ categories: initialCategories, racks }) {
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Scan barcode ISBN (misal: 9780132350884) atau ketik judul buku..."
-                                className="w-full pl-11 pr-4 py-3.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 text-xs font-semibold"
+                                placeholder="Scan barcode ISBN (misal: 9786020531328 atau 9786024125189)..."
+                                className="w-full pl-11 pr-4 py-3.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 text-xs font-semibold font-mono"
                             />
                             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                         </div>
@@ -194,12 +206,12 @@ export default function Create({ categories: initialCategories, racks }) {
                             {isSearching ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>Mencari Metadata...</span>
+                                    <span>Mencari ISBN...</span>
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="w-4 h-4" />
-                                    <span>CARI & AUTO-FILL FORM</span>
+                                    <span>SCAN & CARI ISBN</span>
                                 </>
                             )}
                         </button>
@@ -343,18 +355,35 @@ export default function Create({ categories: initialCategories, racks }) {
                                 />
                             </div>
 
-                            {/* Tahun Terbit */}
-                            <div>
-                                <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
-                                    Tahun Terbit
-                                </label>
-                                <input
-                                    type="number"
-                                    value={data.publish_year}
-                                    onChange={(e) => setData('publish_year', e.target.value)}
-                                    placeholder="2024"
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-mono font-bold"
-                                />
+                            {/* Tahun Terbit & Tahun Pengadaan */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
+                                        Tahun Terbit
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={data.publish_year}
+                                        onChange={(e) => setData('publish_year', e.target.value)}
+                                        placeholder="2024"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-mono font-bold"
+                                    />
+                                    {errors.publish_year && <p className="text-xs text-rose-600 font-bold mt-1">{errors.publish_year}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                        <span>Tahun Pengadaan</span>
+                                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.5 rounded">Barcode INDO[YY]</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={data.procurement_year}
+                                        onChange={(e) => setData('procurement_year', e.target.value)}
+                                        placeholder={new Date().getFullYear().toString()}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-mono font-bold"
+                                    />
+                                    {errors.procurement_year && <p className="text-xs text-rose-600 font-bold mt-1">{errors.procurement_year}</p>}
+                                </div>
                             </div>
 
                             {/* Kategori DDC */}

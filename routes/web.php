@@ -81,6 +81,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/presensi', [AttendanceController::class, 'index'])->name('presensi.index');
 
         // Manajemen Buku & Barcode Label
+        Route::get('/books/fetch-api', [PetugasBookController::class, 'fetchExternalMetadata'])->name('books.fetch-api');
         Route::get('/books/download-template', [PetugasBookController::class, 'downloadTemplate'])->name('books.download-template');
         Route::post('/books/import-csv', [PetugasBookController::class, 'importCsv'])->name('books.import');
         Route::get('/books/{book}/print-barcodes', [PetugasBookController::class, 'printBarcodes'])->name('books.print-barcodes');

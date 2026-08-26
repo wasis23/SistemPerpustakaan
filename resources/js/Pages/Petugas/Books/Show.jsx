@@ -80,6 +80,11 @@ export default function Show({ book, copies }) {
                             <span className="bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-bold">
                                 [{book.category?.code}] {book.category?.name}
                             </span>
+                            {book.call_number && (
+                                <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-mono font-black">
+                                    🏷️ Call No: {book.call_number}
+                                </span>
+                            )}
                             <span className="bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1 rounded-full text-xs font-mono font-bold">
                                 📍 {book.rack?.code_rack} - {book.rack?.location}
                             </span>

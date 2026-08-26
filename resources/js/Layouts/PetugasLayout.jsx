@@ -7,7 +7,6 @@ import {
     Users, 
     FileSpreadsheet, 
     LogOut, 
-    Search, 
     Compass, 
     Monitor, 
     Library, 
@@ -21,15 +20,7 @@ import {
 
 export default function PetugasLayout({ children, activeMenu, todayVisitsCount }) {
     const { auth } = usePage().props;
-    const [searchQuery, setSearchQuery] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        if (searchQuery.trim()) {
-            router.get('/petugas/circulations', { search: searchQuery });
-        }
-    };
 
     const navItems = [
         { key: 'dashboard', label: 'Dashboard Utama', href: '/petugas/dashboard', icon: Compass },
@@ -92,19 +83,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                     </nav>
                 </div>
 
-                {/* Bottom Sidebar Widget */}
-                <div className="bg-gradient-to-br from-amber-500/10 via-amber-100/50 to-amber-500/20 p-4 rounded-3xl border border-amber-500/20 space-y-3">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-950 text-amber-400 flex items-center justify-center font-bold shadow-sm">
-                        <Users className="w-5 h-5 stroke-[2.5]" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-extrabold text-slate-950">Kunjungan Hari Ini</p>
-                        <p className="text-2xl font-black text-amber-800 mt-1">{todayVisitsCount ?? 0} Pengunjung</p>
-                    </div>
-                    <div className="bg-white/80 p-2 rounded-2xl border border-amber-200 text-center">
-                        <span className="text-[10px] font-bold text-slate-800 font-mono">PUSTAKAWAN ON-DUTY</span>
-                    </div>
-                </div>
+
             </aside>
 
             {/* Mobile Drawer / Slide-Over Sidebar */}
@@ -224,23 +203,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                         </Link>
                     </div>
 
-                    {/* Search Bar Center */}
-                    <form onSubmit={handleSearch} className="max-w-md w-full relative hidden sm:block">
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Cari transaksi sirkulasi, NIM, atau ISBN..."
-                            className="w-full pl-11 pr-24 py-2 bg-white border border-slate-300 rounded-full text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 shadow-sm"
-                        />
-                        <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                        <button
-                            type="submit"
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-bold rounded-full transition-all"
-                        >
-                            Cari
-                        </button>
-                    </form>
+
 
                     {/* Right User Utility */}
                     <div className="flex items-center space-x-2 sm:space-x-3">

@@ -20,6 +20,7 @@ class Book extends Model
         'category_id',
         'rack_id',
         'cover_image',
+        'call_number',
         'total_copies',
     ];
 

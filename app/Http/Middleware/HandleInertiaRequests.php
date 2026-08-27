@@ -62,6 +62,12 @@ class HandleInertiaRequests extends Middleware
                 'success_return' => fn () => $request->session()->get('success_return'),
                 'success_visitor' => fn () => $request->session()->get('success_visitor'),
             ],
+            'library_settings' => [
+                'max_borrow_limit' => fn () => (int) \App\Models\Setting::get('max_borrow_limit', 3),
+                'fine_per_day' => fn () => (float) \App\Models\Setting::get('fine_per_day', 1000),
+                'borrow_duration_days' => fn () => (int) \App\Models\Setting::get('borrow_duration_days', 7),
+                'ticket_expire_minutes' => fn () => (int) \App\Models\Setting::get('ticket_expire_minutes', 5),
+            ],
         ]);
     }
 }

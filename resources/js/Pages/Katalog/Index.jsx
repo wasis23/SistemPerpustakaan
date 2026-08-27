@@ -7,16 +7,23 @@ export default function Index({ books, categories, racks, filters }) {
     const [search, setSearch] = useState(filters.search || '');
     const [categoryId, setCategoryId] = useState(filters.category_id || '');
     const [rackId, setRackId] = useState(filters.rack_id || '');
+    const [perPage, setPerPage] = useState(filters.per_page || '12');
 
     const handleFilter = (e) => {
-        e.preventDefault();
-        router.get('/katalog', { search, category_id: categoryId, rack_id: rackId }, { preserveState: true });
+        if (e) e.preventDefault();
+        router.get('/katalog', { search, category_id: categoryId, rack_id: rackId, per_page: perPage }, { preserveState: true });
+    };
+
+    const handlePerPageChange = (val) => {
+        setPerPage(val);
+        router.get('/katalog', { search, category_id: categoryId, rack_id: rackId, per_page: val }, { preserveState: true });
     };
 
     const handleReset = () => {
         setSearch('');
         setCategoryId('');
         setRackId('');
+        setPerPage('12');
         router.get('/katalog', {}, { preserveState: true });
     };
 
@@ -206,6 +213,51 @@ export default function Index({ books, categories, racks, filters }) {
                             </button>
                         </div>
                     )}
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-xs text-slate-500 font-medium">
+                        Menampilkan <span className="font-bold text-slate-900">{books.from || 0}</span> sampai{' '}
+                        <span className="font-bold text-slate-900">{books.to || 0}</span> dari total{' '}
+                        <span className="font-bold text-slate-900">{books.total || 0}</span> koleksi buku
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center space-x-2 text-xs text-slate-600 font-medium">
+                            <span>Tampilkan:</span>
+                            <select
+                                value={perPage}
+                                onChange={(e) => handlePerPageChange(e.target.value)}
+                                className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 cursor-pointer"
+                            >
+                                <option value="12">12 / hal</option>
+                                <option value="24">24 / hal</option>
+                                <option value="48">48 / hal</option>
+                                <option value="96">96 / hal</option>
+                                <option value="all">Semua Data</option>
+                            </select>
+                        </div>
+
+                        {books.links && books.links.length > 3 && (
+                            <div className="flex items-center space-x-1">
+                                {books.links.map((link, idx) => (
+                                    <Link
+                                        key={idx}
+                                        href={link.url || '#'}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                        className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all ${
+                                            link.active
+                                                ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                                : link.url
+                                                ? 'bg-slate-50 text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200'
+                                                : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-transparent'
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </main>
         </div>

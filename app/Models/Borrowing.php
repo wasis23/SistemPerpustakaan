@@ -75,4 +75,12 @@ class Borrowing extends Model
 
         return now()->greaterThan($this->due_date);
     }
+
+    /**
+     * Hitung rincian denda keterlambatan transaksi ini
+     */
+    public function getFineCalculation(?\Carbon\Carbon $at = null): array
+    {
+        return \App\Services\FineCalculator::calculate($this->due_date, $at ?? $this->returned_at ?? now());
+    }
 }

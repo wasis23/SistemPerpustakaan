@@ -9,7 +9,9 @@ use App\Models\Category;
 use App\Models\Rack;
 use App\Services\BarcodeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -44,13 +46,27 @@ class BookController extends Controller
             $query->where('rack_id', $request->rack_id);
         }
 
-        $books = $query->latest('id')->paginate(10)->withQueryString();
+        // Pilihan jumlah per halaman (10, 25, 50, 100, atau semua)
+        $perPageInput = $request->input('per_page', '10');
+        if ($perPageInput === 'all') {
+            $totalCount = (clone $query)->count();
+            $perPage = max(1, $totalCount);
+        } else {
+            $perPage = in_array((int)$perPageInput, [10, 25, 50, 100]) ? (int)$perPageInput : 10;
+        }
+
+        $books = $query->latest('id')->paginate($perPage)->withQueryString();
 
         return Inertia::render('Petugas/Books/Index', [
             'books' => $books,
             'categories' => Category::select('id', 'code', 'name')->get(),
             'racks' => Rack::with('laboratory')->get(),
-            'filters' => $request->only(['search', 'category_id', 'rack_id']),
+            'filters' => [
+                'search' => $request->search ?? '',
+                'category_id' => $request->category_id ?? '',
+                'rack_id' => $request->rack_id ?? '',
+                'per_page' => (string)$perPageInput,
+            ],
         ]);
     }
 
@@ -525,10 +541,12 @@ class BookController extends Controller
         ]);
 
         $currentCount = $book->copies()->count();
-        $newTotal = $currentCount + $request->count;
-
         $category = $book->category;
         $catCode = $category ? $category->code : 'GEN';
+        $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
+        if (empty($shortTitle)) {
+            $shortTitle = 'BOOK';
+        }
         $procurementYear = !empty($book->procurement_year) 
             ? (int)$book->procurement_year 
             : (!empty($book->publish_year) ? (int)$book->publish_year : (int)date('Y'));
@@ -536,25 +554,42 @@ class BookController extends Controller
 
         $baseInventoryNumber = BarcodeService::getNextInventoryNumber(0);
 
-        for ($i = 1; $i <= $request->count; $i++) {
-            $num = $currentCount + $i;
-            $suffix = $num <= 26 ? chr(64 + $num) : "X{$num}";
-            $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
-            $invNumber = $baseInventoryNumber + $i;
-            $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
+        DB::beginTransaction();
+        try {
+            for ($i = 1; $i <= $request->count; $i++) {
+                $num = $currentCount + $i;
+                $suffix = $num <= 26 ? chr(64 + $num) : "X{$num}";
+                $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
+                
+                while (BookCopy::where('copy_code', $copyCode)->exists()) {
+                    $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}-" . Str::random(3);
+                }
 
-            BookCopy::create([
-                'book_id' => $book->id,
-                'copy_code' => $copyCode,
-                'barcode_hash' => $barcode,
-                'condition' => 'good',
-                'status' => 'available',
-            ]);
+                $invNumber = $baseInventoryNumber + $i;
+                $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
+                while (BookCopy::where('barcode_hash', $barcode)->exists()) {
+                    $invNumber++;
+                    $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
+                }
+
+                BookCopy::create([
+                    'book_id' => $book->id,
+                    'copy_code' => $copyCode,
+                    'barcode_hash' => $barcode,
+                    'condition' => 'good',
+                    'status' => 'available',
+                ]);
+            }
+
+            $book->update(['total_copies' => $book->copies()->count()]);
+            DB::commit();
+
+            return back()->with('success', $request->count . ' eksemplar fisik baru berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Gagal tambah eksemplar: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menambahkan eksemplar fisik: ' . $e->getMessage());
         }
-
-        $book->update(['total_copies' => $newTotal]);
-
-        return back()->with('success', $request->count . ' eksemplar fisik baru berhasil ditambahkan.');
     }
 
     /**
@@ -582,7 +617,7 @@ class BookController extends Controller
     }
 
     /**
-     * Impor Massal Buku via File Upload (CSV, XLSX, XLSM)
+     * Impor Massal Buku via File Upload (CSV, XLSX, XLSM, XLS, TXT)
      */
     public function importCsv(Request $request)
     {
@@ -599,12 +634,27 @@ class BookController extends Controller
         if (in_array($extension, ['xlsx', 'xlsm', 'zip'])) {
             $rowsData = $this->parseExcelXml($filePath);
         } else {
-            // Processing CSV / TXT
+            // Processing CSV / TXT / XLS
             $handle = fopen($filePath, 'r');
             if ($handle) {
-                while (($data = fgetcsv($handle, 4096, ',')) !== false) {
-                    if (!empty(array_filter($data))) {
-                        $rowsData[] = array_map('trim', $data);
+                // Auto detect delimiter
+                $firstLine = fgets($handle);
+                rewind($handle);
+                $delimiter = ',';
+                if ($firstLine !== false) {
+                    $countSemicolon = substr_count($firstLine, ';');
+                    $countComma = substr_count($firstLine, ',');
+                    $countTab = substr_count($firstLine, "\t");
+                    if ($countSemicolon > $countComma && $countSemicolon > $countTab) {
+                        $delimiter = ';';
+                    } elseif ($countTab > $countComma && $countTab > $countSemicolon) {
+                        $delimiter = "\t";
+                    }
+                }
+
+                while (($data = fgetcsv($handle, 8192, $delimiter)) !== false) {
+                    if (!empty(array_filter($data, fn($x) => trim((string)$x) !== ''))) {
+                        $rowsData[] = array_map(fn($v) => trim((string)$v), $data);
                     }
                 }
                 fclose($handle);
@@ -615,43 +665,48 @@ class BookController extends Controller
             return back()->with('error', 'File yang diunggah kosong atau formatnya tidak didukung.');
         }
 
-        $defaultCat = Category::first();
-        $defaultRack = Rack::first();
+        // Buang baris header jika terdeteksi
+        if (!empty($rowsData)) {
+            $firstRowStr = strtolower(implode(' ', $rowsData[0]));
+            if (str_contains($firstRowStr, 'judul') || str_contains($firstRowStr, 'title') || str_contains($firstRowStr, 'pengarang') || str_contains($firstRowStr, 'inventaris')) {
+                array_shift($rowsData);
+            }
+        }
 
         $parsedRows = [];
-        
-        // Buang header jika ada
-        if (isset($rowsData[0][1]) && in_array(strtolower(trim($rowsData[0][1])), ['judul', 'title'])) {
-            array_shift($rowsData);
-        }
 
         foreach ($rowsData as $cols) {
             if (count($cols) < 2) continue;
 
-            $col0 = trim($cols[0] ?? '');
-            if (strtolower($col0) === 'no' || strtolower($col0) === 'judul') continue;
+            $col0 = strtolower(trim($cols[0] ?? ''));
+            $col1 = strtolower(trim($cols[1] ?? ''));
+            if ($col0 === 'no' || $col0 === 'judul' || $col1 === 'judul' || $col1 === 'title') continue;
 
-            // Deteksi format berdasarkan jumlah kolom (Format Stock Opname Memiliki 11-13 Kolom)
-            if (count($cols) >= 11) {
+            // Deteksi format berdasarkan jumlah kolom (Format Stock Opname memiliki 10-13 Kolom)
+            if (count($cols) >= 10) {
                 // Stock Opname: [0]NO, [1]JUDUL, [2]KODE, [3]PENGARANG, [4]PENERBIT, [5]KOTA TERBIT, [6]TAHUN, [7]ASAL, [8]ISBN, [9]EKS, [10]INVENTARIS, [11]BARCODE, [12]KET
-                $title = trim($cols[1] ?? $cols[0]);
+                $title = trim($cols[1] ?? $cols[0] ?? '');
                 $kode = trim($cols[2] ?? '');
-                $author = trim($cols[3] ?? 'Penulis Tidak Diketahui');
-                $publisher = trim($cols[4] ?? 'Penerbit Impor');
+                $author = trim($cols[3] ?? '');
+                $publisher = trim($cols[4] ?? '');
                 // Kota Terbit (cols[5]) diabaikan sesuai instruksi
-                $publishYear = isset($cols[6]) && is_numeric(trim($cols[6])) ? (int)trim($cols[6]) : (int)date('Y');
+                $rawYear = trim($cols[6] ?? '');
+                $publishYear = is_numeric($rawYear) && (int)$rawYear > 1000 && (int)$rawYear <= ((int)date('Y') + 1) ? (int)$rawYear : (int)date('Y');
                 $asal = trim($cols[7] ?? '');
-                $isbn = isset($cols[8]) ? preg_replace('/[^0-9X]/i', '', trim($cols[8])) : null;
+                $rawIsbn = trim($cols[8] ?? '');
+                $isbn = !empty($rawIsbn) ? preg_replace('/[^0-9X]/i', '', $rawIsbn) : null;
                 $inventaris = trim($cols[10] ?? '');
                 $barcode = trim($cols[11] ?? '');
                 $ket = trim($cols[12] ?? '');
 
-                // Ekstraksi Tahun Pengadaan dari BARCODE (2 angka setelah kata INDO, misal INDO12001 -> 2012)
+                // Ekstraksi Tahun Pengadaan dari BARCODE (misal INDO12001 -> 2012) atau ASAL
                 $procurementYear = (int)date('Y');
                 if (preg_match('/INDO(\d{2})/i', $barcode, $matches)) {
                     $procurementYear = 2000 + (int)$matches[1];
                 } elseif (preg_match('/20\d{2}/', $asal, $matches)) {
                     $procurementYear = (int)$matches[0];
+                } else {
+                    $procurementYear = $publishYear;
                 }
 
                 if (!empty($title)) {
@@ -670,22 +725,23 @@ class BookController extends Controller
                     ];
                 }
             } else {
-                // Format Standard CSV: Judul, Pengarang, ISBN, Penerbit, TahunTerbit, TahunPengadaan, KodeKategoriDDC, KodeRak, JumlahEksemplar
-                $title = trim($cols[0]);
-                $author = trim($cols[1] ?? 'Penulis Tidak Diketahui');
-                $isbn = isset($cols[2]) ? preg_replace('/[^0-9X]/i', '', trim($cols[2])) : null;
-                $publisher = isset($cols[3]) && trim($cols[3]) !== '' ? trim($cols[3]) : 'Penerbit Impor';
+                // Format Standard CSV: [0]Judul, [1]Pengarang, [2]ISBN, [3]Penerbit, [4]TahunTerbit, [5]TahunPengadaan, [6]KodeKategoriDDC, [7]KodeRak, [8]JumlahEksemplar
+                $title = trim($cols[0] ?? '');
+                $author = trim($cols[1] ?? '');
+                $rawIsbn = trim($cols[2] ?? '');
+                $isbn = !empty($rawIsbn) ? preg_replace('/[^0-9X]/i', '', $rawIsbn) : null;
+                $publisher = trim($cols[3] ?? '');
                 $publishYear = isset($cols[4]) && is_numeric(trim($cols[4])) ? (int)trim($cols[4]) : (int)date('Y');
                 $procurementYear = isset($cols[5]) && is_numeric(trim($cols[5])) ? (int)trim($cols[5]) : (int)date('Y');
                 $categoryCode = isset($cols[6]) ? trim($cols[6]) : null;
                 $rackCode = isset($cols[7]) ? trim($cols[7]) : null;
-                $copiesCount = isset($cols[8]) && is_numeric(trim($cols[8])) ? (int)trim($cols[8]) : 1;
+                $copiesCount = isset($cols[8]) && is_numeric(trim($cols[8])) ? max(1, (int)trim($cols[8])) : 1;
 
                 if (!empty($title)) {
                     $parsedRows[] = [
                         'title' => $title,
-                        'author' => $author,
-                        'publisher' => $publisher,
+                        'author' => !empty($author) ? $author : 'Penulis Tidak Diketahui',
+                        'publisher' => !empty($publisher) ? $publisher : 'Penerbit Impor',
                         'publish_year' => $publishYear,
                         'procurement_year' => $procurementYear,
                         'isbn' => $isbn ?: null,
@@ -698,132 +754,271 @@ class BookController extends Controller
             }
         }
 
+        if (empty($parsedRows)) {
+            return back()->with('error', 'Tidak ditemukan baris data buku yang valid untuk diimpor.');
+        }
+
         // Grouping data berdasarkan ISBN (jika ada) atau Judul + Penulis
         $grouped = [];
         foreach ($parsedRows as $row) {
             if (!empty($row['isbn'])) {
                 $groupKey = 'ISBN_' . $row['isbn'];
             } else {
-                $groupKey = 'TITLE_' . strtolower(preg_replace('/[^A-Za-z0-9]/', '', $row['title'] . $row['author']));
+                $cleanTitle = strtolower(preg_replace('/[^A-Za-z0-9]/', '', $row['title']));
+                $cleanAuthor = strtolower(preg_replace('/[^A-Za-z0-9]/', '', $row['author']));
+                $groupKey = 'TITLE_' . md5($cleanTitle . '_' . $cleanAuthor);
             }
             $grouped[$groupKey][] = $row;
         }
 
-        $importedBooks = 0;
-        $importedCopies = 0;
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
 
-        foreach ($grouped as $groupKey => $itemRows) {
-            $firstRow = $itemRows[0];
+        $defaultCat = Category::first();
+        if (!$defaultCat) {
+            $defaultCat = Category::create([
+                'code' => '000',
+                'name' => 'Karya Umum / Komputer',
+                'description' => 'Kategori Utama Bawaan SIMPUS',
+            ]);
+        }
 
-            // Penentuan Kategori & DDC
-            $category = null;
-            if (!empty($firstRow['category_code'])) {
-                $category = Category::where('code', $firstRow['category_code'])->orWhere('id', $firstRow['category_code'])->first();
-            }
-            if (!$category && !empty($firstRow['kode']) && preg_match('/^(\d{3}(?:\.\d+)?)/', $firstRow['kode'], $matches)) {
-                $ddcCode = $matches[1];
-                $category = Category::where('code', $ddcCode)->first();
-                if (!$category) {
-                    $category = Category::create([
-                        'code' => $ddcCode,
-                        'name' => "Kategori DDC " . $ddcCode,
-                        'description' => "Otomatis dibuat dari impor file Stock Opname",
-                    ]);
+        $defaultRack = Rack::first();
+        if (!$defaultRack) {
+            $defaultRack = Rack::create([
+                'code_rack' => 'RAK-01',
+                'location' => 'Lantai 1 - Sayap Barat',
+            ]);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $importedBooks = 0;
+            $importedCopies = 0;
+            $usedCopyCodes = [];
+            $usedBarcodes = [];
+
+            foreach ($grouped as $groupKey => $itemRows) {
+                $firstRow = $itemRows[0];
+
+                // Penentuan Kategori & DDC
+                $category = null;
+                if (!empty($firstRow['category_code'])) {
+                    $category = Category::where('code', $firstRow['category_code'])->orWhere('id', $firstRow['category_code'])->first();
                 }
-            }
-            $categoryId = $category ? $category->id : ($defaultCat ? $defaultCat->id : 1);
+                if (!$category && !empty($firstRow['kode']) && preg_match('/^(\d{3}(?:\.\d+)?)/', $firstRow['kode'], $matches)) {
+                    $ddcCode = $matches[1];
+                    $category = Category::where('code', $ddcCode)->first();
+                    if (!$category) {
+                        $category = Category::create([
+                            'code' => $ddcCode,
+                            'name' => "Kategori DDC " . $ddcCode,
+                            'description' => "Otomatis dibuat dari impor file Stock Opname",
+                        ]);
+                    }
+                }
+                $categoryId = $category ? $category->id : $defaultCat->id;
 
-            // Penentuan Rak
-            $rack = null;
-            if (!empty($firstRow['rack_code'])) {
-                $rack = Rack::where('code_rack', $firstRow['rack_code'])->orWhere('id', $firstRow['rack_code'])->first();
-            }
-            $rackId = $rack ? $rack->id : ($defaultRack ? $defaultRack->id : 1);
+                // Penentuan Rak
+                $rack = null;
+                if (!empty($firstRow['rack_code'])) {
+                    $rack = Rack::where('code_rack', $firstRow['rack_code'])->orWhere('id', $firstRow['rack_code'])->first();
+                }
+                $rackId = $rack ? $rack->id : $defaultRack->id;
 
-            // Call Number
-            $callNumber = !empty($firstRow['kode']) ? $firstRow['kode'] : null;
-            $coverUrl = !empty($firstRow['isbn']) ? "https://covers.openlibrary.org/b/isbn/{$firstRow['isbn']}-L.jpg" : null;
+                // Call Number
+                $callNumber = !empty($firstRow['kode']) ? $firstRow['kode'] : null;
+                if (empty($callNumber)) {
+                    $cleanAuthor = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $firstRow['author']), 0, 3));
+                    if (strlen($cleanAuthor) < 3) $cleanAuthor = str_pad($cleanAuthor, 3, 'X');
+                    $cleanTitle = strtolower(substr(preg_replace('/[^A-Za-z]/', '', $firstRow['title']), 0, 1));
+                    if (empty($cleanTitle)) $cleanTitle = 'a';
+                    $catCode = $category ? $category->code : '000';
+                    $callNumber = "{$catCode} {$cleanAuthor} {$cleanTitle}";
+                }
 
-            // Cari atau Buat Buku Induk
-            $book = null;
-            if (!empty($firstRow['isbn'])) {
-                $book = Book::where('isbn', $firstRow['isbn'])->first();
-            }
-            if (!$book) {
-                $book = Book::where('title', $firstRow['title'])
-                    ->where('author', $firstRow['author'])
-                    ->first();
-            }
+                $coverUrl = !empty($firstRow['isbn']) ? "https://covers.openlibrary.org/b/isbn/{$firstRow['isbn']}-L.jpg" : null;
 
-            $totalCopiesInGroup = 0;
-            foreach ($itemRows as $r) {
-                $totalCopiesInGroup += ($r['type'] === 'standard') ? ($r['copies_count'] ?? 1) : 1;
-            }
+                // Cari atau Buat Buku Induk
+                $book = null;
+                if (!empty($firstRow['isbn'])) {
+                    $book = Book::where('isbn', $firstRow['isbn'])->first();
+                }
+                if (!$book) {
+                    $book = Book::where('title', $firstRow['title'])
+                        ->where('author', $firstRow['author'])
+                        ->first();
+                }
 
-            if (!$book) {
-                $book = Book::create([
-                    'isbn' => $firstRow['isbn'],
-                    'title' => $firstRow['title'],
-                    'author' => $firstRow['author'],
-                    'publisher' => $firstRow['publisher'],
-                    'publish_year' => $firstRow['publish_year'],
-                    'procurement_year' => $firstRow['procurement_year'],
-                    'category_id' => $categoryId,
-                    'rack_id' => $rackId,
-                    'call_number' => $callNumber,
-                    'cover_image' => $coverUrl,
-                    'total_copies' => $totalCopiesInGroup,
-                ]);
-                $importedBooks++;
-            } else {
-                $book->update([
-                    'total_copies' => $book->total_copies + $totalCopiesInGroup,
-                ]);
-            }
-
-            // Simpan Eksemplar Fisik
-            foreach ($itemRows as $idx => $r) {
-                if ($r['type'] === 'stock_opname') {
-                    $copyCode = !empty($r['inventaris']) ? $r['inventaris'] : "INV-{$book->id}-" . ($idx + 1);
-                    $barcodeHash = !empty($r['barcode']) ? $r['barcode'] : "BC-{$book->id}-" . str_pad($idx + 1, 4, '0', STR_PAD_LEFT);
-                    $condition = str_contains(strtolower($r['ket'] ?? ''), 'rusak') ? 'damaged' : 'good';
-
-                    BookCopy::firstOrCreate(
-                        ['barcode_hash' => $barcodeHash],
-                        [
-                            'book_id' => $book->id,
-                            'copy_code' => $copyCode,
-                            'condition' => $condition,
-                            'status' => $condition === 'damaged' ? 'damaged' : 'available',
-                        ]
-                    );
-                    $importedCopies++;
+                if (!$book) {
+                    $book = Book::create([
+                        'isbn' => $firstRow['isbn'],
+                        'title' => $firstRow['title'],
+                        'author' => $firstRow['author'],
+                        'publisher' => $firstRow['publisher'],
+                        'publish_year' => $firstRow['publish_year'],
+                        'procurement_year' => $firstRow['procurement_year'],
+                        'category_id' => $categoryId,
+                        'rack_id' => $rackId,
+                        'call_number' => $callNumber,
+                        'cover_image' => $coverUrl,
+                        'total_copies' => 0,
+                    ]);
+                    $importedBooks++;
                 } else {
-                    $cnt = $r['copies_count'] ?? 1;
-                    $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
-                    for ($i = 1; $i <= $cnt; $i++) {
-                        $suffix = chr(64 + $i);
-                        $copyCode = "IMP-{$shortTitle}-{$book->id}-{$suffix}-" . Str::random(3);
-                        $barcodeHash = "BC-" . strtoupper(Str::random(8));
+                    if (empty($book->call_number) && !empty($callNumber)) {
+                        $book->call_number = $callNumber;
+                    }
+                    if (empty($book->cover_image) && !empty($coverUrl)) {
+                        $book->cover_image = $coverUrl;
+                    }
+                    $book->save();
+                }
+
+                // Simpan Eksemplar Fisik
+                foreach ($itemRows as $idx => $r) {
+                    if ($r['type'] === 'stock_opname') {
+                        $rawCopyCode = !empty($r['inventaris']) ? trim($r['inventaris']) : '';
+                        $rawBarcode = !empty($r['barcode']) ? trim($r['barcode']) : '';
+                        
+                        $condition = 'good';
+                        $ketLower = strtolower($r['ket'] ?? '');
+                        if (str_contains($ketLower, 'rusak berat')) {
+                            $condition = 'damaged';
+                        } elseif (str_contains($ketLower, 'rusak')) {
+                            $condition = 'slightly_damaged';
+                        }
+                        $status = ($condition === 'damaged') ? 'damaged' : 'available';
+
+                        // 1. Barcode Hash
+                        $barcodeHash = $rawBarcode;
+                        if (empty($barcodeHash)) {
+                            $yy = substr((string)$book->procurement_year, -2);
+                            $barcodeHash = BarcodeService::generateCopyBarcode($yy);
+                            while (isset($usedBarcodes[$barcodeHash]) || BookCopy::where('barcode_hash', $barcodeHash)->exists()) {
+                                $barcodeHash = "INDO{$yy}" . str_pad((string)mt_rand(1000, 999999), 5, '0', STR_PAD_LEFT);
+                            }
+                        }
+
+                        // Cek apakah eksemplar dengan barcode ini sudah ada
+                        $existingCopy = BookCopy::where('barcode_hash', $barcodeHash)->first();
+                        if ($existingCopy) {
+                            $existingCopy->update([
+                                'condition' => $condition,
+                                'status' => $status,
+                            ]);
+                            $usedBarcodes[$barcodeHash] = true;
+                            $usedCopyCodes[$existingCopy->copy_code] = true;
+                            $importedCopies++;
+                            continue;
+                        }
+
+                        // 2. Nomor Inventaris (copy_code) yang Unik
+                        $copyCode = $rawCopyCode;
+                        if (empty($copyCode)) {
+                            $copyCode = "INV-{$book->id}-" . ($idx + 1);
+                        }
+
+                        // Cegah duplicate entry pada copy_code
+                        if (isset($usedCopyCodes[$copyCode]) || BookCopy::where('copy_code', $copyCode)->exists()) {
+                            $baseCopyCode = $copyCode;
+                            $counter = 2;
+                            $copyCode = "{$baseCopyCode}-{$counter}";
+                            while (isset($usedCopyCodes[$copyCode]) || BookCopy::where('copy_code', $copyCode)->exists()) {
+                                $counter++;
+                                $copyCode = "{$baseCopyCode}-{$counter}";
+                            }
+                        }
 
                         BookCopy::create([
                             'book_id' => $book->id,
                             'copy_code' => $copyCode,
                             'barcode_hash' => $barcodeHash,
-                            'condition' => 'good',
-                            'status' => 'available',
+                            'condition' => $condition,
+                            'status' => $status,
                         ]);
+
+                        $usedBarcodes[$barcodeHash] = true;
+                        $usedCopyCodes[$copyCode] = true;
                         $importedCopies++;
+                    } else {
+                        // Standard CSV
+                        $cnt = $r['copies_count'] ?? 1;
+                        $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
+                        if (empty($shortTitle)) $shortTitle = 'BOOK';
+                        $catCode = $category ? $category->code : 'GEN';
+                        $yy = substr((string)$book->procurement_year, -2);
+                        $currentCount = $book->copies()->count();
+
+                        for ($i = 1; $i <= $cnt; $i++) {
+                            $num = $currentCount + $i;
+                            $suffix = $num <= 26 ? chr(64 + $num) : "X{$num}";
+                            $copyCode = "IMP-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
+                            
+                            while (isset($usedCopyCodes[$copyCode]) || BookCopy::where('copy_code', $copyCode)->exists()) {
+                                $copyCode = "IMP-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}-" . Str::random(3);
+                            }
+
+                            $barcodeHash = BarcodeService::generateCopyBarcode($yy);
+                            while (isset($usedBarcodes[$barcodeHash]) || BookCopy::where('barcode_hash', $barcodeHash)->exists()) {
+                                $barcodeHash = "INDO{$yy}" . str_pad((string)mt_rand(1000, 999999), 5, '0', STR_PAD_LEFT);
+                            }
+
+                            BookCopy::create([
+                                'book_id' => $book->id,
+                                'copy_code' => $copyCode,
+                                'barcode_hash' => $barcodeHash,
+                                'condition' => 'good',
+                                'status' => 'available',
+                            ]);
+
+                            $usedBarcodes[$barcodeHash] = true;
+                            $usedCopyCodes[$copyCode] = true;
+                            $importedCopies++;
+                        }
                     }
                 }
-            }
-        }
 
-        return back()->with('success', "Berhasil mengimpor {$importedBooks} judul buku induk & {$importedCopies} eksemplar fisik!");
+                // Sinkronkan total_copies ke jumlah eksemplar fisik aktual
+                $book->update([
+                    'total_copies' => $book->copies()->count(),
+                ]);
+            }
+
+            DB::commit();
+
+            return back()->with('success', "Berhasil memproses impor! Ditambahkan {$importedBooks} judul buku baru & diproses {$importedCopies} eksemplar fisik.");
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Error pada proses impor massal buku: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with('error', 'Gagal memproses impor buku: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Parser XML bawaan untuk membaca sheet file Excel (.xlsx / .xlsm)
+     * Helper untuk mengonversi referensi sel Excel (misal "A1", "K10", "AB5") ke indeks kolom 0-based
+     */
+    private function cellRefToColIndex(string $cellRef): int
+    {
+        $colLetters = preg_replace('/[^A-Za-z]/', '', strtoupper($cellRef));
+        if (empty($colLetters)) {
+            return -1;
+        }
+        $col = 0;
+        $len = strlen($colLetters);
+        for ($i = 0; $i < $len; $i++) {
+            $col = $col * 26 + (ord($colLetters[$i]) - 64);
+        }
+        return $col - 1;
+    }
+
+    /**
+     * Parser XML bawaan untuk membaca sheet file Excel (.xlsx / .xlsm) tanpa pergeseran kolom
      */
     private function parseExcelXml($filePath)
     {
@@ -834,7 +1029,7 @@ class BookController extends Controller
             if (($index = $zip->locateName('xl/sharedStrings.xml')) !== false) {
                 $xmlStr = $zip->getFromIndex($index);
                 if ($xmlStr) {
-                    $xml = simplexml_load_string($xmlStr);
+                    $xml = @simplexml_load_string($xmlStr);
                     if ($xml && isset($xml->si)) {
                         foreach ($xml->si as $si) {
                             $text = '';
@@ -861,20 +1056,44 @@ class BookController extends Controller
             }
 
             if ($sheetXmlStr) {
-                $xml = simplexml_load_string($sheetXmlStr);
+                $xml = @simplexml_load_string($sheetXmlStr);
                 if ($xml && isset($xml->sheetData->row)) {
                     foreach ($xml->sheetData->row as $row) {
-                        $rowVals = [];
+                        $rowMap = [];
+                        $maxCol = 0;
+
                         foreach ($row->c as $c) {
-                            $cellType = (string)$c['t'];
-                            $v = isset($c->v) ? (string)$c->v : '';
-                            if ($cellType === 's' && is_numeric($v) && isset($sharedStrings[(int)$v])) {
-                                $v = $sharedStrings[(int)$v];
+                            $ref = (string)($c['r'] ?? '');
+                            $colIdx = $this->cellRefToColIndex($ref);
+                            if ($colIdx < 0) {
+                                continue;
                             }
-                            $rowVals[] = trim($v);
+                            if ($colIdx > $maxCol) {
+                                $maxCol = $colIdx;
+                            }
+
+                            $cellType = (string)($c['t'] ?? '');
+                            $v = '';
+                            if ($cellType === 'inlineStr' && isset($c->is->t)) {
+                                $v = (string)$c->is->t;
+                            } elseif ($cellType === 's' && isset($c->v)) {
+                                $strIdx = (int)(string)$c->v;
+                                $v = $sharedStrings[$strIdx] ?? '';
+                            } elseif (isset($c->v)) {
+                                $v = (string)$c->v;
+                            }
+
+                            $rowMap[$colIdx] = trim($v);
                         }
-                        if (!empty(array_filter($rowVals))) {
-                            $rows[] = $rowVals;
+
+                        if (!empty($rowMap)) {
+                            $rowVals = [];
+                            for ($k = 0; $k <= $maxCol; $k++) {
+                                $rowVals[$k] = $rowMap[$k] ?? '';
+                            }
+                            if (!empty(array_filter($rowVals, fn($val) => $val !== ''))) {
+                                $rows[] = $rowVals;
+                            }
                         }
                     }
                 }
@@ -885,17 +1104,18 @@ class BookController extends Controller
     }
 
     /**
-     * Unduh Template CSV Impor Massal Format Stock Opname Terbaru
+     * Unduh Template CSV Impor Massal Format Stock Opname Terbaru (UTF-8 BOM Support)
      */
     public function downloadTemplate()
     {
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="template_impor_buku_simpus.csv"',
         ];
 
         $callback = function () {
             $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF"); // UTF-8 BOM untuk kompatibilitas Microsoft Excel
             // Header persis format Stock Opname
             fputcsv($file, ['NO', 'JUDUL', 'KODE', 'PENGARANG', 'PENERBIT', 'KOTA TERBIT', 'TAHUN', 'ASAL', 'ISBN', 'EKS', 'INVENTARIS', 'BARCODE', 'KET']);
             // Contoh baris 1
@@ -906,6 +1126,28 @@ class BookController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Hapus / Reset Bersih Seluruh Data Buku & Eksemplar Fisik
+     */
+    public function resetAll()
+    {
+        try {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            DB::table('borrow_tickets')->truncate();
+            DB::table('borrowings')->truncate();
+            DB::table('book_copies')->truncate();
+            DB::table('books')->truncate();
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+            return redirect()->route('petugas.books.index')
+                ->with('success', 'Semua data buku, eksemplar fisik, dan transaksi sirkulasi terkait berhasil di-reset dan dibersihkan total dari sistem!');
+        } catch (\Throwable $e) {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            Log::error('Gagal reset data buku: ' . $e->getMessage());
+            return back()->with('error', 'Gagal mereset data buku: ' . $e->getMessage());
+        }
     }
 }
 

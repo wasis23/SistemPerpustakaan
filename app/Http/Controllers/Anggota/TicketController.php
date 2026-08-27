@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BookCopy;
 use App\Models\Borrowing;
 use App\Models\BorrowTicket;
+use App\Models\Setting;
 use App\Services\BarcodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,15 +75,16 @@ class TicketController extends Controller
             ]);
         }
 
-        // 3. Cek batas maksimal peminjaman aktif anggota (misal maksimal 3 buku)
+        // 3. Cek batas maksimal peminjaman aktif anggota
+        $maxBorrowLimit = (int) Setting::get('max_borrow_limit', 3);
         $activeBorrowingsCount = Borrowing::where('user_id', $user->id)
             ->where('status', 'active')
             ->count();
 
-        if ($activeBorrowingsCount >= 3) {
+        if ($activeBorrowingsCount >= $maxBorrowLimit) {
             return back()->withErrors([
-                'copy_code' => 'Anda telah mencapai batas maksimal 3 peminjaman buku aktif. Kembalikan buku fisik sebelumnya terlebih dahulu.',
-                'barcode_hash' => 'Anda telah mencapai batas maksimal 3 peminjaman buku aktif. Kembalikan buku fisik sebelumnya terlebih dahulu.',
+                'copy_code' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
+                'barcode_hash' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
             ]);
         }
 
@@ -113,14 +115,15 @@ class TicketController extends Controller
                 // Ubah status eksemplar dari available menjadi ticketed
                 $copy->update(['status' => 'ticketed']);
 
-                // Buat Tiket Pinjam 5 Menit
+                // Buat Tiket Pinjam dengan durasi kadaluarsa sesuai pengaturan
                 $ticketCode = 'TCK-' . date('Ymd') . '-' . strtoupper(Str::random(4));
+                $expireMinutes = (int) Setting::get('ticket_expire_minutes', 5);
 
                 return BorrowTicket::create([
                     'ticket_code' => $ticketCode,
                     'user_id' => $user->id,
                     'book_copy_id' => $copy->id,
-                    'expires_at' => now()->addMinutes(5),
+                    'expires_at' => now()->addMinutes($expireMinutes),
                     'status' => 'pending',
                 ]);
             });

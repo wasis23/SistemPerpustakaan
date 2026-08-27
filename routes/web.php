@@ -17,6 +17,7 @@ use App\Http\Controllers\Petugas\MemberController as PetugasMemberController;
 use App\Http\Controllers\Petugas\ProfileController as PetugasProfileController;
 use App\Http\Controllers\Petugas\RackController as PetugasRackController;
 use App\Http\Controllers\Petugas\ReportController as PetugasReportController;
+use App\Http\Controllers\Petugas\SettingController as PetugasSettingController;
 use Illuminate\Support\Facades\Route;
 
 // Halaman Utama Publik SIMPUS & Katalog Publik
@@ -84,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/books/fetch-api', [PetugasBookController::class, 'fetchExternalMetadata'])->name('books.fetch-api');
         Route::get('/books/download-template', [PetugasBookController::class, 'downloadTemplate'])->name('books.download-template');
         Route::post('/books/import-csv', [PetugasBookController::class, 'importCsv'])->name('books.import');
+        Route::delete('/books/reset-all', [PetugasBookController::class, 'resetAll'])->name('books.reset-all');
         Route::get('/books/{book}/print-barcodes', [PetugasBookController::class, 'printBarcodes'])->name('books.print-barcodes');
         Route::post('/books/{book}/add-copies', [PetugasBookController::class, 'addCopies'])->name('books.add-copies');
         Route::resource('books', PetugasBookController::class);
@@ -102,6 +104,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/circulations/scan-return', [PetugasCirculationController::class, 'scanReturnForm'])->name('circulations.scan-return');
         Route::post('/circulations/process-return', [PetugasCirculationController::class, 'processReturn'])->name('circulations.process-return');
         Route::post('/circulations/{borrowing}/pay-fine', [PetugasCirculationController::class, 'payFine'])->name('circulations.pay-fine');
+
+        // Pengaturan Aturan Sirkulasi, Tarif Denda & Hari Libur (Tanggal Merah)
+        Route::get('/settings', [PetugasSettingController::class, 'index'])->name('settings.index');
+        Route::put('/settings', [PetugasSettingController::class, 'update'])->name('settings.update');
+        Route::post('/settings/holidays', [PetugasSettingController::class, 'storeHoliday'])->name('settings.holidays.store');
+        Route::delete('/settings/holidays/{holiday}', [PetugasSettingController::class, 'destroyHoliday'])->name('settings.holidays.destroy');
 
         // Laporan & Rekapitulasi Analytics
         Route::get('/reports', [PetugasReportController::class, 'index'])->name('reports.index');

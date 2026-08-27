@@ -55,8 +55,10 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 4. Seeder Master Data (Laboratorium/Perpustakaan 360, Kategori, Rak, Buku, Eksemplar)
+        // 4. Seeder Master Data (Laboratorium/Perpustakaan 360, Kategori, Rak, Buku, Eksemplar, Pengaturan, Hari Libur)
         $this->call([
+            SettingSeeder::class,
+            HolidaySeeder::class,
             LaboratorySeeder::class,
             CategorySeeder::class,
             RackSeeder::class,

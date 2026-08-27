@@ -125,18 +125,29 @@ export default function ScanReturn() {
                         </div>
 
                         {/* Denda Summary Box */}
-                        <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs ${
+                        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
                             returnReceipt.late_days > 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'
                         }`}>
-                            <div>
+                            <div className="space-y-0.5">
                                 <p className="font-extrabold text-slate-900">
-                                    {returnReceipt.late_days > 0 ? `Terlambat ${returnReceipt.late_days} Hari` : 'Tepat Waktu'}
+                                    {returnReceipt.late_days > 0 ? `Terlambat ${returnReceipt.late_days} Hari Kalender` : 'Tepat Waktu'}
                                 </p>
                                 <p className="text-[10px] text-slate-500">Tgl Jatuh Tempo: {returnReceipt.due_date}</p>
+                                {returnReceipt.total_exempt_days > 0 && (
+                                    <p className="text-[10px] text-emerald-700 font-bold">
+                                        ✓ Bebas Denda: {returnReceipt.total_exempt_days} Hari (
+                                        {returnReceipt.sunday_exempt_days > 0 ? `${returnReceipt.sunday_exempt_days} Minggu` : ''}
+                                        {returnReceipt.sunday_exempt_days > 0 && returnReceipt.holiday_exempt_days > 0 ? ' + ' : ''}
+                                        {returnReceipt.holiday_exempt_days > 0 ? `${returnReceipt.holiday_exempt_days} Tanggal Merah` : ''}
+                                        )
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="text-right">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase block">Total Denda:</span>
+                            <div className="text-right sm:text-right">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                                    Total Denda ({returnReceipt.fineable_days ?? returnReceipt.late_days} hari kena denda):
+                                </span>
                                 <span className={`font-mono font-black text-base ${
                                     returnReceipt.fine_amount > 0 ? 'text-rose-600' : 'text-emerald-700'
                                 }`}>

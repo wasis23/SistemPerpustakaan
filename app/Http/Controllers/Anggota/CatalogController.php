@@ -24,7 +24,12 @@ class CatalogController extends Controller
             'books' => $books,
             'categories' => Category::select('id', 'code', 'name')->get(),
             'racks' => Rack::select('id', 'code_rack', 'location')->get(),
-            'filters' => $request->only(['search', 'category_id', 'rack_id']),
+            'filters' => [
+                'search' => $request->search ?? '',
+                'category_id' => $request->category_id ?? '',
+                'rack_id' => $request->rack_id ?? '',
+                'per_page' => (string)$request->input('per_page', '12'),
+            ],
         ]);
     }
 
@@ -52,7 +57,12 @@ class CatalogController extends Controller
             'books' => $books,
             'categories' => Category::select('id', 'code', 'name')->get(),
             'racks' => Rack::select('id', 'code_rack', 'location')->get(),
-            'filters' => $request->only(['search', 'category_id', 'rack_id']),
+            'filters' => [
+                'search' => $request->search ?? '',
+                'category_id' => $request->category_id ?? '',
+                'rack_id' => $request->rack_id ?? '',
+                'per_page' => (string)$request->input('per_page', '12'),
+            ],
         ]);
     }
 
@@ -97,7 +107,16 @@ class CatalogController extends Controller
             $query->where('rack_id', $request->rack_id);
         }
 
-        return $query->latest('id')->paginate(12)->withQueryString();
+        // Pilihan per halaman (12, 24, 48, 96, atau semua)
+        $perPageInput = $request->input('per_page', '12');
+        if ($perPageInput === 'all') {
+            $totalCount = (clone $query)->count();
+            $perPage = max(1, $totalCount);
+        } else {
+            $perPage = in_array((int)$perPageInput, [12, 24, 48, 96]) ? (int)$perPageInput : 12;
+        }
+
+        return $query->latest('id')->paginate($perPage)->withQueryString();
     }
 
     /**

@@ -1,27 +1,47 @@
 import React, { useState } from 'react';
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { BookOpen, Plus, Search, Filter, Printer, FileText, ArrowLeft, Eye, Trash2, Edit } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { BookOpen, Plus, Search, Filter, Printer, FileText, ArrowLeft, Eye, Trash2, Edit, CheckCircle2, AlertCircle } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
 export default function Index({ books, categories, racks, filters }) {
+    const { flash } = usePage().props;
     const [search, setSearch] = useState(filters.search || '');
     const [categoryId, setCategoryId] = useState(filters.category_id || '');
     const [rackId, setRackId] = useState(filters.rack_id || '');
+    const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [showImportModal, setShowImportModal] = useState(false);
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
 
     const { data: importData, setData: setImportData, post: postImport, processing: importing, errors: importErrors, reset: resetImport } = useForm({
         file: null,
     });
 
+    const handleResetAll = () => {
+        setIsResetting(true);
+        router.delete('/petugas/books/reset-all', {
+            onFinish: () => {
+                setIsResetting(false);
+                setShowResetModal(false);
+            },
+        });
+    };
+
     const handleFilter = (e) => {
-        e.preventDefault();
-        router.get('/petugas/books', { search, category_id: categoryId, rack_id: rackId }, { preserveState: true });
+        if (e) e.preventDefault();
+        router.get('/petugas/books', { search, category_id: categoryId, rack_id: rackId, per_page: perPage }, { preserveState: true });
+    };
+
+    const handlePerPageChange = (val) => {
+        setPerPage(val);
+        router.get('/petugas/books', { search, category_id: categoryId, rack_id: rackId, per_page: val }, { preserveState: true });
     };
 
     const handleReset = () => {
         setSearch('');
         setCategoryId('');
         setRackId('');
+        setPerPage('10');
         router.get('/petugas/books', {}, { preserveState: true });
     };
 
@@ -78,6 +98,16 @@ export default function Index({ books, categories, racks, filters }) {
                             <span>Impor File (Excel/CSV)</span>
                         </button>
 
+                        <button
+                            type="button"
+                            onClick={() => setShowResetModal(true)}
+                            className="px-4 py-2.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-2xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
+                            title="Hapus dan bersihkan semua data buku dari sistem"
+                        >
+                            <Trash2 className="w-4 h-4 text-rose-600" />
+                            <span>Reset Semua Buku</span>
+                        </button>
+
                         <Link
                             href="/petugas/books/create"
                             className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow transition-all flex items-center space-x-1.5"
@@ -87,6 +117,70 @@ export default function Index({ books, categories, racks, filters }) {
                         </Link>
                     </div>
                 </div>
+
+                {/* Flash Messages */}
+                {flash?.success && (
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center space-x-2 shadow-sm">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{flash.success}</span>
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center space-x-2 shadow-sm">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>{flash.error}</span>
+                    </div>
+                )}
+
+                {/* Reset All Books Confirmation Modal */}
+                {showResetModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-rose-200 shadow-2xl space-y-4">
+                            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                                <Trash2 className="w-6 h-6 stroke-[2.5]" />
+                            </div>
+
+                            <div className="text-center space-y-2">
+                                <h3 className="text-lg font-black text-slate-950">Reset Seluruh Katalog Buku?</h3>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                    Apakah Anda yakin ingin <strong className="text-rose-600 font-bold">menghapus SEMUA data buku</strong> dan seluruh eksemplar fisik di perpustakaan?
+                                </p>
+                                <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-left text-[11px] text-rose-800 font-medium space-y-1">
+                                    <p className="font-bold flex items-center space-x-1">
+                                        <AlertCircle className="w-3.5 h-3.5 text-rose-600 inline shrink-0" />
+                                        <span>Dampak Tindakan:</span>
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-0.5 text-rose-700">
+                                        <li>Semua judul buku dan eksemplar fisik akan terhapus.</li>
+                                        <li>Riwayat sirkulasi & tiket buku akan dibersihkan.</li>
+                                        <li>Kategori DDC dan Lokasi Rak tetap tersimpan.</li>
+                                        <li>Tindakan ini permanen dan tidak dapat dibatalkan.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="flex space-x-3 pt-2">
+                                <button
+                                    type="button"
+                                    disabled={isResetting}
+                                    onClick={() => setShowResetModal(false)}
+                                    className="flex-1 py-2.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isResetting}
+                                    onClick={handleResetAll}
+                                    className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-200 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>{isResetting ? 'Sedang Mereset...' : 'Ya, Hapus Semua'}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Import File Modal */}
                 {showImportModal && (
@@ -261,7 +355,12 @@ export default function Index({ books, categories, racks, filters }) {
                                                             {book.title}
                                                         </Link>
                                                         <p className="text-slate-600 text-xs font-medium mt-0.5">Penulis: {book.author}</p>
-                                                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">ISBN: {book.isbn || '-'}</p>
+                                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                            <span className="text-[10px] text-slate-500 font-mono">ISBN: {book.isbn || '-'}</span>
+                                                            <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
+                                                                🏷️ {book.call_number || '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -320,6 +419,53 @@ export default function Index({ books, categories, racks, filters }) {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Pagination Footer */}
+                    <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="text-xs text-slate-500 font-medium">
+                            Menampilkan <span className="font-bold text-slate-900">{books.from || 0}</span> sampai{' '}
+                            <span className="font-bold text-slate-900">{books.to || 0}</span> dari total{' '}
+                            <span className="font-bold text-slate-900">{books.total || 0}</span> judul buku
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Per Page Selector */}
+                            <div className="flex items-center space-x-2 text-xs text-slate-600 font-medium">
+                                <span>Tampilkan:</span>
+                                <select
+                                    value={perPage}
+                                    onChange={(e) => handlePerPageChange(e.target.value)}
+                                    className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm"
+                                >
+                                    <option value="10">10 / hal</option>
+                                    <option value="25">25 / hal</option>
+                                    <option value="50">50 / hal</option>
+                                    <option value="100">100 / hal</option>
+                                    <option value="all">Semua Data</option>
+                                </select>
+                            </div>
+
+                            {/* Pagination Links */}
+                            {books.links && books.links.length > 3 && (
+                                <div className="flex items-center space-x-1">
+                                    {books.links.map((link, idx) => (
+                                        <Link
+                                            key={idx}
+                                            href={link.url || '#'}
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                                link.active
+                                                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                                    : link.url
+                                                    ? 'bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200 shadow-sm'
+                                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-transparent'
+                                            }`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

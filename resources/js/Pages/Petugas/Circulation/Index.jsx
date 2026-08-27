@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Search, Filter, QrCode, ArrowRightLeft, BookOpen, AlertTriangle, CheckCircle2, DollarSign } from 'lucide-react';
+import { Search, Filter, QrCode, ArrowRightLeft, BookOpen, AlertTriangle, CheckCircle2, DollarSign, SlidersHorizontal } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
 export default function Index({ borrowings, filters, stats }) {
@@ -43,7 +43,15 @@ export default function Index({ borrowings, filters, stats }) {
                         <p className="text-xs text-slate-500 font-medium mt-0.5">Peminjaman aktif, pengembalian, dan tagihan denda</p>
                     </div>
 
-                    <div className="flex items-center space-x-3">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <Link
+                            href="/petugas/settings"
+                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-all flex items-center space-x-1.5 border border-slate-200"
+                            title="Atur batas maksimal eksemplar dan tarif denda per hari"
+                        >
+                            <SlidersHorizontal className="w-4 h-4 text-amber-600" />
+                            <span>Aturan & Tarif Denda</span>
+                        </Link>
                         <Link
                             href="/petugas/circulations/scan-ticket"
                             className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs shadow transition-all flex items-center space-x-1.5"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { 
     BookmarkCheck, 
     BookOpen, 
@@ -17,6 +17,10 @@ import {
 import AnggotaLayout from '@/Layouts/AnggotaLayout';
 
 export default function Index({ activeBorrowings, historyBorrowings, stats }) {
+    const { library_settings } = usePage().props;
+    const finePerDay = library_settings?.fine_per_day || 1000;
+    const durationDays = library_settings?.borrow_duration_days || 7;
+    const maxLimit = library_settings?.max_borrow_limit || 3;
     return (
         <AnggotaLayout activeMenu="borrowings">
             <Head title="Buku Sedang Dipinjam - Anggota" />
@@ -54,7 +58,7 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                         <div className="space-y-1">
                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Kuota Pinjam Aktif</span>
                             <p className="text-2xl font-black text-slate-950">
-                                {stats.active_count} <span className="text-sm font-bold text-slate-400">/ {stats.max_limit} Buku</span>
+                                {stats.active_count} <span className="text-sm font-bold text-slate-400">/ {stats.max_limit} Eksemplar</span>
                             </p>
                             <div className="w-36 bg-slate-100 rounded-full h-2 overflow-hidden">
                                 <div 
@@ -73,7 +77,7 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                         <div className="space-y-1">
                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status Keterlambatan</span>
                             <p className={`text-2xl font-black ${stats.overdue_count > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                                {stats.overdue_count > 0 ? `${stats.overdue_count} Buku Terlambat` : 'Semua Tepat Waktu'}
+                                {stats.overdue_count > 0 ? `${stats.overdue_count} Eksemplar Terlambat` : 'Semua Tepat Waktu'}
                             </p>
                             <span className="text-[10px] text-slate-500 font-medium">
                                 {stats.overdue_count > 0 ? 'Segera kembalikan ke meja petugas' : 'Durasi pinjam standar 7 hari'}
@@ -165,14 +169,28 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
 
                                         {/* Status Alert Badge */}
                                         {item.is_overdue ? (
-                                            <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 space-y-1">
-                                                <div className="flex items-center space-x-1.5 font-extrabold text-rose-700">
-                                                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                                                    <span>Terlambat {item.overdue_days} Hari</span>
+                                            <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center space-x-1.5 font-extrabold text-rose-700">
+                                                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                                                        <span>Terlambat {item.overdue_days} Hari</span>
+                                                    </div>
+                                                    <span className="font-bold text-rose-800 font-mono">
+                                                        Rp {item.estimated_fine.toLocaleString('id-ID')}
+                                                    </span>
                                                 </div>
                                                 <p className="text-[10px] text-rose-600 font-medium">
-                                                    Estimasi Denda: <strong>Rp {item.estimated_fine.toLocaleString('id-ID')}</strong> (Rp 1.000 / hari)
+                                                    Estimasi Denda: <strong>{item.fineable_days ?? item.overdue_days} hari</strong> dikenakan denda (@ Rp {finePerDay.toLocaleString('id-ID')}/hari)
                                                 </p>
+                                                {item.exempt_days > 0 && (
+                                                    <p className="text-[10px] text-emerald-700 font-bold">
+                                                        ✓ Bebas Denda: {item.exempt_days} hari (
+                                                        {item.sunday_exempt_days > 0 ? `${item.sunday_exempt_days} Minggu` : ''}
+                                                        {item.sunday_exempt_days > 0 && item.holiday_exempt_days > 0 ? ' + ' : ''}
+                                                        {item.holiday_exempt_days > 0 ? `${item.holiday_exempt_days} Tanggal Merah` : ''}
+                                                        )
+                                                    </p>
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center justify-between font-bold">
@@ -305,8 +323,9 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                     <div className="text-xs text-amber-900 leading-relaxed font-medium space-y-1">
                         <p className="font-bold">Ketentuan Sirkulasi Peminjaman SIMPUS Politeknik Indonusa Surakarta:</p>
                         <ul className="list-disc list-inside space-y-0.5 text-amber-800 text-[11px]">
-                            <li>Batas waktu masa pinjam buku fisik adalah <strong>7 hari kalender</strong> terhitung sejak pengesahan petugas.</li>
-                            <li>Keterlambatan pengembalian buku dikenakan denda administrasi sebesar <strong>Rp 1.000 / hari per eksemplar</strong>.</li>
+                            <li>Batas maksimal peminjaman aktif adalah <strong>{maxLimit} eksemplar buku</strong> secara bersamaan.</li>
+                            <li>Batas waktu masa pinjam buku fisik adalah <strong>{durationDays} hari kalender</strong> terhitung sejak pengesahan petugas.</li>
+                            <li>Keterlambatan pengembalian buku dikenakan denda administrasi sebesar <strong>Rp {finePerDay.toLocaleString('id-ID')} / hari per eksemplar</strong>.</li>
                             <li>Pengembalian buku fisik dilakukan langsung di <strong>Meja Sirkulasi Pustakawan</strong>.</li>
                         </ul>
                     </div>

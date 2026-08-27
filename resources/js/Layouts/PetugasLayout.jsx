@@ -14,6 +14,7 @@ import {
     MapPin, 
     UserCheck, 
     UserCog,
+    SlidersHorizontal,
     Menu,
     X
 } from 'lucide-react';
@@ -29,6 +30,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
         { key: 'categories', label: 'Kategori DDC', href: '/petugas/categories', icon: Tag },
         { key: 'racks', label: 'Lokasi Rak Fisik', href: '/petugas/racks', icon: MapPin },
         { key: 'circulations', label: 'Sirkulasi Transaksi', href: '/petugas/circulations', icon: ArrowRightLeft },
+        { key: 'settings', label: 'Pengaturan Sirkulasi', href: '/petugas/settings', icon: SlidersHorizontal },
         { key: 'presensi', label: 'Rekap Presensi', href: '/petugas/presensi', icon: Users },
         { key: 'reports', label: 'Laporan Analytics', href: '/petugas/reports', icon: FileSpreadsheet },
         { key: 'laboratories', label: 'Perpustakaan 360°', href: '/petugas/laboratories', icon: Library },

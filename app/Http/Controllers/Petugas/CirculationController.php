@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\BookCopy;
 use App\Models\Borrowing;
 use App\Models\BorrowTicket;
+use App\Models\Setting;
+use App\Services\FineCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -110,8 +112,9 @@ class CirculationController extends Controller
                 $ticket->update(['status' => 'validated']);
                 $bookCopy->update(['status' => 'borrowed']);
 
-                // Buat Transaksi Sirkulasi (Durasi Pinjam 7 Hari)
+                // Buat Transaksi Sirkulasi dengan Durasi Pinjam sesuai Pengaturan
                 $borrowingCode = 'TRX-' . date('Ymd') . '-' . sprintf('%04d', Borrowing::count() + 1);
+                $durationDays = (int) Setting::get('borrow_duration_days', 7);
 
                 return Borrowing::create([
                     'borrowing_code' => $borrowingCode,
@@ -120,7 +123,7 @@ class CirculationController extends Controller
                     'ticket_id' => $ticket->id,
                     'officer_id' => $officer->id,
                     'borrowed_at' => now(),
-                    'due_date' => now()->addDays(7),
+                    'due_date' => now()->addDays($durationDays),
                     'status' => 'active',
                 ]);
             });
@@ -186,16 +189,12 @@ class CirculationController extends Controller
                     throw new \Exception("Tidak ditemukan transaksi peminjaman aktif untuk eksemplar {$bookCopy->copy_code}.");
                 }
 
-                // Kalkulasi Denda (Rp 1.000 per hari keterlambatan)
+                // Kalkulasi Denda Keterlambatan sesuai Aturan (Bebas Denda Hari Minggu & Tanggal Merah)
                 $returnedAt = now();
-                $fineAmount = 0;
-                $overdueDays = 0;
+                $finePerDay = (float) Setting::get('fine_per_day', 1000);
+                $calc = FineCalculator::calculate($borrowing->due_date, $returnedAt, $finePerDay);
 
-                if ($returnedAt->greaterThan($borrowing->due_date)) {
-                    $overdueDays = ceil($returnedAt->diffInDays($borrowing->due_date));
-                    $fineAmount = $overdueDays * 1000;
-                }
-
+                $fineAmount = $calc['fine_amount'];
                 $fineStatus = $fineAmount > 0 ? 'unpaid' : 'none';
 
                 // Update Peminjaman & Eksemplar
@@ -216,8 +215,12 @@ class CirculationController extends Controller
                     'user_nim' => $borrowing->user->username,
                     'book_title' => $borrowing->bookCopy->book->title,
                     'copy_code' => $borrowing->bookCopy->copy_code,
-                    'late_days' => $overdueDays,
-                    'overdue_days' => $overdueDays,
+                    'late_days' => $calc['total_overdue_days'],
+                    'overdue_days' => $calc['total_overdue_days'],
+                    'fineable_days' => $calc['fineable_days'],
+                    'sunday_exempt_days' => $calc['sunday_exempt_days'],
+                    'holiday_exempt_days' => $calc['holiday_exempt_days'],
+                    'total_exempt_days' => $calc['total_exempt_days'],
                     'fine_amount' => $fineAmount,
                     'fine_status' => $fineStatus,
                     'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d M Y (H:i)') : '-',

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Anggota;
 use App\Http\Controllers\Controller;
 use App\Models\Borrowing;
 use App\Models\BorrowTicket;
+use App\Models\Setting;
+use App\Services\FineCalculator;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,6 +22,7 @@ class BorrowingController extends Controller
         BorrowTicket::releaseExpiredTickets();
 
         $user = $request->user();
+        $finePerDay = (float) Setting::get('fine_per_day', 1000);
 
         // 1. Buku yang sedang aktif dipinjam oleh akun ini
         $activeBorrowings = Borrowing::where('user_id', $user->id)
@@ -31,13 +34,9 @@ class BorrowingController extends Controller
             ])
             ->latest('borrowed_at')
             ->get()
-            ->map(function ($borrowing) {
-                $now = now();
-                $dueDate = $borrowing->due_date;
-                $isOverdue = $now->greaterThan($dueDate);
-                $remainingDays = $isOverdue ? 0 : (int) ceil($now->diffInDays($dueDate, false));
-                $overdueDays = $isOverdue ? (int) ceil($now->diffInDays($dueDate)) : 0;
-                $estimatedFine = $overdueDays * 1000;
+            ->map(function ($borrowing) use ($finePerDay) {
+                $calc = FineCalculator::calculate($borrowing->due_date, now(), $finePerDay);
+                $remainingDays = $calc['is_overdue'] ? 0 : (int) ceil(now()->diffInDays($borrowing->due_date, false));
 
                 return [
                     'id' => $borrowing->id,
@@ -55,10 +54,14 @@ class BorrowingController extends Controller
                     'borrowed_at' => $borrowing->borrowed_at ? $borrowing->borrowed_at->format('d M Y (H:i)') : '-',
                     'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d M Y (H:i)') : '-',
                     'due_date_raw' => $borrowing->due_date?->toISOString(),
-                    'is_overdue' => $isOverdue,
+                    'is_overdue' => $calc['is_overdue'],
                     'remaining_days' => $remainingDays,
-                    'overdue_days' => $overdueDays,
-                    'estimated_fine' => $estimatedFine,
+                    'overdue_days' => $calc['total_overdue_days'],
+                    'fineable_days' => $calc['fineable_days'],
+                    'exempt_days' => $calc['total_exempt_days'],
+                    'sunday_exempt_days' => $calc['sunday_exempt_days'],
+                    'holiday_exempt_days' => $calc['holiday_exempt_days'],
+                    'estimated_fine' => $calc['fine_amount'],
                 ];
             });
 
@@ -80,7 +83,7 @@ class BorrowingController extends Controller
             'historyBorrowings' => $historyBorrowings,
             'stats' => [
                 'active_count' => $activeBorrowings->count(),
-                'max_limit' => 3,
+                'max_limit' => (int) Setting::get('max_borrow_limit', 3),
                 'overdue_count' => $activeBorrowings->where('is_overdue', true)->count(),
                 'history_count' => Borrowing::where('user_id', $user->id)->count(),
                 'unpaid_fines' => $unpaidFinesTotal,

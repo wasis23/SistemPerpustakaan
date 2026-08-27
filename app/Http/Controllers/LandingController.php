@@ -7,6 +7,7 @@ use App\Models\BookCopy;
 use App\Models\Borrowing;
 use App\Models\Category;
 use App\Models\Laboratory;
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -47,11 +48,18 @@ class LandingController extends Controller
             'active_members' => User::where('role', 'anggota')->count(),
         ];
 
+        // Berita & Informasi Terbaru
+        $latestPosts = Post::published()
+            ->latest('published_at')
+            ->take(3)
+            ->get();
+
         return Inertia::render('Landing', [
             'featuredBooks' => $featuredBooks,
             'categories' => $categories,
             'libraries' => $libraries,
             'stats' => $stats,
+            'latestPosts' => $latestPosts,
         ]);
     }
 }

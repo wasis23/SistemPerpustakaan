@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, usePage, router } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { 
     BookOpen, 
     Shield, 
@@ -15,46 +15,59 @@ import {
     UserCheck, 
     UserCog,
     SlidersHorizontal,
+    Newspaper,
+    GraduationCap,
+    BookMarked,
     Menu,
-    X
+    X,
+    ExternalLink
 } from 'lucide-react';
 
 export default function PetugasLayout({ children, activeMenu, todayVisitsCount }) {
     const { auth } = usePage().props;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    // Flat Navigation Items with the optimal UX order
     const navItems = [
         { key: 'dashboard', label: 'Dashboard Utama', href: '/petugas/dashboard', icon: Compass },
+        { key: 'circulations', label: 'Sirkulasi Transaksi', href: '/petugas/circulations', icon: ArrowRightLeft },
+        { key: 'presensi', label: 'Rekap Presensi', href: '/petugas/presensi', icon: Users },
         { key: 'members', label: 'Data Anggota', href: '/petugas/members', icon: UserCheck },
-        { key: 'books', label: 'Katalog Buku', href: '/petugas/books', icon: BookOpen },
+        { key: 'books', label: 'Katalog Buku Fisik', href: '/petugas/books', icon: BookOpen },
+        { key: 'lecturer-books', label: 'Karya Buku Dosen', href: '/petugas/lecturer-books', icon: GraduationCap },
+        { key: 'national-journals', label: 'Publikasi Ilmiah', href: '/petugas/national-journals', icon: BookMarked },
         { key: 'categories', label: 'Kategori DDC', href: '/petugas/categories', icon: Tag },
         { key: 'racks', label: 'Lokasi Rak Fisik', href: '/petugas/racks', icon: MapPin },
-        { key: 'circulations', label: 'Sirkulasi Transaksi', href: '/petugas/circulations', icon: ArrowRightLeft },
-        { key: 'settings', label: 'Pengaturan Sirkulasi', href: '/petugas/settings', icon: SlidersHorizontal },
-        { key: 'presensi', label: 'Rekap Presensi', href: '/petugas/presensi', icon: Users },
-        { key: 'reports', label: 'Laporan Analytics', href: '/petugas/reports', icon: FileSpreadsheet },
+        { key: 'posts', label: 'Manajemen Berita', href: '/petugas/posts', icon: Newspaper },
         { key: 'laboratories', label: 'Perpustakaan 360°', href: '/petugas/laboratories', icon: Library },
+        { key: 'reports', label: 'Laporan Analytics', href: '/petugas/reports', icon: FileSpreadsheet },
+        { key: 'settings', label: 'Pengaturan Sirkulasi', href: '/petugas/settings', icon: SlidersHorizontal },
         { key: 'profile', label: 'Profil Pustakawan', href: '/petugas/profile', icon: UserCog },
     ];
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-slate-900 flex font-sans selection:bg-amber-500 selection:text-slate-950">
             {/* Desktop Left Vertical Sidebar */}
-            <aside className="w-64 bg-white border-r border-amber-900/10 hidden md:flex flex-col justify-between p-6 shrink-0 min-h-screen sticky top-0 h-screen z-30">
-                <div className="space-y-8">
+            <aside className="w-64 bg-white border-r border-amber-900/10 hidden md:flex flex-col justify-between p-4 shrink-0 min-h-screen sticky top-0 h-screen z-30 overflow-hidden">
+                <div className="flex flex-col h-full overflow-hidden">
                     {/* Brand Header */}
-                    <Link href="/" className="flex items-center space-x-3 px-2">
-                        <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg shadow-md">
-                            <Shield className="w-5 h-5 stroke-[2.5]" />
-                        </div>
-                        <div>
-                            <span className="font-extrabold text-xl text-slate-950 tracking-tight">SIMPUS.</span>
-                            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-2 font-bold uppercase">Petugas</span>
-                        </div>
-                    </Link>
+                    <div className="pb-4 pt-2 px-2 border-b border-slate-100 shrink-0">
+                        <Link href="/" className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg shadow-md shrink-0">
+                                <Shield className="w-5 h-5 stroke-[2.5]" />
+                            </div>
+                            <div>
+                                <div className="flex items-center space-x-1.5">
+                                    <span className="font-extrabold text-lg text-slate-950 tracking-tight">SIMPUS.</span>
+                                    <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded-md font-extrabold uppercase">Petugas</span>
+                                </div>
+                                <span className="text-[10px] text-slate-500 font-medium block">Politeknik Indonusa</span>
+                            </div>
+                        </Link>
+                    </div>
 
-                    {/* Navigation Links */}
-                    <nav className="space-y-1.5">
+                    {/* Scrollable Navigation List without Group Headings */}
+                    <div className="flex-1 overflow-y-auto py-3 space-y-1 pr-1 custom-scrollbar">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = activeMenu === item.key;
@@ -62,30 +75,62 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                                 <Link
                                     key={item.key}
                                     href={item.href}
-                                    className={`flex items-center space-x-3 px-4 py-3 font-bold rounded-2xl text-xs transition-all ${
+                                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                                         isActive
-                                            ? 'bg-amber-500 text-slate-950 shadow-sm'
-                                            : 'text-slate-600 hover:text-amber-800 hover:bg-amber-50'
+                                            ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                                            : 'text-slate-600 hover:text-slate-950 hover:bg-amber-50/80'
                                     }`}
                                 >
-                                    <Icon className="w-4 h-4 stroke-[2.5]" />
-                                    <span>{item.label}</span>
+                                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'stroke-[2.5]' : 'stroke-[2]'}`} />
+                                    <span className="truncate">{item.label}</span>
                                 </Link>
                             );
                         })}
 
-                        <Link
-                            href="/presensi"
-                            target="_blank"
-                            className="flex items-center space-x-3 px-4 py-3 text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold rounded-2xl text-xs transition-all border border-amber-200"
-                        >
-                            <Monitor className="w-4 h-4" />
-                            <span>Presensi</span>
-                        </Link>
-                    </nav>
+                        {/* Presensi Kiosk */}
+                        <div className="pt-2">
+                            <Link
+                                href="/presensi"
+                                target="_blank"
+                                className="flex items-center justify-between px-3.5 py-2.5 text-amber-900 bg-amber-50 hover:bg-amber-100 font-bold rounded-xl text-xs transition-all border border-amber-200"
+                            >
+                                <div className="flex items-center space-x-2.5">
+                                    <Monitor className="w-4 h-4 text-amber-700" />
+                                    <span>Layar Presensi Kiosk</span>
+                                </div>
+                                <ExternalLink className="w-3.5 h-3.5 text-amber-600" />
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Bottom User Card */}
+                    <div className="pt-3 border-t border-slate-100 shrink-0">
+                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded-2xl border border-slate-200/70">
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                                    {auth.user.name.charAt(0)}
+                                </div>
+                                <div className="min-w-0 pr-1">
+                                    <p className="text-xs font-black text-slate-900 truncate leading-tight">
+                                        {auth.user.name}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 font-medium truncate">
+                                        Pustakawan
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/logout"
+                                method="post"
+                                as="button"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Keluar"
+                            >
+                                <LogOut className="w-4 h-4" />
+                            </Link>
+                        </div>
+                    </div>
                 </div>
-
-
             </aside>
 
             {/* Mobile Drawer / Slide-Over Sidebar */}
@@ -98,10 +143,10 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                     />
 
                     {/* Drawer Panel */}
-                    <div className="relative w-72 max-w-[85vw] bg-white h-full p-6 flex flex-col justify-between shadow-2xl z-10 overflow-y-auto">
-                        <div className="space-y-6">
+                    <div className="relative w-72 max-w-[85vw] bg-white h-full p-5 flex flex-col justify-between shadow-2xl z-10 overflow-y-auto">
+                        <div className="space-y-5">
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                 <Link 
                                     href="/" 
                                     onClick={() => setMobileMenuOpen(false)}
@@ -111,8 +156,8 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                                         <Shield className="w-5 h-5 stroke-[2.5]" />
                                     </div>
                                     <div>
-                                        <span className="font-extrabold text-lg text-slate-950 tracking-tight">SIMPUS.</span>
-                                        <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-1.5 font-bold uppercase">Petugas</span>
+                                        <span className="font-extrabold text-base text-slate-950 tracking-tight">SIMPUS.</span>
+                                        <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md ml-1 font-bold uppercase">Petugas</span>
                                     </div>
                                 </Link>
 
@@ -127,7 +172,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                             </div>
 
                             {/* Mobile Nav Links */}
-                            <nav className="space-y-1.5">
+                            <nav className="space-y-1">
                                 {navItems.map((item) => {
                                     const Icon = item.icon;
                                     const isActive = activeMenu === item.key;
@@ -136,10 +181,10 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                                             key={item.key}
                                             href={item.href}
                                             onClick={() => setMobileMenuOpen(false)}
-                                            className={`flex items-center space-x-3 px-4 py-3 font-bold rounded-2xl text-xs transition-all ${
+                                            className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                                                 isActive
-                                                    ? 'bg-amber-500 text-slate-950 shadow-sm'
-                                                    : 'text-slate-600 hover:text-amber-800 hover:bg-amber-50'
+                                                    ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
+                                                    : 'text-slate-600 hover:text-slate-950 hover:bg-amber-50/80'
                                             }`}
                                         >
                                             <Icon className="w-4 h-4 stroke-[2.5]" />
@@ -148,22 +193,27 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                                     );
                                 })}
 
-                                <Link
-                                    href="/presensi"
-                                    target="_blank"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="flex items-center space-x-3 px-4 py-3 text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold rounded-2xl text-xs transition-all border border-amber-200"
-                                >
-                                    <Monitor className="w-4 h-4" />
-                                    <span>Presensi</span>
-                                </Link>
+                                <div className="pt-2">
+                                    <Link
+                                        href="/presensi"
+                                        target="_blank"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="flex items-center justify-between px-3.5 py-2.5 text-amber-900 bg-amber-50 hover:bg-amber-100 font-bold rounded-xl text-xs transition-all border border-amber-200"
+                                    >
+                                        <div className="flex items-center space-x-2.5">
+                                            <Monitor className="w-4 h-4" />
+                                            <span>Layar Presensi Kiosk</span>
+                                        </div>
+                                        <ExternalLink className="w-3.5 h-3.5 text-amber-600" />
+                                    </Link>
+                                </div>
                             </nav>
                         </div>
 
                         {/* Drawer Bottom Widget */}
-                        <div className="pt-6 border-t border-slate-100 space-y-3">
+                        <div className="pt-4 border-t border-slate-100 space-y-3">
                             <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/60">
-                                <p className="text-xs font-extrabold text-slate-950">{auth.user.name}</p>
+                                <p className="text-xs font-extrabold text-slate-950 truncate">{auth.user.name}</p>
                                 <p className="text-[10px] text-amber-800 font-medium">Pustakawan / Administrator</p>
                                 <p className="text-[10px] text-slate-400 font-mono mt-0.5">Hari ini: {todayVisitsCount ?? 0} Kunjungan</p>
                             </div>
@@ -204,8 +254,6 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                             <span className="font-extrabold text-base text-slate-950 tracking-tight">SIMPUS</span>
                         </Link>
                     </div>
-
-
 
                     {/* Right User Utility */}
                     <div className="flex items-center space-x-2 sm:space-x-3">

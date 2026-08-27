@@ -63,6 +63,9 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             RackSeeder::class,
             BookSeeder::class,
+            PostSeeder::class,
+            LecturerBookSeeder::class,
+            NationalJournalSeeder::class,
         ]);
     }
 }

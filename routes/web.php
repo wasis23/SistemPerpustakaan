@@ -8,22 +8,28 @@ use App\Http\Controllers\Anggota\TicketController as AnggotaTicketController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\NewsController;
 use App\Http\Controllers\Petugas\BookController as PetugasBookController;
 use App\Http\Controllers\Petugas\CategoryController as PetugasCategoryController;
 use App\Http\Controllers\Petugas\CirculationController as PetugasCirculationController;
 use App\Http\Controllers\Petugas\DashboardController as PetugasDashboardController;
 use App\Http\Controllers\Petugas\LaboratoryController as PetugasLaboratoryController;
+use App\Http\Controllers\Petugas\LecturerBookController as PetugasLecturerBookController;
 use App\Http\Controllers\Petugas\MemberController as PetugasMemberController;
+use App\Http\Controllers\Petugas\NationalJournalController as PetugasNationalJournalController;
+use App\Http\Controllers\Petugas\PostController as PetugasPostController;
 use App\Http\Controllers\Petugas\ProfileController as PetugasProfileController;
 use App\Http\Controllers\Petugas\RackController as PetugasRackController;
 use App\Http\Controllers\Petugas\ReportController as PetugasReportController;
 use App\Http\Controllers\Petugas\SettingController as PetugasSettingController;
 use Illuminate\Support\Facades\Route;
 
-// Halaman Utama Publik SIMPUS & Katalog Publik
+// Halaman Utama Publik SIMPUS, Katalog Publik & Berita
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/katalog', [AnggotaCatalogController::class, 'indexPublic'])->name('katalog.index');
 Route::get('/katalog/{book}', [AnggotaCatalogController::class, 'showPublic'])->name('katalog.show');
+Route::get('/berita', [NewsController::class, 'index'])->name('news.index');
+Route::get('/berita/{slug}', [NewsController::class, 'show'])->name('news.show');
 
 // Kiosk Presensi Kunjungan Pintu Masuk
 Route::get('/presensi', [AttendanceController::class, 'kiosk'])->name('presensi.kiosk');
@@ -110,6 +116,24 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings', [PetugasSettingController::class, 'update'])->name('settings.update');
         Route::post('/settings/holidays', [PetugasSettingController::class, 'storeHoliday'])->name('settings.holidays.store');
         Route::delete('/settings/holidays/{holiday}', [PetugasSettingController::class, 'destroyHoliday'])->name('settings.holidays.destroy');
+
+        // Manajemen Berita, Pengumuman & Artikel (SEO Supported)
+        Route::post('/posts/{post}/toggle-featured', [PetugasPostController::class, 'toggleFeatured'])->name('posts.toggle-featured');
+        Route::resource('posts', PetugasPostController::class);
+
+        // Manajemen Karya Buku Dosen (Terpisah dari Katalog Fisik, Tanpa No Inventaris)
+        Route::get('/lecturer-books/download-template', [PetugasLecturerBookController::class, 'downloadTemplate'])->name('lecturer-books.download-template');
+        Route::post('/lecturer-books/import-csv', [PetugasLecturerBookController::class, 'importCsv'])->name('lecturer-books.import-csv');
+        Route::get('/lecturer-books/export-csv', [PetugasLecturerBookController::class, 'exportCsv'])->name('lecturer-books.export-csv');
+        Route::post('/lecturer-books/{lecturer_book}/toggle-featured', [PetugasLecturerBookController::class, 'toggleFeatured'])->name('lecturer-books.toggle-featured');
+        Route::resource('lecturer-books', PetugasLecturerBookController::class);
+
+        // Manajemen Jurnal Nasional (SINTA, ISSN, e-ISSN, OJS Link)
+        Route::get('/national-journals/download-template', [PetugasNationalJournalController::class, 'downloadTemplate'])->name('national-journals.download-template');
+        Route::post('/national-journals/import-csv', [PetugasNationalJournalController::class, 'importCsv'])->name('national-journals.import-csv');
+        Route::get('/national-journals/export-csv', [PetugasNationalJournalController::class, 'exportCsv'])->name('national-journals.export-csv');
+        Route::post('/national-journals/{national_journal}/toggle-status', [PetugasNationalJournalController::class, 'toggleStatus'])->name('national-journals.toggle-status');
+        Route::resource('national-journals', PetugasNationalJournalController::class);
 
         // Laporan & Rekapitulasi Analytics
         Route::get('/reports', [PetugasReportController::class, 'index'])->name('reports.index');

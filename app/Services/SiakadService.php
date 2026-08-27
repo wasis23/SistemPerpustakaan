@@ -11,22 +11,24 @@ use Illuminate\Support\Facades\Log;
 class SiakadService
 {
     /**
-     * Autentikasi dan sinkronisasi data Mahasiswa dari SIAKAD
+     * Autentikasi dan sinkronisasi data Mahasiswa atau Dosen dari SIAKAD
      *
-     * @param string $username (NIM Mahasiswa)
+     * @param string $username (NIM Mahasiswa / NIDN Dosen / NIP / Username)
      * @param string $password
      * @return User|null
      */
     public function authenticate(string $username, string $password): ?User
     {
-        $cleanNim = strtoupper(trim($username));
-        $mahasiswaData = null;
+        $cleanUsername = trim($username);
+        $upperUsername = strtoupper($cleanUsername);
+        $userData = null;
 
-        // 1. Coba via HTTP API SIAKAD External (POST verify-login)
+        // =========================================================================
+        // 1. Coba Autentikasi via HTTP API SIAKAD External (POST verify-login)
+        // =========================================================================
         $apiUrl = config('services.siakad.url', 'https://siakadv2.poltekindonusa.ac.id/api/verify-login');
         $apiKey = config('services.siakad.api_key', 'e844f45c5100479b91c0eb97793a84b8b85cc2fe21f50caf38807ff72408e143');
 
-        // Daftar target URL yang dicoba (baik tanpa .php maupun dengan .php)
         $endpoints = [$apiUrl];
         if (!str_ends_with($apiUrl, '.php')) {
             $endpoints[] = $apiUrl . '.php';
@@ -41,14 +43,13 @@ class SiakadService
                     ])
                     ->asJson()
                     ->post($url, [
-                        'username' => $cleanNim,
+                        'username' => $cleanUsername,
                         'password' => $password,
                     ]);
 
                 if ($response->successful()) {
                     $payload = $response->json();
 
-                    // Format 1: Status success langsung dengan payload data
                     if (
                         !empty($payload) &&
                         (
@@ -56,27 +57,30 @@ class SiakadService
                             (!empty($payload['success']) && $payload['success'] === true)
                         )
                     ) {
-                        $mhs = $payload['data'] ?? $payload['user'] ?? $payload['mahasiswa'] ?? $payload;
-                        $mahasiswaData = [
-                            'nim' => $mhs['nim'] ?? $mhs['nipd'] ?? $mhs['username'] ?? $cleanNim,
-                            'nama' => $mhs['nama'] ?? $mhs['name'] ?? $mhs['nm_pd'] ?? $cleanNim,
-                            'email' => $mhs['email'] ?? $mhs['email_institusi'] ?? $mhs['email_poltek'] ?? ($cleanNim . '@poltekindonusa.ac.id'),
-                            'prodi' => $mhs['prodi'] ?? $mhs['nm_lemb'] ?? $mhs['program_studi'] ?? null,
-                            'phone' => $mhs['no_hp'] ?? $mhs['phone'] ?? $mhs['telepon_seluler'] ?? null,
+                        $pData = $payload['data'] ?? $payload['user'] ?? $payload['mahasiswa'] ?? $payload['dosen'] ?? $payload;
+                        $isDosen = !empty($pData['nidn']) || !empty($pData['nip']) || (isset($pData['role']) && in_array(strtolower($pData['role']), ['dosen', 'pengajar', 'lecturer']));
+
+                        $userData = [
+                            'username' => $pData['nidn'] ?? $pData['nim'] ?? $pData['nipd'] ?? $pData['nip'] ?? $pData['username'] ?? $cleanUsername,
+                            'name' => $pData['nama'] ?? $pData['name'] ?? $pData['nm_pd'] ?? $pData['nm_ptk'] ?? $cleanUsername,
+                            'email' => $pData['email'] ?? $pData['email_institusi'] ?? $pData['email_poltek'] ?? ($cleanUsername . '@poltekindonusa.ac.id'),
+                            'prodi' => $pData['prodi'] ?? $pData['nm_lemb'] ?? $pData['program_studi'] ?? ($isDosen ? 'Dosen Politeknik Indonusa' : null),
+                            'phone' => $pData['no_hp'] ?? $pData['phone'] ?? $pData['telepon_seluler'] ?? null,
                         ];
                         break;
                     }
 
-                    // Format 2: Response mengembalikan password_hash untuk diverifikasi lokal
+                    // Format 2: Password hash verification from API response
                     if (!empty($payload['status']) && isset($payload['data']['password_hash'])) {
-                        $mhs = $payload['data'];
-                        if (password_verify($password, $mhs['password_hash'])) {
-                            $mahasiswaData = [
-                                'nim' => $mhs['nim'] ?? $cleanNim,
-                                'nama' => $mhs['nama'] ?? $cleanNim,
-                                'email' => $mhs['email_institusi'] ?? ($cleanNim . '@poltekindonusa.ac.id'),
-                                'prodi' => $mhs['prodi'] ?? null,
-                                'phone' => $mhs['no_hp'] ?? null,
+                        $pData = $payload['data'];
+                        if (password_verify($password, $pData['password_hash'])) {
+                            $isDosen = !empty($pData['nidn']) || !empty($pData['nip']);
+                            $userData = [
+                                'username' => $pData['nidn'] ?? $pData['nim'] ?? $pData['nipd'] ?? $cleanUsername,
+                                'name' => $pData['nama'] ?? $pData['name'] ?? $cleanUsername,
+                                'email' => $pData['email'] ?? $pData['email_institusi'] ?? ($cleanUsername . '@poltekindonusa.ac.id'),
+                                'prodi' => $pData['prodi'] ?? ($isDosen ? 'Dosen Politeknik Indonusa' : null),
+                                'phone' => $pData['no_hp'] ?? null,
                             ];
                             break;
                         }
@@ -87,36 +91,29 @@ class SiakadService
             }
         }
 
+        // =========================================================================
         // 2. Fallback: Direct Database Connection ke Database SIAKAD (siakaddb)
-        if (!$mahasiswaData) {
+        // =========================================================================
+        if (!$userData) {
             try {
+                // -------------------------------------------------------------
+                // A. CEK DATA MAHASISWA (viewMahasiswaPt / viewMahasiswaKeluar)
+                // -------------------------------------------------------------
                 $student = DB::connection('siakad')
                     ->table('viewMahasiswaPt')
-                    ->where('nipd', $cleanNim)
+                    ->where('nipd', $upperUsername)
                     ->first();
 
                 if (!$student) {
                     $student = DB::connection('siakad')
                         ->table('viewMahasiswaKeluar')
-                        ->where('nipd', $cleanNim)
+                        ->where('nipd', $upperUsername)
                         ->first();
                 }
 
                 if ($student) {
                     $hash = trim((string)($student->pass ?? $student->password ?? ''));
-                    $passwordValid = false;
-
-                    if ($hash && password_verify($password, $hash)) {
-                        $passwordValid = true;
-                    } elseif ($hash && md5($password) === strtolower($hash)) {
-                        $passwordValid = true;
-                    } elseif ($hash && sha1($password) === strtolower($hash)) {
-                        $passwordValid = true;
-                    } elseif ($hash && $password === $hash) {
-                        $passwordValid = true;
-                    }
-
-                    if ($passwordValid) {
+                    if ($this->verifyPasswordHash($password, $hash)) {
                         $bio = null;
                         if (!empty($student->id_pd) || !empty($student->xid_pd)) {
                             $bio = DB::connection('siakad')->table('wsia_mahasiswa')
@@ -127,13 +124,72 @@ class SiakadService
                                 ->first();
                         }
 
-                        $mahasiswaData = [
-                            'nim' => $student->nipd ?? $cleanNim,
-                            'nama' => $bio->nm_pd ?? $student->nm_pd ?? $cleanNim,
-                            'email' => $bio->email_poltek ?: ($bio->email ?: strtolower($cleanNim) . '@students.poltekindonusa.ac.id'),
+                        $userData = [
+                            'username' => $student->nipd ?? $upperUsername,
+                            'name' => $bio->nm_pd ?? $student->nm_pd ?? $upperUsername,
+                            'email' => $bio->email_poltek ?: ($bio->email ?: strtolower($upperUsername) . '@students.poltekindonusa.ac.id'),
                             'prodi' => $student->nm_lemb ?? $student->nm_prodi ?? null,
                             'phone' => $bio->telepon_seluler ?? $bio->telepon_rumah ?? $student->telepon_seluler ?? null,
                         ];
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // B. CEK DATA DOSEN (wsia_dosen / viewDosenPt)
+                // -------------------------------------------------------------
+                if (!$userData) {
+                    $dosen = DB::connection('siakad')
+                        ->table('wsia_dosen')
+                        ->where(function ($q) use ($cleanUsername, $upperUsername) {
+                            $q->where('nidn', $cleanUsername)
+                              ->orWhere('nip', $cleanUsername)
+                              ->orWhere('xid_ptk', $cleanUsername)
+                              ->orWhere('id_ptk', $cleanUsername)
+                              ->orWhere('niy_nigk', $cleanUsername)
+                              ->orWhere('nuptk', $cleanUsername)
+                              ->orWhere('email', $cleanUsername)
+                              ->orWhere('email_poltek', $cleanUsername)
+                              ->orWhere('nm_dsn', $cleanUsername);
+                        })
+                        ->first();
+
+                    if ($dosen) {
+                        $hash = trim((string)($dosen->pass ?? ''));
+                        if ($this->verifyPasswordHash($password, $hash)) {
+                            // Ambil info Homebase Prodi Dosen dari viewDosenPt
+                            $dosenPt = DB::connection('siakad')
+                                ->table('viewDosenPt')
+                                ->where(function ($q) use ($dosen) {
+                                    if (!empty($dosen->id_ptk)) $q->where('id_ptk', $dosen->id_ptk);
+                                    if (!empty($dosen->xid_ptk)) $q->orWhere('xid_ptk', $dosen->xid_ptk);
+                                    if (!empty($dosen->nidn)) $q->orWhere('nidn', $dosen->nidn);
+                                })
+                                ->first();
+
+                            // Susun Nama Lengkap Beserta Gelar
+                            $fullName = trim($dosen->nm_ptk);
+                            $gelarDepan = trim((string)($dosen->gelar_depan ?? ''));
+                            $gelarBelakang = trim((string)($dosen->gelar_belakang ?? ''));
+
+                            if ($gelarDepan) {
+                                $fullName = $gelarDepan . ' ' . $fullName;
+                            }
+                            if ($gelarBelakang) {
+                                $fullName = $fullName . ', ' . $gelarBelakang;
+                            }
+
+                            $nidnOrUsername = $dosen->nidn ?: ($dosen->nip ?: ($dosen->niy_nigk ?: $cleanUsername));
+                            $email = $dosen->email_poltek ?: ($dosen->email ?: strtolower($nidnOrUsername) . '@poltekindonusa.ac.id');
+                            $prodi = $dosenPt->nm_prodi ?? 'Dosen Politeknik Indonusa';
+
+                            $userData = [
+                                'username' => $nidnOrUsername,
+                                'name' => $fullName,
+                                'email' => $email,
+                                'prodi' => $prodi,
+                                'phone' => $dosen->no_hp ?? null,
+                            ];
+                        }
                     }
                 }
             } catch (\Throwable $e) {
@@ -141,22 +197,56 @@ class SiakadService
             }
         }
 
-        // 3. Jika Mahasiswa terverifikasi, sinkronisasi ke tabel lokal users
-        if ($mahasiswaData) {
+        // =========================================================================
+        // 3. Jika Mahasiswa / Dosen Terverifikasi, Simpan / Update Akun Lokal SIMPUS
+        // =========================================================================
+        if ($userData) {
             return User::updateOrCreate(
-                ['username' => $mahasiswaData['nim']],
+                ['username' => $userData['username']],
                 [
-                    'name' => $mahasiswaData['nama'],
-                    'email' => $mahasiswaData['email'],
+                    'name' => $userData['name'],
+                    'email' => $userData['email'],
                     'password' => Hash::make($password),
                     'role' => 'anggota',
-                    'prodi' => $mahasiswaData['prodi'],
-                    'phone' => $mahasiswaData['phone'],
+                    'prodi' => $userData['prodi'],
+                    'phone' => $userData['phone'],
                     'status' => 'active',
                 ]
             );
         }
 
         return null;
+    }
+
+    /**
+     * Helper Verifikasi Password Hash SIAKAD (Bcrypt / MD5 / SHA1 / Plaintext)
+     */
+    private function verifyPasswordHash(string $password, string $hash): bool
+    {
+        if (empty($hash)) {
+            return false;
+        }
+
+        // 1. Standar Bcrypt / Argon2 / PHP password_hash
+        if (password_verify($password, $hash)) {
+            return true;
+        }
+
+        // 2. MD5 Hash (Legacy SIAKAD)
+        if (md5($password) === strtolower($hash) || strtoupper(md5($password)) === strtoupper($hash)) {
+            return true;
+        }
+
+        // 3. SHA1 Hash
+        if (sha1($password) === strtolower($hash) || strtoupper(sha1($password)) === strtoupper($hash)) {
+            return true;
+        }
+
+        // 4. Plaintext
+        if ($password === $hash) {
+            return true;
+        }
+
+        return false;
     }
 }

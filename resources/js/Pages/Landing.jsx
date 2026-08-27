@@ -23,7 +23,7 @@ import {
     ExternalLink
 } from 'lucide-react';
 
-export default function Landing({ featuredBooks, categories, libraries, stats }) {
+export default function Landing({ featuredBooks, categories, libraries, stats, latestPosts = [] }) {
     const { auth } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -73,6 +73,9 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                         </Link>
                         <Link href="/katalog" className="hover:text-amber-600 transition-colors">
                             Katalog Buku
+                        </Link>
+                        <Link href="/berita" className="hover:text-amber-600 transition-colors">
+                            Berita & Informasi
                         </Link>
                         <Link href="#kategori" className="hover:text-amber-600 transition-colors">
                             Kategori DDC
@@ -410,7 +413,92 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                 </div>
             </section>
 
-            {/* 5. WHY SIMPUS? (Harmonized Warm Amber Theme Section) */}
+            {/* 5. BERITA & KABAR LITERASI TERBARU */}
+            {latestPosts && latestPosts.length > 0 && (
+                <section className="py-16 bg-white border-t border-b border-amber-900/10">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                            <div className="space-y-1.5">
+                                <div className="inline-flex items-center space-x-2 bg-amber-500/10 text-amber-900 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Warta & Informasi Terkini</span>
+                                </div>
+                                <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                                    Berita & Kabar Perpustakaan
+                                </h2>
+                                <p className="text-slate-600 text-xs sm:text-sm">
+                                    Pengumuman resmi, kegiatan literasi akademik, dan pembaruan fasilitas perpustakaan.
+                                </p>
+                            </div>
+
+                            <Link
+                                href="/berita"
+                                className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center space-x-1.5 bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-full transition-all border border-amber-200"
+                            >
+                                <span>Lihat Semua Berita</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {latestPosts.map((post) => (
+                                <Link
+                                    key={post.id}
+                                    href={`/berita/${post.slug}`}
+                                    className="group bg-[#FDFBF7] rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col justify-between"
+                                >
+                                    <div>
+                                        <div className="w-full h-48 bg-slate-100 relative overflow-hidden">
+                                            <img
+                                                src={post.thumbnail || 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=600&q=80'}
+                                                alt={post.thumbnail_alt || post.title}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=600&q=80';
+                                                }}
+                                            />
+                                            <div className="absolute top-3 left-3 bg-amber-500 text-slate-950 font-black text-[10px] uppercase px-3 py-1 rounded-full shadow-md">
+                                                {post.category}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6 space-y-3">
+                                            <div className="flex items-center space-x-2 text-[11px] text-slate-400 font-medium">
+                                                <Clock className="w-3.5 h-3.5" />
+                                                <span>{post.reading_time || 2} menit baca</span>
+                                                <span>•</span>
+                                                <span>
+                                                    {new Date(post.published_at || post.created_at).toLocaleDateString('id-ID', {
+                                                        day: 'numeric',
+                                                        month: 'short',
+                                                        year: 'numeric',
+                                                    })}
+                                                </span>
+                                            </div>
+
+                                            <h3 className="font-black text-base text-slate-950 group-hover:text-amber-600 transition-colors line-clamp-2 leading-snug">
+                                                {post.title}
+                                            </h3>
+
+                                            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                                                {post.excerpt || post.meta_description}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="px-6 pb-6 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs font-bold text-amber-700 group-hover:text-amber-800">
+                                        <span>Baca Berita</span>
+                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* 6. WHY SIMPUS? (Harmonized Warm Amber Theme Section) */}
             <section id="fitur" className="py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 border border-amber-500/30 rounded-3xl p-8 sm:p-12 shadow-xl space-y-8 relative overflow-hidden backdrop-blur-sm">
@@ -475,7 +563,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                 </div>
             </section>
 
-            {/* 6. SEARCH BANNER (Equalized Width: max-w-7xl) */}
+            {/* 7. SEARCH BANNER (Equalized Width: max-w-7xl) */}
             <section className="py-12 bg-white border-t border-slate-200/60">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -503,7 +591,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                 </div>
             </section>
 
-            {/* 7. FOOTER */}
+            {/* 8. FOOTER */}
             <footer className="bg-slate-950 text-slate-400 pt-16 pb-12 border-t border-slate-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -524,6 +612,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats })
                             <ul className="space-y-2 text-xs">
                                 <li><Link href="/" className="hover:text-amber-400">Beranda</Link></li>
                                 <li><Link href="/katalog" className="hover:text-amber-400">Katalog Buku</Link></li>
+                                <li><Link href="/berita" className="hover:text-amber-400">Berita & Informasi</Link></li>
                                 <li><Link href="/presensi" target="_blank" className="hover:text-amber-400">Presensi</Link></li>
                                 <li><Link href="/login" className="hover:text-amber-400">Portal Login</Link></li>
                             </ul>

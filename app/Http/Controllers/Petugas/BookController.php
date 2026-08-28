@@ -138,10 +138,69 @@ class BookController extends Controller
         $bookData = null;
         $source = '';
 
-        // 1. CARI PERTAMA: Open Library API menggunakan ISBN
-        try {
-            $olUrl = "https://openlibrary.org/search.json?isbn=" . urlencode($cleanIsbn);
-            $response = Http::timeout(6)->get($olUrl);
+        // 1. CARI PERTAMA: Google Books API (Katalog Global Resmi)
+        $googleBooksKey = config('services.google_books.api_key') ?: env('GOOGLE_BOOKS_API_KEY');
+        if (!empty($googleBooksKey)) {
+            try {
+                $queries = [
+                    "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode($cleanIsbn) . "&key=" . urlencode($googleBooksKey),
+                    "https://www.googleapis.com/books/v1/volumes?q=" . urlencode($cleanIsbn) . "&key=" . urlencode($googleBooksKey),
+                ];
+
+                foreach ($queries as $gUrl) {
+                    $gRes = Http::timeout(6)->get($gUrl);
+                    if ($gRes->successful()) {
+                        $gJson = $gRes->json();
+                        if (!empty($gJson['items'][0]['volumeInfo'])) {
+                            $vol = $gJson['items'][0]['volumeInfo'];
+                            $title = $vol['title'] ?? null;
+                            if (!empty($vol['subtitle'])) {
+                                $title .= ': ' . $vol['subtitle'];
+                            }
+
+                            $authors = !empty($vol['authors']) ? implode(', ', $vol['authors']) : '';
+                            $publisher = $vol['publisher'] ?? '';
+                            $publishYear = !empty($vol['publishedDate']) ? (int)substr($vol['publishedDate'], 0, 4) : (int)date('Y');
+
+                            $categories = !empty($vol['categories']) ? implode(' ', $vol['categories']) : '';
+                            $description = $vol['description'] ?? '';
+                            $ddc = $classifyDdc($categories . ' ' . $title . ' ' . $description);
+
+                            // Extract cover URL jika ada
+                            $coverUrl = null;
+                            if (!empty($vol['imageLinks']['thumbnail'])) {
+                                $coverUrl = str_replace('http://', 'https://', $vol['imageLinks']['thumbnail']);
+                            } elseif (!empty($vol['imageLinks']['smallThumbnail'])) {
+                                $coverUrl = str_replace('http://', 'https://', $vol['imageLinks']['smallThumbnail']);
+                            } else {
+                                $coverUrl = "https://covers.openlibrary.org/b/isbn/{$cleanIsbn}-L.jpg";
+                            }
+
+                            if ($title) {
+                                $bookData = [
+                                    'title' => trim($title),
+                                    'author' => trim($authors) ?: 'Penulis Tidak Diketahui',
+                                    'publisher' => trim($publisher) ?: '',
+                                    'publish_year' => $publishYear ?: (int)date('Y'),
+                                    'isbn' => $cleanIsbn,
+                                    'ddc' => $ddc,
+                                    'cover_url' => $coverUrl,
+                                ];
+                                $source = 'Google Books API';
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 2. CARI KEDUA: Open Library API menggunakan ISBN
+        if (!$bookData) {
+            try {
+                $olUrl = "https://openlibrary.org/search.json?isbn=" . urlencode($cleanIsbn);
+                $response = Http::timeout(6)->get($olUrl);
+
 
             if ($response->successful()) {
                 $json = $response->json();
@@ -208,9 +267,12 @@ class BookController extends Controller
                 }
             }
         } catch (\Throwable $e) {}
+        }
 
-        // 2. CARI KEDUA: Indonesia OneSearch (onesearch.id) jika tidak ada di Open Library
+        // 3. CARI KETIGA: Indonesia OneSearch (onesearch.id) jika tidak ada di Google Books / Open Library
+
         if (!$bookData) {
+
             try {
                 $osUrl = "https://onesearch.id/Search/Results?lookfor=" . urlencode($cleanIsbn) . "&view=rss";
                 $osResponse = Http::timeout(6)->withHeaders([
@@ -285,12 +347,89 @@ class BookController extends Controller
             } catch (\Throwable $e) {}
         }
 
+        // 3. CARI KETIGA (FALLBACK TERAKHIR): OpenAI Live Web Search + Metadata Formatter
+        if (!$bookData) {
+            $openAiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+            if (!empty($openAiKey)) {
+                try {
+                    $aiPrompt = "Lakukan live web search di internet Indonesia (Google, Gramedia, Perpusnas, Marketplace Buku, Ebook) untuk mencari data buku fisik dengan nomor ISBN: \"{$cleanIsbn}\".\n"
+                        . "Identifikasi judul buku resmi, nama pengarang/penulis lengkap, penerbit, tahun terbit, dan tentukan kode klasifikasi DDC 3-digit (misal: 004 untuk Komputer, 650 untuk Manajemen/Ekonomi, 610 untuk Kesehatan/Rekam Medis, 300 untuk Sosial/Hukum, 800 untuk Sastra/Novel, 200 untuk Agama, 100 untuk Filsafat, 500 untuk Sains, dll).\n"
+                        . "PENTING: Jangan berhalusinasi atau mengarang data buku! Jika hasil pencarian web menemukan buku asli yang terdaftar dengan nomor ISBN tersebut, kembalikan HANYA JSON:\n"
+                        . "{\n"
+                        . "  \"found\": true,\n"
+                        . "  \"title\": \"Judul Buku Hasil Web Search\",\n"
+                        . "  \"author\": \"Nama Pengarang\",\n"
+                        . "  \"publisher\": \"Nama Penerbit\",\n"
+                        . "  \"publish_year\": 2020,\n"
+                        . "  \"ddc\": \"004\"\n"
+                        . "}\n"
+                        . "Jika di internet tidak ditemukan informasi buku untuk nomor ISBN tersebut, kembalikan HANYA: {\"found\": false}.";
+
+                    // Panggil OpenAI Responses API dengan Live Web Search Tool
+                    $aiResponse = Http::timeout(25)->withHeaders([
+                        'Authorization' => 'Bearer ' . $openAiKey,
+                        'Content-Type' => 'application/json',
+                    ])->post('https://api.openai.com/v1/responses', [
+                        'model' => 'gpt-4o',
+                        'input' => $aiPrompt,
+                        'tools' => [
+                            [
+                                'type' => 'web_search_preview',
+                                'user_location' => [
+                                    'type' => 'approximate',
+                                    'country' => 'ID'
+                                ]
+                            ]
+                        ]
+                    ]);
+
+                    if ($aiResponse->successful()) {
+                        $jsonResp = $aiResponse->json();
+                        $responseText = '';
+                        if (!empty($jsonResp['output'])) {
+                            foreach ($jsonResp['output'] as $outItem) {
+                                if (!empty($outItem['content'])) {
+                                    foreach ($outItem['content'] as $c) {
+                                        if (!empty($c['text'])) {
+                                            $responseText .= $c['text'];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Bersihkan markdown code block ```json ... ```
+                        $cleanJsonStr = trim($responseText);
+                        $cleanJsonStr = preg_replace('/^```(?:json)?\s*/i', '', $cleanJsonStr);
+                        $cleanJsonStr = preg_replace('/\s*```$/', '', $cleanJsonStr);
+                        $parsedAi = json_decode($cleanJsonStr, true);
+
+                        if ($parsedAi && !empty($parsedAi['found']) && !empty($parsedAi['title']) && strtolower(trim($parsedAi['title'])) !== 'null') {
+                            $ddc = !empty($parsedAi['ddc']) ? (string)$parsedAi['ddc'] : $classifyDdc($parsedAi['title'] . ' ' . ($parsedAi['author'] ?? ''));
+
+                            $bookData = [
+                                'title' => trim($parsedAi['title']),
+                                'author' => trim($parsedAi['author'] ?? 'Penulis Tidak Diketahui') ?: 'Penulis Tidak Diketahui',
+                                'publisher' => trim($parsedAi['publisher'] ?? ''),
+                                'publish_year' => is_numeric($parsedAi['publish_year'] ?? null) ? (int)$parsedAi['publish_year'] : (int)date('Y'),
+                                'isbn' => $cleanIsbn,
+                                'ddc' => $ddc,
+                                'cover_url' => "https://covers.openlibrary.org/b/isbn/{$cleanIsbn}-L.jpg",
+                            ];
+                            $source = 'OpenAI Live Web Search (GPT-4o)';
+                        }
+                    }
+                } catch (\Throwable $e) {}
+            }
+        }
+
         if (!$bookData) {
             return response()->json([
                 'success' => false,
-                'message' => 'Buku dengan nomor ISBN ' . $query . ' tidak ditemukan di Open Library maupun Indonesia OneSearch. Silakan lengkapi form manual.'
+                'message' => 'Buku dengan nomor ISBN ' . $query . ' tidak ditemukan di Google Books, Open Library, Indonesia OneSearch, maupun Live Web Search OpenAI. Silakan lengkapi form manual.'
             ], 404);
         }
+
 
         // Process DDC & Auto-register Category if not exists
         $ddcCode = !empty($bookData['ddc']) ? $bookData['ddc'] : '000';
@@ -372,6 +511,7 @@ class BookController extends Controller
             'publisher' => ['nullable', 'string', 'max:255'],
             'publish_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
             'procurement_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
+            'procurement_month' => ['nullable', 'integer', 'min:1', 'max:12'],
             'category_id' => ['required', 'exists:categories,id'],
             'rack_id' => ['required', 'exists:racks,id'],
             'call_number' => ['nullable', 'string', 'max:100'],
@@ -410,6 +550,10 @@ class BookController extends Controller
             ? (int)$validated['procurement_year'] 
             : (int)date('Y');
 
+        $procurementMonth = !empty($validated['procurement_month'])
+            ? (int)$validated['procurement_month']
+            : (int)date('n');
+
         $book = Book::create([
             'isbn' => $validated['isbn'],
             'title' => $validated['title'],
@@ -417,6 +561,7 @@ class BookController extends Controller
             'publisher' => $validated['publisher'],
             'publish_year' => $validated['publish_year'],
             'procurement_year' => $procurementYear,
+            'procurement_month' => $procurementMonth,
             'category_id' => $validated['category_id'],
             'rack_id' => $validated['rack_id'],
             'cover_image' => $coverPath,
@@ -424,19 +569,23 @@ class BookController extends Controller
             'total_copies' => $validated['initial_copies'],
         ]);
 
-        // Auto-generate eksemplar fisik
-        $category = Category::find($validated['category_id']);
-        $catCode = $category ? $category->code : 'GEN';
-        $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $validated['title']), 0, 4));
+        // Auto-generate eksemplar fisik dengan format penomoran inventaris: [NO INVENTARIS]/PERPUS-INDO/[BULAN PENGADAAN]/[TAHUN PENGADAAN]
         $yy = substr((string)$procurementYear, -2);
-
         $baseInventoryNumber = BarcodeService::getNextInventoryNumber(0);
 
         for ($i = 1; $i <= $validated['initial_copies']; $i++) {
-            $suffix = chr(64 + $i);
-            $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
             $invNumber = $baseInventoryNumber + $i;
+            $copyCode = BarcodeService::generateCopyCode($procurementYear, $procurementMonth, $invNumber);
+            while (BookCopy::where('copy_code', $copyCode)->exists()) {
+                $invNumber++;
+                $copyCode = BarcodeService::generateCopyCode($procurementYear, $procurementMonth, $invNumber);
+            }
+
             $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
+            while (BookCopy::where('barcode_hash', $barcode)->exists()) {
+                $invNumber++;
+                $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
+            }
 
             BookCopy::create([
                 'book_id' => $book->id,
@@ -501,6 +650,7 @@ class BookController extends Controller
             'publisher' => ['nullable', 'string', 'max:255'],
             'publish_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
             'procurement_year' => ['nullable', 'integer', 'min:1900', 'max:' . (date('Y') + 1)],
+            'procurement_month' => ['nullable', 'integer', 'min:1', 'max:12'],
             'category_id' => ['required', 'exists:categories,id'],
             'rack_id' => ['required', 'exists:racks,id'],
             'call_number' => ['nullable', 'string', 'max:100'],
@@ -540,16 +690,12 @@ class BookController extends Controller
             'count' => ['required', 'integer', 'min:1', 'max:20'],
         ]);
 
-        $currentCount = $book->copies()->count();
-        $category = $book->category;
-        $catCode = $category ? $category->code : 'GEN';
-        $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
-        if (empty($shortTitle)) {
-            $shortTitle = 'BOOK';
-        }
         $procurementYear = !empty($book->procurement_year) 
             ? (int)$book->procurement_year 
             : (!empty($book->publish_year) ? (int)$book->publish_year : (int)date('Y'));
+        $procurementMonth = !empty($book->procurement_month)
+            ? (int)$book->procurement_month
+            : (int)date('n');
         $yy = substr((string)$procurementYear, -2);
 
         $baseInventoryNumber = BarcodeService::getNextInventoryNumber(0);
@@ -557,15 +703,13 @@ class BookController extends Controller
         DB::beginTransaction();
         try {
             for ($i = 1; $i <= $request->count; $i++) {
-                $num = $currentCount + $i;
-                $suffix = $num <= 26 ? chr(64 + $num) : "X{$num}";
-                $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
-                
+                $invNumber = $baseInventoryNumber + $i;
+                $copyCode = BarcodeService::generateCopyCode($procurementYear, $procurementMonth, $invNumber);
                 while (BookCopy::where('copy_code', $copyCode)->exists()) {
-                    $copyCode = "IND-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}-" . Str::random(3);
+                    $invNumber++;
+                    $copyCode = BarcodeService::generateCopyCode($procurementYear, $procurementMonth, $invNumber);
                 }
 
-                $invNumber = $baseInventoryNumber + $i;
                 $barcode = BarcodeService::generateCopyBarcode($yy, $invNumber);
                 while (BookCopy::where('barcode_hash', $barcode)->exists()) {
                     $invNumber++;
@@ -945,24 +1089,24 @@ class BookController extends Controller
                     } else {
                         // Standard CSV
                         $cnt = $r['copies_count'] ?? 1;
-                        $shortTitle = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $book->title), 0, 4));
-                        if (empty($shortTitle)) $shortTitle = 'BOOK';
-                        $catCode = $category ? $category->code : 'GEN';
-                        $yy = substr((string)$book->procurement_year, -2);
-                        $currentCount = $book->copies()->count();
+                        $procurementYear = !empty($book->procurement_year) ? (int)$book->procurement_year : (int)date('Y');
+                        $procurementMonth = !empty($book->procurement_month) ? (int)$book->procurement_month : (int)date('n');
+                        $yy = substr((string)$procurementYear, -2);
+                        $baseInventoryNumber = BarcodeService::getNextInventoryNumber(0);
 
                         for ($i = 1; $i <= $cnt; $i++) {
-                            $num = $currentCount + $i;
-                            $suffix = $num <= 26 ? chr(64 + $num) : "X{$num}";
-                            $copyCode = "IMP-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}";
+                            $invNumber = $baseInventoryNumber + $i;
+                            $copyCode = BarcodeService::generateCopyCode($procurementYear, $procurementMonth, $invNumber);
                             
                             while (isset($usedCopyCodes[$copyCode]) || BookCopy::where('copy_code', $copyCode)->exists()) {
-                                $copyCode = "IMP-{$catCode}-{$shortTitle}-{$book->id}-{$suffix}-" . Str::random(3);
+                                $invNumber++;
+                                $copyCode = BarcodeService::generateCopyCode($procurementYear, $procurementMonth, $invNumber);
                             }
 
-                            $barcodeHash = BarcodeService::generateCopyBarcode($yy);
+                            $barcodeHash = BarcodeService::generateCopyBarcode($yy, $invNumber);
                             while (isset($usedBarcodes[$barcodeHash]) || BookCopy::where('barcode_hash', $barcodeHash)->exists()) {
-                                $barcodeHash = "INDO{$yy}" . str_pad((string)mt_rand(1000, 999999), 5, '0', STR_PAD_LEFT);
+                                $invNumber++;
+                                $barcodeHash = BarcodeService::generateCopyBarcode($yy, $invNumber);
                             }
 
                             BookCopy::create([

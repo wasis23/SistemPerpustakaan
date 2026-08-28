@@ -23,12 +23,28 @@ export default function Create({ categories: initialCategories, racks }) {
     const [isSearching, setIsSearching] = useState(false);
     const [searchResultInfo, setSearchResultInfo] = useState(null);
 
+    const MONTHS = [
+        { value: 1, label: 'Januari (I)', roman: 'I' },
+        { value: 2, label: 'Februari (II)', roman: 'II' },
+        { value: 3, label: 'Maret (III)', roman: 'III' },
+        { value: 4, label: 'April (IV)', roman: 'IV' },
+        { value: 5, label: 'Mei (V)', roman: 'V' },
+        { value: 6, label: 'Juni (VI)', roman: 'VI' },
+        { value: 7, label: 'Juli (VII)', roman: 'VII' },
+        { value: 8, label: 'Agustus (VIII)', roman: 'VIII' },
+        { value: 9, label: 'September (IX)', roman: 'IX' },
+        { value: 10, label: 'Oktober (X)', roman: 'X' },
+        { value: 11, label: 'November (XI)', roman: 'XI' },
+        { value: 12, label: 'Desember (XII)', roman: 'XII' },
+    ];
+
     const { data, setData, post, processing, errors } = useForm({
         isbn: '',
         title: '',
         author: '',
         publisher: '',
         publish_year: new Date().getFullYear(),
+        procurement_month: new Date().getMonth() + 1,
         procurement_year: new Date().getFullYear(),
         category_id: categories[0]?.id || '',
         rack_id: racks[0]?.id || '',
@@ -37,6 +53,8 @@ export default function Create({ categories: initialCategories, racks }) {
         cover_image: null,
         cover_url: '',
     });
+
+    const currentRomanMonth = MONTHS.find(m => m.value === Number(data.procurement_month))?.roman || 'I';
 
     // Helper untuk kalkulasi Call Number: [DDC] [3-Huruf Penulis] [1-Huruf Judul (kecil)]
     const calculateCallNumber = (titleVal, authorVal, catIdVal) => {
@@ -139,7 +157,7 @@ export default function Create({ categories: initialCategories, racks }) {
             } else {
                 setSearchResultInfo({
                     type: 'error',
-                    message: json.message || 'Buku tidak ditemukan di Open Library maupun Indonesia OneSearch.',
+                    message: json.message || 'Buku tidak ditemukan di Open Library, Indonesia OneSearch, maupun OpenAI AI Assistant.',
                 });
             }
         } catch (err) {
@@ -169,18 +187,18 @@ export default function Create({ categories: initialCategories, racks }) {
                     </Link>
                     <div>
                         <h1 className="font-extrabold text-slate-950 text-xl tracking-tight">Tambah Judul Buku & Eksemplar</h1>
-                        <p className="text-xs text-slate-500 font-medium">Input data induk koleksi, auto-fill ISBN Open Library & OneSearch, dan generasi barcode fisik otomatis</p>
+                        <p className="text-xs text-slate-500 font-medium">Input data induk koleksi, auto-fill 3-metode ISBN (Open Library, OneSearch & OpenAI LLM), dan generasi barcode fisik otomatis</p>
                     </div>
                 </div>
 
-                {/* Top Widget: Auto-Fill Scanner via Open Library & Indonesia OneSearch */}
+                {/* Top Widget: Auto-Fill Scanner via Open Library, Indonesia OneSearch & OpenAI */}
                 <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white p-6 sm:p-8 rounded-3xl border border-amber-900/40 shadow-xl space-y-4 relative overflow-hidden">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="relative z-10 space-y-2">
                         <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
                             <Globe className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Auto-Fill Barcode ISBN (Open Library & Indonesia OneSearch)</span>
+                            <span>3 Metode Auto-Fill Barcode ISBN (Open Library, OneSearch & OpenAI LLM)</span>
                         </div>
                         <h2 className="text-lg font-black tracking-tight">
                             Pindai Barcode ISBN Buku
@@ -355,8 +373,8 @@ export default function Create({ categories: initialCategories, racks }) {
                                 />
                             </div>
 
-                            {/* Tahun Terbit & Tahun Pengadaan */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Tahun Terbit, Bulan Pengadaan & Tahun Pengadaan */}
+                            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
                                     <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
                                         Tahun Terbit
@@ -372,8 +390,26 @@ export default function Create({ categories: initialCategories, racks }) {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                        <span>Bulan Pengadaan</span>
+                                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.5 rounded">Romawi [{currentRomanMonth}]</span>
+                                    </label>
+                                    <select
+                                        value={data.procurement_month}
+                                        onChange={(e) => setData('procurement_month', e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                                    >
+                                        {MONTHS.map((m) => (
+                                            <option key={m.value} value={m.value}>
+                                                {m.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.procurement_month && <p className="text-xs text-rose-600 font-bold mt-1">{errors.procurement_month}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2 flex items-center justify-between">
                                         <span>Tahun Pengadaan</span>
-                                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.5 rounded">Barcode INDO[YY]</span>
+                                        <span className="text-[10px] text-amber-700 bg-amber-100 font-bold px-1.5 py-0.5 rounded">INDO[{String(data.procurement_year || '').slice(-2)}]</span>
                                     </label>
                                     <input
                                         type="number"
@@ -422,7 +458,7 @@ export default function Create({ categories: initialCategories, racks }) {
                             </div>
 
                             {/* Rak Lokasi */}
-                            <div>
+                            <div className="sm:col-span-2">
                                 <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
                                     Lokasi Rak Fisik <span className="text-rose-600">*</span>
                                 </label>
@@ -440,13 +476,21 @@ export default function Create({ categories: initialCategories, racks }) {
                                 </select>
                             </div>
 
-                            {/* Jumlah Eksemplar Fisik */}
-                            <div className="sm:col-span-2 bg-amber-50/70 p-5 rounded-3xl border border-amber-200 space-y-2">
-                                <label className="block text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center space-x-1.5">
-                                    <Sparkles className="w-4 h-4 text-amber-600" />
-                                    <span>Generasi Eksemplar Fisik Awal</span>
-                                </label>
-                                <p className="text-xs text-amber-800 font-medium">Sistem akan membuat kode eksemplar & label barcode hash unik secara otomatis.</p>
+                            {/* Jumlah Eksemplar Fisik & Format Penomoran Inventaris */}
+                            <div className="sm:col-span-2 bg-amber-50/70 p-5 rounded-3xl border border-amber-200 space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <label className="block text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center space-x-1.5">
+                                        <Sparkles className="w-4 h-4 text-amber-600" />
+                                        <span>Generasi Eksemplar Fisik Awal</span>
+                                    </label>
+                                    <div className="inline-flex items-center space-x-1.5 bg-amber-200/80 px-2.5 py-1 rounded-xl text-amber-950 text-[11px] font-mono font-black border border-amber-300">
+                                        <span>Format:</span>
+                                        <span className="underline">0001/PERPUS-INDO/{currentRomanMonth}/{data.procurement_year || new Date().getFullYear()}</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-amber-800 font-medium">
+                                    Sistem akan otomatis mencetak nomor inventaris berurutan dengan format <code className="font-mono font-bold text-amber-950 bg-amber-100 px-1 py-0.5 rounded">NO INVENTARIS/PERPUS-INDO/BULAN PENGADAAN/TAHUN PENGADAAN</code> dan barcode label fisik.
+                                </p>
                                 <input
                                     type="number"
                                     min="1"

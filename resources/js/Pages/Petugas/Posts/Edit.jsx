@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
+import RichTextEditor from '@/Components/RichTextEditor';
 import {
     ArrowLeft,
     Sparkles,
@@ -19,16 +20,14 @@ import {
     AlertCircle,
     Info,
     HelpCircle,
-    Heading2,
-    Heading3,
-    Bold,
-    Italic,
-    Quote,
-    List,
-    ListOrdered,
-    Link as LinkIcon,
     UploadCloud,
-    ExternalLink
+    ExternalLink,
+    Wand2,
+    Bot,
+    Zap,
+    Loader2,
+    RefreshCw,
+    SlidersHorizontal
 } from 'lucide-react';
 
 export default function PostsEdit({ post, categories = [], authors = [] }) {
@@ -53,9 +52,72 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
     });
 
     const [isCustomSlug, setIsCustomSlug] = useState(false);
-    const [previewTab, setPreviewTab] = useState('editor');
     const [imageUploadMode, setImageUploadMode] = useState('file');
     const [imagePreview, setImagePreview] = useState(post.thumbnail || null);
+
+    // AI Generator State
+    const [aiPrompt, setAiPrompt] = useState(post.title || '');
+    const [aiCategory, setAiCategory] = useState(post.category || categories[0] || 'Pengumuman');
+    const [aiTone, setAiTone] = useState('informatif, menarik, dan profesional');
+    const [showAiOptions, setShowAiOptions] = useState(false);
+    const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+    const [aiSuccessMessage, setAiSuccessMessage] = useState(null);
+    const [aiErrorMessage, setAiErrorMessage] = useState(null);
+
+    // Handle AI generation
+    const handleGenerateAi = async (customPrompt = null) => {
+        const promptToUse = (typeof customPrompt === 'string' ? customPrompt : (aiPrompt || data.title)).trim();
+        if (!promptToUse) {
+            setAiErrorMessage('Silakan ketikkan judul atau ide topik berita terlebih dahulu.');
+            return;
+        }
+
+        setIsGeneratingAi(true);
+        setAiErrorMessage(null);
+        setAiSuccessMessage(null);
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const response = await fetch('/petugas/posts/generate-ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    prompt: promptToUse,
+                    category: aiCategory || data.category,
+                    tone: aiTone,
+                }),
+            });
+
+            const resData = await response.json();
+            if (resData.success && resData.data) {
+                const ai = resData.data;
+                setData((prev) => ({
+                    ...prev,
+                    title: ai.title || prev.title,
+                    slug: ai.slug || prev.slug,
+                    category: ai.category || prev.category,
+                    excerpt: ai.excerpt || prev.excerpt,
+                    content: ai.content || prev.content,
+                    meta_title: ai.meta_title || ai.title || prev.meta_title,
+                    meta_description: ai.meta_description || ai.excerpt || prev.meta_description,
+                    meta_keywords: ai.meta_keywords || prev.meta_keywords,
+                    thumbnail_alt: ai.thumbnail_alt || prev.thumbnail_alt,
+                }));
+                setAiPrompt(ai.title || promptToUse);
+                setAiSuccessMessage('✨ Artikel berhasil diperbarui secara otomatis oleh AI!');
+            } else {
+                setAiErrorMessage('Gagal membuat konten dengan AI. Silakan coba kembali.');
+            }
+        } catch (err) {
+            setAiErrorMessage('Terjadi kendala jaringan saat menghubungi asisten AI.');
+        } finally {
+            setIsGeneratingAi(false);
+        }
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -67,31 +129,6 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
             };
             reader.readAsDataURL(file);
         }
-    };
-
-    const insertFormatting = (prefix, suffix = '') => {
-        const textarea = document.getElementById('post-content-textarea');
-        if (!textarea) return;
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = textarea.value.substring(start, end) || 'Teks disini';
-        const replacement = `${prefix}${selectedText}${suffix}`;
-
-        const newContent =
-            textarea.value.substring(0, start) +
-            replacement +
-            textarea.value.substring(end);
-
-        setData('content', newContent);
-
-        setTimeout(() => {
-            textarea.focus();
-            textarea.setSelectionRange(
-                start + prefix.length,
-                start + prefix.length + selectedText.length
-            );
-        }, 50);
     };
 
     const handleSubmit = (e) => {
@@ -173,6 +210,159 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
                     </div>
                 </div>
 
+                {/* AI Assistant Widget Banner */}
+                <div className="bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-amber-500/5 p-6 rounded-3xl border border-amber-500/30 shadow-sm relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-md shrink-0">
+                                <Bot className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <div className="flex items-center space-x-2">
+                                    <h2 className="text-sm font-black text-slate-950 tracking-tight flex items-center gap-1.5">
+                                        <span>Asisten Penulis Berita AI (LLM Automatic Generator)</span>
+                                        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider">
+                                            Rewrite / Auto-Fill
+                                        </span>
+                                    </h2>
+                                </div>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                    Gunakan AI untuk memperkaya konten, menulis ulang artikel, atau menyempurnakan struktur SEO artikel ini secara otomatis.
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowAiOptions(!showAiOptions)}
+                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-white/80 hover:bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs self-start md:self-auto transition-all"
+                        >
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{showAiOptions ? 'Tutup Opsi AI' : 'Opsi Gaya Bahasa & Kategori'}</span>
+                        </button>
+                    </div>
+
+                    {/* AI Prompt Input Bar */}
+                    <div className="space-y-3">
+                        <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleGenerateAi();
+                                        }
+                                    }}
+                                    placeholder="Ketik ide/topik berita, contoh: Sosialisasi Akses Database Jurnal ScienceDirect & IEEE untuk Skripsi..."
+                                    className="w-full pl-4 pr-10 py-3 bg-white border border-amber-900/20 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-xs"
+                                />
+                                {aiPrompt && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAiPrompt('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                                    >
+                                        ×
+                                    </button>
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => handleGenerateAi()}
+                                disabled={isGeneratingAi || (!aiPrompt && !data.title)}
+                                className="px-6 py-3 bg-slate-950 hover:bg-slate-900 text-amber-400 hover:text-amber-300 text-xs font-extrabold rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 shrink-0 disabled:opacity-50"
+                            >
+                                {isGeneratingAi ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                                        <span>Sedang Menulis Berita...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Wand2 className="w-4 h-4" />
+                                        <span>Regenerate dengan AI</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Collapsible Advanced AI Options */}
+                        {showAiOptions && (
+                            <div className="p-4 bg-white/90 rounded-2xl border border-amber-200/80 grid grid-cols-1 sm:grid-cols-2 gap-3.5 animate-in fade-in zoom-in-95 duration-150 text-xs">
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">
+                                        Kategori Berita Target
+                                    </label>
+                                    <select
+                                        value={aiCategory}
+                                        onChange={(e) => setAiCategory(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    >
+                                        {categories.map((cat) => (
+                                            <option key={cat} value={cat}>
+                                                {cat}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">
+                                        Gaya Bahasa / Tone Tulisan
+                                    </label>
+                                    <select
+                                        value={aiTone}
+                                        onChange={(e) => setAiTone(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    >
+                                        <option value="informatif, menarik, dan profesional">Informatif, Menarik & Profesional (Standar)</option>
+                                        <option value="formal dan akademik">Resmi, Formal & Akademik</option>
+                                        <option value="antusias, persuasif, dan mengajak">Antusias, Promotif & Mengajak Mahasiswa</option>
+                                        <option value="ringkas, padat, dan langsung ke poin">Ringkas, Lugas & To-The-Point</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Success & Error Notification Badges */}
+                        {aiSuccessMessage && (
+                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs font-semibold text-emerald-800 animate-in fade-in duration-200">
+                                <div className="flex items-center space-x-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span>{aiSuccessMessage}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiSuccessMessage(null)}
+                                    className="text-emerald-500 hover:text-emerald-700 font-bold ml-2"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+
+                        {aiErrorMessage && (
+                            <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between text-xs font-semibold text-rose-800 animate-in fade-in duration-200">
+                                <div className="flex items-center space-x-2">
+                                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                    <span>{aiErrorMessage}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiErrorMessage(null)}
+                                    className="text-rose-500 hover:text-rose-700 font-bold ml-2"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Grid Container */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     {/* Left Main Content Column (8 Cols) */}
@@ -180,9 +370,23 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
                         {/* 1. Article Title & Slug Card */}
                         <div className="bg-white p-6 rounded-3xl border border-amber-900/10 shadow-sm space-y-5">
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-900 mb-2">
-                                    Judul Berita / Artikel <span className="text-rose-500">*</span>
-                                </label>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-xs font-extrabold text-slate-900">
+                                        Judul Berita / Artikel <span className="text-rose-500">*</span>
+                                    </label>
+                                    {data.title && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateAi(data.title)}
+                                            disabled={isGeneratingAi}
+                                            className="text-[11px] font-bold text-amber-700 hover:text-amber-800 inline-flex items-center space-x-1"
+                                            title="Generate ulang seluruh isi artikel berdasarkan judul ini"
+                                        >
+                                            <Zap className="w-3 h-3 text-amber-500" />
+                                            <span>Generate Ulang Form dari Judul Ini</span>
+                                        </button>
+                                    )}
+                                </div>
                                 <input
                                     type="text"
                                     value={data.title}
@@ -247,127 +451,22 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
                             </div>
                         </div>
 
-                        {/* 2. Rich Content Editor Card */}
-                        <div className="bg-white rounded-3xl border border-amber-900/10 shadow-sm overflow-hidden space-y-0">
-                            {/* Editor Top Toolbar */}
-                            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<h2>', '</h2>')}
-                                        title="Heading 2"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold flex items-center space-x-1"
-                                    >
-                                        <Heading2 className="w-3.5 h-3.5" />
-                                        <span>H2</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<h3>', '</h3>')}
-                                        title="Heading 3"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold flex items-center space-x-1"
-                                    >
-                                        <Heading3 className="w-3.5 h-3.5" />
-                                        <span>H3</span>
-                                    </button>
-                                    <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<strong>', '</strong>')}
-                                        title="Tebal (Bold)"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200"
-                                    >
-                                        <Bold className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<em>', '</em>')}
-                                        title="Miring (Italic)"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200"
-                                    >
-                                        <Italic className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<blockquote>', '</blockquote>')}
-                                        title="Kutipan (Blockquote)"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200"
-                                    >
-                                        <Quote className="w-3.5 h-3.5" />
-                                    </button>
-                                    <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<ul>\n  <li>', '</li>\n  <li>Poin kedua</li>\n</ul>')}
-                                        title="Daftar Bullet"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200"
-                                    >
-                                        <List className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<ol>\n  <li>', '</li>\n  <li>Langkah kedua</li>\n</ol>')}
-                                        title="Daftar Angka"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200"
-                                    >
-                                        <ListOrdered className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => insertFormatting('<a href="https://..." target="_blank">', '</a>')}
-                                        title="Tautan Link"
-                                        className="p-2 bg-white hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200"
-                                    >
-                                        <LinkIcon className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-
-                                <div className="flex items-center space-x-1.5 bg-slate-200 p-1 rounded-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreviewTab('editor')}
-                                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                                            previewTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                                        }`}
-                                    >
-                                        Editor HTML
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreviewTab('preview')}
-                                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                                            previewTab === 'preview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                                        }`}
-                                    >
-                                        Pratinjau Tampilan
-                                    </button>
-                                </div>
+                        {/* 2. Visual Dynamic Rich Text Editor */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="block text-xs font-extrabold text-slate-900">
+                                    Isi Berita / Konten Artikel <span className="text-rose-500">*</span>
+                                </label>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                    Editor Teks Dinamis (Heading, Bold, Rata Teks, List, Link)
+                                </span>
                             </div>
-
-                            {/* Editor Textarea / Preview Box */}
-                            <div className="p-6">
-                                {previewTab === 'editor' ? (
-                                    <div>
-                                        <textarea
-                                            id="post-content-textarea"
-                                            rows="16"
-                                            value={data.content}
-                                            onChange={(e) => setData('content', e.target.value)}
-                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none leading-relaxed"
-                                            required
-                                        />
-                                        {errors.content && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.content}</p>}
-                                    </div>
-                                ) : (
-                                    <div className="prose prose-slate max-w-none bg-slate-50/50 p-6 rounded-2xl border border-slate-200 min-h-[350px]">
-                                        {data.content ? (
-                                            <div dangerouslySetInnerHTML={{ __html: data.content }} />
-                                        ) : (
-                                            <p className="text-slate-400 italic text-xs">Belum ada konten yang ditulis untuk dipratinjau.</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                            <RichTextEditor
+                                value={data.content}
+                                onChange={(content) => setData('content', content)}
+                                placeholder="Tuliskan isi berita di sini. Anda dapat mengatur heading, menebalkan teks, miring, rata kiri, rata tengah, rata kanan, rata kanan-kiri (justify), daftar poin, dan tautan secara langsung..."
+                                error={errors.content}
+                            />
                         </div>
 
                         {/* 3. Live Google Search & Social Media SEO Snippet Preview */}

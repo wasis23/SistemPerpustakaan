@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Petugas;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -77,6 +79,109 @@ class PostController extends Controller
             'categories' => $categories,
             'authors' => $authors,
             'defaultAuthor' => Auth::user(),
+        ]);
+    }
+
+    /**
+     * Generate Konten Berita Otomatis dengan Bantuan LLM (AI)
+     */
+    public function generateWithAi(Request $request): JsonResponse
+    {
+        $request->validate([
+            'prompt' => ['required', 'string', 'max:500'],
+            'category' => ['nullable', 'string'],
+            'tone' => ['nullable', 'string'],
+        ]);
+
+        $userPrompt = trim($request->prompt);
+        $preferredCategory = $request->category ?: 'Pengumuman';
+        $tone = $request->tone ?: 'informatif, menarik, dan profesional';
+
+        $openAiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+        $generatedData = null;
+
+        if (!empty($openAiKey)) {
+            try {
+                $systemPrompt = "Anda adalah Asisten Jurnalis & Content Writer Ahli Perpustakaan Digital di Politeknik Indonusa Surakarta (SIMPUS Poltek Indonusa).\n"
+                    . "Tugas Anda adalah membuat artikel berita / pengumuman perpustakaan yang lengkap, terstruktur, profesional, dan kaya informasi berdasarkan ide atau judul yang diberikan oleh pustakawan.\n"
+                    . "Kategori perpustakaan yang tersedia: 'Pengumuman', 'Kegiatan & Acara', 'Inovasi & Teknologi', 'Koleksi Baru', 'Literasi Informasi', 'Akademik & Riset', 'Panduan Layanan'.\n\n"
+                    . "Format output HARUS berupa JSON murni dengan format persis seperti ini (tanpa markdown tambahan di luar JSON):\n"
+                    . "{\n"
+                    . "  \"title\": \"Judul Berita yang Menarik, Ringkas, dan Jurnalistik\",\n"
+                    . "  \"slug\": \"slug-url-berita-seo\",\n"
+                    . "  \"category\": \"Kategori yang paling cocok\",\n"
+                    . "  \"excerpt\": \"Ringkasan 1-2 kalimat padat untuk kartu preview dan search engine (maksimal 180 karakter).\",\n"
+                    . "  \"content\": \"<p>Paragraf pembuka berita...</p><h2>Sub Judul 1</h2><p>Penjelasan detail...</p><ul><li>Poin penting 1</li><li>Poin penting 2</li></ul><blockquote>Kutipan penting atau highlight pengumuman perpustakaan</blockquote><h2>Sub Judul 2</h2><p>Paragraf penutup atau ajakan sivitas akademika...</p>\",\n"
+                    . "  \"meta_title\": \"Judul SEO Google 50-60 Karakter | SIMPUS Politeknik Indonusa\",\n"
+                    . "  \"meta_description\": \"Deskripsi meta pencarian Google 130-155 karakter yang mengundang klik.\",\n"
+                    . "  \"meta_keywords\": \"kata kunci 1, kata kunci 2, perpustakaan, poltekindonusa, literasi\",\n"
+                    . "  \"thumbnail_alt\": \"Deskripsi alt gambar pendukung berita\"\n"
+                    . "}\n\n"
+                    . "Gunakan gaya bahasa: {$tone}. Konten artikel pada key 'content' harus menggunakan tag HTML standar (<p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <em>, <blockquote>) yang rapi, berbobot, dan siap dipublikasikan.";
+
+                $response = Http::timeout(30)->withHeaders([
+                    'Authorization' => 'Bearer ' . $openAiKey,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => "Buatkan artikel berita/pengumuman lengkap untuk topik perpustakaan berikut ini:\n\"{$userPrompt}\"" . ($preferredCategory ? "\nKategori yang diinginkan: {$preferredCategory}" : "")],
+                    ],
+                    'temperature' => 0.7,
+                    'response_format' => ['type' => 'json_object'],
+                ]);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $contentStr = $json['choices'][0]['message']['content'] ?? '';
+                    $cleanJson = trim($contentStr);
+                    $parsed = json_decode($cleanJson, true);
+                    if ($parsed && !empty($parsed['title']) && !empty($parsed['content'])) {
+                        $generatedData = $parsed;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fallback handled below
+            }
+        }
+
+        // Fallback smart generator jika OpenAI API belum diisi / offline
+        if (!$generatedData) {
+            $title = Str::title($userPrompt);
+            $slug = Str::slug($title);
+            $cat = in_array($preferredCategory, [
+                'Pengumuman', 'Kegiatan & Acara', 'Inovasi & Teknologi', 'Koleksi Baru',
+                'Literasi Informasi', 'Akademik & Riset', 'Panduan Layanan'
+            ]) ? $preferredCategory : 'Pengumuman';
+
+            $generatedData = [
+                'title' => $title,
+                'slug' => $slug,
+                'category' => $cat,
+                'excerpt' => "Perpustakaan Politeknik Indonusa Surakarta merilis informasi terkini mengenai {$title} guna menunjang produktivitas dan literasi akademik seluruh sivitas kampus.",
+                'content' => "<p>Dalam rangka meningkatkan mutu layanan serta memperluas akses sumber daya informasi, UPT Perpustakaan Politeknik Indonusa Surakarta secara resmi menghadirkan program dan pengumuman mengenai <strong>{$title}</strong>.</p>"
+                    . "<h2>Tujuan & Manfaat Program</h2>"
+                    . "<p>Inisiatif ini diluncurkan untuk mempermudah mahasiswa, dosen, serta tenaga kependidikan dalam mengakses referensi keilmuan, riset, dan pemanfaatan fasilitas perpustakaan modern.</p>"
+                    . "<ul>"
+                    . "<li>Memperluas jangkauan layanan literasi informasi bagi seluruh civitas akademika.</li>"
+                    . "<li>Menyediakan sarana referensi yang kredibel, mutakhir, dan relevan dengan kurikulum vokasi.</li>"
+                    . "<li>Mendorong iklim riset, publikasi ilmiah, dan minat baca yang berkelanjutan di lingkungan kampus.</li>"
+                    . "</ul>"
+                    . "<blockquote>\"Perpustakaan bertransformasi menjadi pusat kolaborasi, riset, dan pengembangan inovasi terdepan sivitas akademika Politeknik Indonusa.\"</blockquote>"
+                    . "<h2>Panduan & Akses Layanan</h2>"
+                    . "<p>Seluruh civitas akademika dapat langsung memanfaatkan layanan ini melalui meja sirkulasi perpustakaan atau mengakses portal SIMPUS digital Politeknik Indonusa Surakarta pada hari dan jam operasional layanan.</p>"
+                    . "<p>Untuk konsultasi dan bantuan lebih lanjut, silakan menghubungi tim pustakawan di layanan informasi terpadu perpustakaan.</p>",
+                'meta_title' => Str::limit($title, 55, '') . ' | Perpustakaan Poltek Indonusa',
+                'meta_description' => "Informasi lengkap {$title} dari Perpustakaan Politeknik Indonusa Surakarta. Simak panduan dan jadwal resminya di sini.",
+                'meta_keywords' => 'perpustakaan, simpus, poltekindonusa, ' . Str::slug($title, ', ') . ', surakarta, literasi',
+                'thumbnail_alt' => 'Ilustrasi ' . $title . ' Perpustakaan Politeknik Indonusa Surakarta',
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $generatedData,
         ]);
     }
 

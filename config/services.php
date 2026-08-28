@@ -39,4 +39,13 @@ return [
         'url' => env('SIAKAD_API_URL', 'https://siakadv2.poltekindonusa.ac.id/api/verify-login'),
         'api_key' => env('SIAKAD_API_KEY', 'e844f45c5100479b91c0eb97793a84b8b85cc2fe21f50caf38807ff72408e143'),
     ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+    ],
+
+    'google_books' => [
+        'api_key' => env('GOOGLE_BOOKS_API_KEY'),
+    ],
 ];
+

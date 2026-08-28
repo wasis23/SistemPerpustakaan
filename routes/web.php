@@ -117,7 +117,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/settings/holidays', [PetugasSettingController::class, 'storeHoliday'])->name('settings.holidays.store');
         Route::delete('/settings/holidays/{holiday}', [PetugasSettingController::class, 'destroyHoliday'])->name('settings.holidays.destroy');
 
-        // Manajemen Berita, Pengumuman & Artikel (SEO Supported)
+        // Manajemen Berita, Pengumuman & Artikel (SEO Supported & LLM AI Generation)
+        Route::post('/posts/generate-ai', [PetugasPostController::class, 'generateWithAi'])->name('posts.generate-ai');
         Route::post('/posts/{post}/toggle-featured', [PetugasPostController::class, 'toggleFeatured'])->name('posts.toggle-featured');
         Route::resource('posts', PetugasPostController::class);
 

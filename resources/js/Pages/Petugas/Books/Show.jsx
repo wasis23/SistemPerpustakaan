@@ -93,7 +93,7 @@ export default function Show({ book, copies }) {
                         <h2 className="text-2xl font-black text-slate-950 tracking-tight">{book.title}</h2>
                         <p className="text-xs text-slate-700">Penulis: <strong className="text-slate-950 font-extrabold">{book.author}</strong></p>
                         <p className="text-xs text-slate-500 font-medium">
-                            Penerbit: {book.publisher || '-'} | Terbit: {book.publish_year || '-'} | Pengadaan: <strong className="text-amber-800 font-bold">{book.procurement_year || book.publish_year || '-'}</strong>
+                            Penerbit: {book.publisher || '-'} | Terbit: {book.publish_year || '-'} | Pengadaan: <strong className="text-amber-800 font-bold">{book.procurement_month ? ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][book.procurement_month - 1] + ' ' : ''}{book.procurement_year || book.publish_year || '-'}</strong>
                         </p>
 
                         <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">

@@ -81,12 +81,14 @@ export default function Show({ book, copies }) {
                                 [{book.category?.code}] {book.category?.name}
                             </span>
                             {book.call_number && (
-                                <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-mono font-black">
-                                    🏷️ Call No: {book.call_number}
+                                <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-mono font-black flex items-center space-x-1">
+                                    <Tag className="w-3 h-3 shrink-0" />
+                                    <span>Call No: {book.call_number}</span>
                                 </span>
                             )}
-                            <span className="bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1 rounded-full text-xs font-mono font-bold">
-                                📍 {book.rack?.code_rack} - {book.rack?.location}
+                            <span className="bg-slate-100 text-slate-800 border border-slate-200 px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center space-x-1">
+                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>{book.rack?.code_rack} - {book.rack?.location}</span>
                             </span>
                         </div>
 

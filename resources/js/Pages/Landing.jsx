@@ -9,21 +9,29 @@ import {
     Sparkles,
     Monitor,
     ChevronRight,
-    Cpu,
-    HeartPulse,
-    Globe,
-    Scale,
-    FileCode,
     Lock,
     ShieldCheck,
     Layers,
     BookMarked,
     Library,
     Compass,
-    ExternalLink
+    ExternalLink,
+    GraduationCap,
+    Award,
+    Building2,
+    Calendar,
+    Hash,
+    Download,
+    X,
+    Star,
+    User,
+    Database,
+    Smartphone,
+    Globe,
+    FileText
 } from 'lucide-react';
 
-export default function Landing({ featuredBooks, categories, libraries, stats, latestPosts = [] }) {
+export default function Landing({ featuredBooks = [], categories = [], libraries = [], stats = {}, latestPosts = [] }) {
     const { auth } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -34,24 +42,14 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
         }
     };
 
-    // Pastel icon styles for DDC Categories
-    const categoryStyles = [
-        { bg: 'bg-amber-100/90 text-amber-800', icon: Cpu, border: 'hover:border-amber-400' },
-        { bg: 'bg-emerald-100/90 text-emerald-800', icon: HeartPulse, border: 'hover:border-emerald-400' },
-        { bg: 'bg-indigo-100/90 text-indigo-800', icon: FileCode, border: 'hover:border-indigo-400' },
-        { bg: 'bg-purple-100/90 text-purple-800', icon: Globe, border: 'hover:border-purple-400' },
-        { bg: 'bg-rose-100/90 text-rose-800', icon: Scale, border: 'hover:border-rose-400' },
-        { bg: 'bg-cyan-100/90 text-cyan-800', icon: BookOpen, border: 'hover:border-cyan-400' },
-    ];
-
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-slate-900 selection:bg-amber-500 selection:text-slate-950 font-sans">
             <Head title="SIMPUS - Perpustakaan Digital Politeknik Indonusa Surakarta" />
 
-            {/* 1. TOP NAVIGATION BAR */}
+            {/* 1. TOP NAVIGATION BAR (Warm) */}
             <header className="sticky top-0 z-50 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-amber-900/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                    {/* Brand Logo */}
+                    {/* Brand Logo & Title */}
                     <Link href="/" className="flex items-center space-x-3 group">
                         <div className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xl shadow-md group-hover:scale-105 transition-all">
                             <BookOpen className="w-6 h-6 stroke-[2.5]" />
@@ -66,39 +64,8 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                         </div>
                     </Link>
 
-                    {/* Nav Links */}
-                    <nav className="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-700">
-                        <Link href="/" className="text-amber-600 font-bold border-b-2 border-amber-500 pb-0.5">
-                            Beranda
-                        </Link>
-                        <Link href="/katalog" className="hover:text-amber-600 transition-colors">
-                            Katalog Buku
-                        </Link>
-                        <Link href="/berita" className="hover:text-amber-600 transition-colors">
-                            Berita & Informasi
-                        </Link>
-                        <Link href="#kategori" className="hover:text-amber-600 transition-colors">
-                            Kategori DDC
-                        </Link>
-                        <Link href="/presensi" target="_blank" className="hover:text-amber-600 transition-colors flex items-center space-x-1">
-                            <Monitor className="w-4 h-4 text-amber-500" />
-                            <span>Presensi</span>
-                        </Link>
-                        <Link href="#fitur" className="hover:text-amber-600 transition-colors">
-                            Keunggulan
-                        </Link>
-                    </nav>
-
-                    {/* Right CTA Actions */}
+                    {/* Right CTA Actions: Portal Anggota */}
                     <div className="flex items-center space-x-3">
-                        <Link
-                            href="/katalog"
-                            className="p-2.5 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-all"
-                            title="Cari Katalog"
-                        >
-                            <Search className="w-5 h-5" />
-                        </Link>
-
                         {auth && auth.user ? (
                             <Link
                                 href={auth.user.role === 'petugas' ? '/petugas/dashboard' : '/anggota/dashboard'}
@@ -122,17 +89,12 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                 </div>
             </header>
 
-            {/* 2. HERO SECTION */}
-            <section className="relative pt-12 pb-16 overflow-hidden">
+            {/* 2. HERO SECTION (1. Warm #FDFBF7) */}
+            <section className="relative pt-12 pb-16 overflow-hidden bg-[#FDFBF7]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                         {/* Left Hero Text Column */}
                         <div className="lg:col-span-6 space-y-6">
-                            <div className="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full text-amber-800 font-semibold text-xs">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Self-Service Digital Circulation System</span>
-                            </div>
-
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.1]">
                                 Pinjam Cepat.<br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 via-amber-500 to-amber-700">
@@ -141,26 +103,8 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                             </h1>
 
                             <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-xl">
-                                Layanan perpustakaan digital Politeknik Indonusa Surakarta. Pindai barcode buku di depan rak menggunakan kamera HP, dapatkan tiket digital 5 menit, dan bebas antre di meja pustakawan.
+                                Layanan perpustakaan digital Politeknik Indonusa Surakarta. Pindai barcode buku di depan rak menggunakan kamera HP, dapatkan tiket digital 5 menit, serta jelajahi repositori karya buku dosen.
                             </p>
-
-                            {/* Hero Action Buttons */}
-                            <div className="flex flex-wrap items-center gap-3 pt-2">
-                                <Link
-                                    href={auth && auth.user ? "/anggota/scan" : "/login"}
-                                    className="px-7 py-3.5 bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm rounded-full shadow-xl transition-all flex items-center space-x-2.5"
-                                >
-                                    <QrCode className="w-4 h-4 text-amber-400" />
-                                    <span>Pindai Buku di Rak HP</span>
-                                </Link>
-
-                                <Link
-                                    href="/katalog"
-                                    className="px-7 py-3.5 bg-white border border-slate-300 hover:border-amber-500 hover:bg-amber-50/50 text-slate-800 font-bold text-sm rounded-full shadow-sm hover:shadow transition-all"
-                                >
-                                    Jelajahi Katalog Buku
-                                </Link>
-                            </div>
                         </div>
 
                         {/* Right Hero Decorative Stack Artwork: Perpustakaan 360° */}
@@ -193,16 +137,16 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                                         btn: 'bg-amber-500 hover:bg-amber-400 text-slate-950',
                                                     },
                                                     {
-                                                        card: 'bg-amber-600 text-slate-950',
-                                                        subtext: 'text-amber-950 font-semibold',
-                                                        title: 'text-slate-950 font-black',
-                                                        btn: 'bg-slate-950 hover:bg-slate-800 text-amber-300',
+                                                        card: 'bg-[#FDFBF7] text-slate-900 border border-slate-200/80',
+                                                        subtext: 'text-amber-700 font-bold',
+                                                        title: 'text-slate-950',
+                                                        btn: 'bg-slate-950 hover:bg-slate-800 text-amber-400',
                                                     },
                                                     {
-                                                        card: 'bg-emerald-800 text-white',
-                                                        subtext: 'text-emerald-300',
+                                                        card: 'bg-amber-600 text-white',
+                                                        subtext: 'text-amber-100',
                                                         title: 'text-white',
-                                                        btn: 'bg-emerald-400 hover:bg-emerald-300 text-emerald-950',
+                                                        btn: 'bg-white hover:bg-slate-100 text-amber-950',
                                                     },
                                                 ];
                                                 const style = styles[idx % styles.length];
@@ -210,93 +154,53 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                                 return (
                                                     <div
                                                         key={lib.id}
-                                                        className={`p-4 rounded-2xl ${style.card} flex items-center justify-between shadow-md transform hover:-translate-y-1 transition-transform`}
+                                                        className={`${style.card} p-4 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-all group`}
                                                     >
-                                                        <div className="flex items-center space-x-3 min-w-0 pr-2">
-                                                            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                                                                <Compass className="w-4 h-4" />
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                {/* 1. Nama Perpustakaan / Ruang Baca */}
-                                                                <p className={`font-extrabold text-xs sm:text-sm ${style.title} line-clamp-1`}>
-                                                                    {lib.name}
-                                                                </p>
-                                                                {/* 2. Deskripsi / Fasilitas */}
-                                                                <p className={`text-[10px] sm:text-xs ${style.subtext} line-clamp-1 font-medium mt-0.5`}>
-                                                                    {lib.description || `📍 ${lib.location} • Area baca & fasilitas komputer`}
-                                                                </p>
-                                                            </div>
+                                                        <div className="space-y-0.5 max-w-[65%]">
+                                                            <span className={`text-[10px] font-mono block ${style.subtext}`}>
+                                                                {lib.location}
+                                                            </span>
+                                                            <h4 className={`font-extrabold text-xs leading-snug line-clamp-1 ${style.title}`}>
+                                                                {lib.name}
+                                                            </h4>
                                                         </div>
-                                                        {/* 3. Tombol 360 di Samping Kanan */}
-                                                        <a
-                                                            href={lib.link_360}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={`px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold shadow flex items-center space-x-1 shrink-0 transition-all ${style.btn}`}
-                                                        >
-                                                            <span>Tour 360°</span>
-                                                            <ExternalLink className="w-3 h-3" />
-                                                        </a>
+
+                                                        {(lib.link_360 || lib.virtual_tour_url) ? (
+                                                            <a
+                                                                href={lib.link_360 || lib.virtual_tour_url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={`px-3 py-1.5 rounded-xl font-bold text-[11px] flex items-center space-x-1 transition-all shadow-sm shrink-0 ${style.btn}`}
+                                                            >
+                                                                <span>Tour 360°</span>
+                                                                <ExternalLink className="w-3 h-3" />
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-[10px] text-slate-400 italic">Segera Hadir</span>
+                                                        )}
                                                     </div>
                                                 );
                                             })
                                         ) : (
-                                            /* Sample Default Perpustakaan 360 Cards */
-                                            <>
-                                                <div className="p-4 rounded-2xl bg-slate-950 text-white flex items-center justify-between shadow-md hover:-translate-y-0.5 transition-transform">
-                                                    <div className="flex items-center space-x-3 min-w-0 pr-2">
-                                                        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                                                            <Compass className="w-4 h-4 text-amber-400" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="font-extrabold text-xs sm:text-sm text-white line-clamp-1">Perpustakaan Utama Kampus 1</p>
-                                                            <p className="text-[10px] sm:text-xs text-amber-400 line-clamp-1 font-medium mt-0.5">📍 Kampus 1 • Ruang baca ber-AC & spot diskusi</p>
-                                                        </div>
-                                                    </div>
-                                                    <a
-                                                        href="https://kuula.co/share/collection/7l7Q1?logo=1&card=1&info=0&logosize=40&fs=1&vr=1&sd=1&initload=0&thumbs=1"
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow flex items-center space-x-1 shrink-0 transition-all cursor-pointer"
-                                                    >
-                                                        <span>Tour 360°</span>
-                                                        <ExternalLink className="w-3 h-3" />
-                                                    </a>
-                                                </div>
-
-                                                <div className="p-4 rounded-2xl bg-amber-600 text-slate-950 flex items-center justify-between shadow-md hover:-translate-y-0.5 transition-transform">
-                                                    <div className="flex items-center space-x-3 min-w-0 pr-2">
-                                                        <div className="w-8 h-8 rounded-xl bg-slate-950/20 flex items-center justify-center shrink-0">
-                                                            <Compass className="w-4 h-4 text-slate-950" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="font-extrabold text-xs sm:text-sm text-slate-950 line-clamp-1">Ruang Baca Perpustakaan Kampus 2</p>
-                                                            <p className="text-[10px] sm:text-xs text-amber-950 line-clamp-1 font-semibold mt-0.5">📍 Kampus 2 • Spot membaca tenang & e-library</p>
-                                                        </div>
-                                                    </div>
-                                                    <a
-                                                        href="https://kuula.co/share/collection/7v2P3?logo=1&card=1&info=0&logosize=40&fs=1&vr=1&sd=1&initload=0&thumbs=1"
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-2 rounded-xl text-[10px] sm:text-xs font-extrabold bg-slate-950 hover:bg-slate-800 text-amber-300 shadow flex items-center space-x-1 shrink-0 transition-all cursor-pointer"
-                                                    >
-                                                        <span>Tour 360°</span>
-                                                        <ExternalLink className="w-3 h-3" />
-                                                    </a>
-                                                </div>
-                                            </>
+                                            <p className="text-xs text-slate-400 italic text-center py-4">
+                                                Belum ada tautan virtual tour.
+                                            </p>
                                         )}
                                     </div>
 
-                                    {/* Retained Stats Badge */}
-                                    <div className="grid grid-cols-2 gap-3 pt-2 text-center">
-                                        <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/60">
-                                            <p className="text-lg font-extrabold text-slate-950">{stats.total_books} Judul</p>
-                                            <p className="text-[10px] text-amber-800 font-semibold uppercase">Katalog Buku</p>
+                                    {/* Stats Badge */}
+                                    <div className="grid grid-cols-3 gap-2.5 pt-2 text-center">
+                                        <div className="p-2.5 bg-amber-50 rounded-2xl border border-amber-200/60">
+                                            <p className="text-base font-extrabold text-slate-950">{stats.total_books || 0}</p>
+                                            <p className="text-[9px] text-amber-800 font-semibold uppercase">Judul Buku</p>
                                         </div>
-                                        <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200/60">
-                                            <p className="text-lg font-extrabold text-emerald-900">{stats.available_copies} Eksemplar</p>
-                                            <p className="text-[10px] text-emerald-800 font-semibold uppercase">Tersedia di Rak</p>
+                                        <div className="p-2.5 bg-emerald-50 rounded-2xl border border-emerald-200/60">
+                                            <p className="text-base font-extrabold text-emerald-900">{stats.available_copies || 0}</p>
+                                            <p className="text-[9px] text-emerald-800 font-semibold uppercase">Tersedia di Rak</p>
+                                        </div>
+                                        <div className="p-2.5 bg-purple-50 rounded-2xl border border-purple-200/60">
+                                            <p className="text-base font-extrabold text-purple-900">{stats.total_lecturer_books || 0}</p>
+                                            <p className="text-[9px] text-purple-800 font-semibold uppercase">Buku Dosen</p>
                                         </div>
                                     </div>
                                 </div>
@@ -306,52 +210,238 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                 </div>
             </section>
 
-            {/* 3. BROWSE BY CATEGORY (DDC Classification Grid) */}
-            <section id="kategori" className="py-16 bg-white border-y border-slate-200/60">
+            {/* PORTAL & DIREKTORI AKADEMIK TERPADU (Repository, Digital Library, Indonusa Publisher, Jurnal Nasional, Jurnal Internasional, Prosiding) */}
+            <section className="py-16 bg-white border-t border-slate-200/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-10">
-                        <div>
-                            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
-                                Jelajahi Berdasarkan Kategori DDC
-                            </h2>
-                            <p className="text-slate-600 text-sm mt-1">
-                                Klik kategori untuk melihat daftar koleksi buku (Login diperlukan untuk meminjam)
-                            </p>
-                        </div>
-
-                        <Link
-                            href="/katalog"
-                            className="mt-3 sm:mt-0 text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center space-x-1"
-                        >
-                            <span>Lihat Semua Kategori</span>
-                            <ArrowRight className="w-4 h-4" />
-                        </Link>
+                    <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
+                        <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                            Portal Akses Referensi & Publikasi Terpadu
+                        </h2>
+                        <p className="text-slate-600 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
+                            Akses langsung repositori institusi, e-library mobile, karya buku dosen, direktori jurnal terakreditasi SINTA, jurnal internasional, dan prosiding seminar Politeknik Indonusa Surakarta.
+                        </p>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                        {categories.map((cat, idx) => {
-                            const style = categoryStyles[idx % categoryStyles.length];
-                            const IconComponent = style.icon;
-                            return (
-                                <Link
-                                    key={cat.id}
-                                    href={`/katalog?category_id=${cat.id}`}
-                                    className={`p-5 rounded-2xl bg-white border border-slate-200 ${style.border} hover:shadow-lg transition-all text-center flex flex-col items-center group`}
-                                >
-                                    <div className={`w-14 h-14 rounded-2xl ${style.bg} flex items-center justify-center mb-3 group-hover:scale-110 transition-all shadow-sm`}>
-                                        <IconComponent className="w-7 h-7" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* 1. Repository */}
+                        <div className="bg-[#FDFBF7] hover:bg-white rounded-3xl p-6 border border-slate-200/80 hover:border-emerald-400 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                                        <Database className="w-6 h-6" />
                                     </div>
-                                    <span className="font-extrabold text-xs text-slate-950 block line-clamp-1">{cat.name}</span>
-                                    <span className="text-[10px] text-slate-500 font-mono mt-0.5">[{cat.code}] • {cat.books_count} Buku</span>
+                                    <span className="px-2.5 py-1 bg-emerald-100/80 text-emerald-800 text-[10px] font-extrabold rounded-full border border-emerald-200">
+                                        E-Prints Institusi
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-emerald-700 transition-colors">
+                                        Repository
+                                    </h3>
+                                    <p className="text-xs font-semibold text-emerald-800">
+                                        E-Prints Skripsi & Tugas Akhir
+                                    </p>
+                                    <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                                        Pangkalan data karya ilmiah, skripsi, laporan tugas akhir, dan publikasi penelitian civitas akademika Politeknik Indonusa Surakarta.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200/70">
+                                <a
+                                    href="https://eprint.poltekindonusa.ac.id/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm group-hover:shadow"
+                                >
+                                    <span>Buka Repository E-Prints</span>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* 2. Digital Library */}
+                        <div className="bg-[#FDFBF7] hover:bg-white rounded-3xl p-6 border border-slate-200/80 hover:border-blue-400 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                                        <Smartphone className="w-6 h-6" />
+                                    </div>
+                                    <span className="px-2.5 py-1 bg-blue-100/80 text-blue-800 text-[10px] font-extrabold rounded-full border border-blue-200">
+                                        Kubuku E-Library
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-blue-700 transition-colors">
+                                        Digital Library
+                                    </h3>
+                                    <p className="text-xs font-semibold text-blue-800">
+                                        Aplikasi Baca E-Book Digital
+                                    </p>
+                                    <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                                        Layanan perpustakaan digital interaktif Kubuku untuk membaca ribuan koleksi e-book akademik langsung di Android dan komputer/laptop.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200/70">
+                                <a
+                                    href="https://kubuku.id/download/digilib-politeknik-indonusa-surakarta/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm group-hover:shadow"
+                                >
+                                    <span>Akses Digital Library Kubuku</span>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* 3. Indonusa Publisher */}
+                        <div className="bg-[#FDFBF7] hover:bg-white rounded-3xl p-6 border border-slate-200/80 hover:border-amber-400 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                                        <GraduationCap className="w-6 h-6" />
+                                    </div>
+                                    <span className="px-2.5 py-1 bg-amber-100/80 text-amber-900 text-[10px] font-extrabold rounded-full border border-amber-200">
+                                        Karya Buku Dosen
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-amber-700 transition-colors">
+                                        Indonusa Publisher
+                                    </h3>
+                                    <p className="text-xs font-semibold text-amber-800">
+                                        Buku Ajar & Monograf Dosen
+                                    </p>
+                                    <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                                        Penerbitan dan etalase karya buku ajar, buku referensi, monograf, dan modul praktikum yang ditulis oleh dosen Politeknik Indonusa.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200/70">
+                                <Link
+                                    href="/karya-dosen"
+                                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm group-hover:shadow"
+                                >
+                                    <span>Jelajahi Karya Buku Dosen</span>
+                                    <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
                                 </Link>
-                            );
-                        })}
+                            </div>
+                        </div>
+
+                        {/* 4. Jurnal Nasional */}
+                        <div className="bg-[#FDFBF7] hover:bg-white rounded-3xl p-6 border border-slate-200/80 hover:border-blue-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-600/10 text-blue-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                                        <FileText className="w-6 h-6" />
+                                    </div>
+                                    <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-[10px] font-extrabold rounded-full border border-blue-200">
+                                        {stats.total_national_journals ? `${stats.total_national_journals} Jurnal Terdata` : 'Terakreditasi SINTA'}
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-blue-700 transition-colors">
+                                        Jurnal Nasional
+                                    </h3>
+                                    <p className="text-xs font-semibold text-blue-800">
+                                        Pangkalan Jurnal Terakreditasi SINTA
+                                    </p>
+                                    <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                                        Direktori portal jurnal ilmiah nasional terakreditasi SINTA dan ber-ISSN lintas program studi Politeknik Indonusa Surakarta.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200/70">
+                                <Link
+                                    href="/jurnal-nasional"
+                                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm group-hover:shadow"
+                                >
+                                    <span>Buka Jurnal Nasional</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* 5. Jurnal Internasional */}
+                        <div className="bg-[#FDFBF7] hover:bg-white rounded-3xl p-6 border border-slate-200/80 hover:border-purple-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-purple-600/10 text-purple-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                                        <Globe className="w-6 h-6" />
+                                    </div>
+                                    <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded-full border border-purple-200">
+                                        {stats.total_international_journals ? `${stats.total_international_journals} Jurnal Terdata` : 'Indeks Global'}
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-purple-700 transition-colors">
+                                        Jurnal Internasional
+                                    </h3>
+                                    <p className="text-xs font-semibold text-purple-800">
+                                        Publikasi Bereputasi Internasional
+                                    </p>
+                                    <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                                        Koleksi dan direktori jurnal internasional bereputasi, terindeks dalam database ilmiah global, serta rujukan riset mutakhir.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200/70">
+                                <Link
+                                    href="/jurnal-internasional"
+                                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-purple-700 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm group-hover:shadow"
+                                >
+                                    <span>Buka Jurnal Internasional</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* 6. Prosiding */}
+                        <div className="bg-[#FDFBF7] hover:bg-white rounded-3xl p-6 border border-slate-200/80 hover:border-emerald-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 group">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-600/10 text-emerald-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                                        <Layers className="w-6 h-6" />
+                                    </div>
+                                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full border border-emerald-200">
+                                        {stats.total_proceedings ? `${stats.total_proceedings} Prosiding` : 'Seminar & Konferensi'}
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-emerald-700 transition-colors">
+                                        Prosiding
+                                    </h3>
+                                    <p className="text-xs font-semibold text-emerald-800">
+                                        Makalah Seminar & Konferensi
+                                    </p>
+                                    <p className="text-xs text-slate-600 leading-relaxed pt-1">
+                                        Kumpulan artikel dan prosiding seminar nasional hasil diseminasi karya riset dan pengabdian masyarakat civitas akademika.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-200/70">
+                                <Link
+                                    href="/prosiding"
+                                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm group-hover:shadow"
+                                >
+                                    <span>Buka Prosiding Seminar</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* 4. FEATURED BOOKS COLLECTION */}
-            <section className="py-16 bg-[#FDFBF7]">
+            {/* 3. FEATURED BOOKS COLLECTION (Warm #FDFBF7) */}
+            <section className="py-16 bg-[#FDFBF7] border-t border-amber-900/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-10">
                         <div>
@@ -392,7 +482,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                     <p className="text-xs text-slate-500 font-medium">Penulis: {book.author}</p>
                                 </div>
 
-                                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                                <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
                                     <div>
                                         <span className="text-[10px] text-slate-400 block font-semibold">Status Ketersediaan</span>
                                         <span className={`text-xs font-bold ${book.available_copies_count > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
@@ -413,16 +503,12 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                 </div>
             </section>
 
-            {/* 5. BERITA & KABAR LITERASI TERBARU */}
+            {/* 5. BERITA & KABAR LITERASI TERBARU (4. Putih) */}
             {latestPosts && latestPosts.length > 0 && (
-                <section className="py-16 bg-white border-t border-b border-amber-900/10">
+                <section className="py-16 bg-white border-t border-slate-200/80">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
                         <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
                             <div className="space-y-1.5">
-                                <div className="inline-flex items-center space-x-2 bg-amber-500/10 text-amber-900 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-                                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>Warta & Informasi Terkini</span>
-                                </div>
                                 <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
                                     Berita & Kabar Perpustakaan
                                 </h2>
@@ -433,7 +519,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
 
                             <Link
                                 href="/berita"
-                                className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center space-x-1.5 bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-full transition-all border border-amber-200"
+                                className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center space-x-1.5 bg-[#FDFBF7] hover:bg-amber-50 px-4 py-2 rounded-full transition-all border border-slate-200 shadow-sm"
                             >
                                 <span>Lihat Semua Berita</span>
                                 <ArrowRight className="w-4 h-4" />
@@ -445,7 +531,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                 <Link
                                     key={post.id}
                                     href={`/berita/${post.slug}`}
-                                    className="group bg-[#FDFBF7] rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col justify-between"
+                                    className="group bg-[#FDFBF7] rounded-3xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col justify-between"
                                 >
                                     <div>
                                         <div className="w-full h-48 bg-slate-100 relative overflow-hidden">
@@ -487,7 +573,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                         </div>
                                     </div>
 
-                                    <div className="px-6 pb-6 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs font-bold text-amber-700 group-hover:text-amber-800">
+                                    <div className="px-6 pb-6 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-amber-700 group-hover:text-amber-800">
                                         <span>Baca Berita</span>
                                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </div>
@@ -498,18 +584,14 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                 </section>
             )}
 
-            {/* 6. WHY SIMPUS? (Harmonized Warm Amber Theme Section) */}
-            <section id="fitur" className="py-16">
+            {/* 6. WHY SIMPUS? (5. Warm #FDFBF7) */}
+            <section id="fitur" className="py-16 bg-[#FDFBF7] border-t border-amber-900/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 border border-amber-500/30 rounded-3xl p-8 sm:p-12 shadow-xl space-y-8 relative overflow-hidden backdrop-blur-sm">
                         {/* Ambient Glow */}
                         <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl" />
 
                         <div className="text-center max-w-2xl mx-auto space-y-2">
-                            <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-900 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Keunggulan Platform</span>
-                            </div>
                             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
                                 Mengapa Menggunakan Sistem Sirkulasi SIMPUS?
                             </h2>
@@ -519,7 +601,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
-                            <div className="bg-white/90 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group">
+                            <div className="bg-white/95 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group shadow-sm">
                                 <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <QrCode className="w-6 h-6" />
                                 </div>
@@ -529,7 +611,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                 </p>
                             </div>
 
-                            <div className="bg-white/90 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group">
+                            <div className="bg-white/95 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group shadow-sm">
                                 <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Lock className="w-6 h-6" />
                                 </div>
@@ -539,7 +621,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                 </p>
                             </div>
 
-                            <div className="bg-white/90 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group">
+                            <div className="bg-white/95 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group shadow-sm">
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Clock className="w-6 h-6" />
                                 </div>
@@ -549,7 +631,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                 </p>
                             </div>
 
-                            <div className="bg-white/90 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group">
+                            <div className="bg-white/95 p-6 rounded-2xl border border-amber-900/10 hover:border-amber-500 hover:shadow-xl transition-all space-y-3 group shadow-sm">
                                 <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <Monitor className="w-6 h-6" />
                                 </div>
@@ -563,8 +645,8 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                 </div>
             </section>
 
-            {/* 7. SEARCH BANNER (Equalized Width: max-w-7xl) */}
-            <section className="py-12 bg-white border-t border-slate-200/60">
+            {/* 7. SEARCH BANNER (6. Putih) */}
+            <section className="py-12 bg-white border-t border-slate-200/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6">
                         <div className="space-y-1 text-center sm:text-left">
@@ -582,7 +664,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                             />
                             <button
                                 type="submit"
-                                className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow-md hover:shadow-lg transition-all shrink-0"
+                                className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
                             >
                                 Cari Buku
                             </button>
@@ -591,7 +673,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                 </div>
             </section>
 
-            {/* 8. FOOTER */}
+            {/* 9. FOOTER */}
             <footer className="bg-slate-950 text-slate-400 pt-16 pb-12 border-t border-slate-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -603,7 +685,7 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                                 <span className="font-extrabold text-xl text-white tracking-tight">SIMPUS</span>
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-                                Sistem Informasi Perpustakaan Digital UPT Perpustakaan Politeknik Indonusa Surakarta. Mendukung sirkulasi mandiri berbasis scan barcode HP & locking transaksional.
+                                Sistem Informasi Perpustakaan Digital UPT Perpustakaan Politeknik Indonusa Surakarta. Mendukung sirkulasi mandiri berbasis scan barcode HP, locking transaksional, dan repositori karya buku dosen.
                             </p>
                         </div>
 
@@ -612,8 +694,10 @@ export default function Landing({ featuredBooks, categories, libraries, stats, l
                             <ul className="space-y-2 text-xs">
                                 <li><Link href="/" className="hover:text-amber-400">Beranda</Link></li>
                                 <li><Link href="/katalog" className="hover:text-amber-400">Katalog Buku</Link></li>
+                                <li><Link href="/karya-dosen" className="hover:text-amber-400">Karya Buku Dosen</Link></li>
+                                <li><Link href="/jurnal" className="hover:text-amber-400">Publikasi & Jurnal</Link></li>
                                 <li><Link href="/berita" className="hover:text-amber-400">Berita & Informasi</Link></li>
-                                <li><Link href="/presensi" target="_blank" className="hover:text-amber-400">Presensi</Link></li>
+                                <li><Link href="/presensi" target="_blank" className="hover:text-amber-400">Presensi Kunjungan</Link></li>
                                 <li><Link href="/login" className="hover:text-amber-400">Portal Login</Link></li>
                             </ul>
                         </div>

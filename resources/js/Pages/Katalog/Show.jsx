@@ -74,7 +74,7 @@ export default function Show({ book, copies }) {
                                 [{book.category?.code}] {book.category?.name}
                             </span>
                             <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-mono font-bold">
-                                📍 Rak: {book.rack?.code_rack} ({book.rack?.location})
+                                Rak: {book.rack?.code_rack} ({book.rack?.location})
                             </span>
                         </div>
 

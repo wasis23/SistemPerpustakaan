@@ -7,7 +7,8 @@ import {
     Clock, 
     Search, 
     ChevronRight, 
-    Sparkles 
+    Sparkles,
+    ArrowRight
 } from 'lucide-react';
 import AnggotaLayout from '@/Layouts/AnggotaLayout';
 
@@ -25,10 +26,6 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
 
                         <div className="relative z-10 space-y-4 max-w-2xl">
-                            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-amber-200 text-[10px] font-extrabold uppercase tracking-wider">
-                                <Sparkles className="w-3.5 h-3.5" />
-                                <span>Fitur Sirkulasi Mandiri SIMPUS</span>
-                            </div>
                             <h1 className="text-2xl sm:text-3xl font-black leading-tight tracking-tight">
                                 Pinjam Buku Langsung dari Rak Tanpa Antre!
                             </h1>
@@ -162,13 +159,14 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                             </div>
                                             <Link
                                                 href={`/anggota/ticket/${ticket.id}`}
-                                                className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow text-center block"
+                                                className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center space-x-1"
                                             >
-                                                Tampilkan Barcode HP ➔
+                                                <span>Tampilkan Barcode HP</span>
+                                                <ArrowRight className="w-3.5 h-3.5" />
                                             </Link>
                                         </div>
                                     );
-                                })}
+                                 })}
                             </div>
                         ) : (
                             <div className="text-center py-6 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2">
@@ -194,9 +192,10 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                         </p>
                         <Link
                             href="/anggota/katalog"
-                            className="inline-block px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow transition-all"
+                            className="inline-flex items-center space-x-1.5 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl text-xs shadow transition-all"
                         >
-                            Cari Judul Referensi ➔
+                            <span>Cari Judul Referensi</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
 

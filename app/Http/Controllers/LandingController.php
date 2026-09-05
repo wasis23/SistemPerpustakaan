@@ -7,6 +7,8 @@ use App\Models\BookCopy;
 use App\Models\Borrowing;
 use App\Models\Category;
 use App\Models\Laboratory;
+use App\Models\LecturerBook;
+use App\Models\NationalJournal;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -40,12 +42,23 @@ class LandingController extends Controller
         // Data Perpustakaan 360 Virtual Tour
         $libraries = Laboratory::latest('id')->take(3)->get();
 
+        // Karya Buku Dosen (Featured & Terbaru)
+        $lecturerBooks = LecturerBook::with('user')
+            ->orderByDesc('is_featured')
+            ->latest('id')
+            ->take(8)
+            ->get();
+
         // Statistik Perpustakaan Real-Time
         $stats = [
             'total_books' => Book::count(),
             'available_copies' => BookCopy::where('status', 'available')->count(),
             'total_circulations' => Borrowing::count(),
             'active_members' => User::where('role', 'anggota')->count(),
+            'total_lecturer_books' => LecturerBook::count(),
+            'total_national_journals' => NationalJournal::where('is_active', true)->where('journal_type', 'Nasional')->count(),
+            'total_international_journals' => NationalJournal::where('is_active', true)->where('journal_type', 'Internasional')->count(),
+            'total_proceedings' => NationalJournal::where('is_active', true)->where('journal_type', 'Prosiding')->count(),
         ];
 
         // Berita & Informasi Terbaru
@@ -58,6 +71,7 @@ class LandingController extends Controller
             'featuredBooks' => $featuredBooks,
             'categories' => $categories,
             'libraries' => $libraries,
+            'lecturerBooks' => $lecturerBooks,
             'stats' => $stats,
             'latestPosts' => $latestPosts,
         ]);

@@ -124,7 +124,7 @@ export default function PostsCreate({ categories = [], authors = [], defaultAuth
                     thumbnail_alt: ai.thumbnail_alt || prev.thumbnail_alt,
                 }));
                 setAiPrompt(ai.title || promptToUse);
-                setAiSuccessMessage('✨ Berita berhasil dibuat lengkap oleh AI! Semua isian (Judul, Slug, Kategori, Ringkasan, Isi Berita, dan SEO) telah terisi otomatis.');
+                setAiSuccessMessage('Berita berhasil dibuat lengkap oleh AI! Semua isian (Judul, Slug, Kategori, Ringkasan, Isi Berita, dan SEO) telah terisi otomatis.');
             } else {
                 setAiErrorMessage('Gagal membuat konten dengan AI. Silakan coba kembali.');
             }

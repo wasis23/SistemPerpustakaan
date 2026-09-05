@@ -172,12 +172,13 @@ export default function Index({ laboratories, filters }) {
                                         <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
                                             <Library className="w-6 h-6" />
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold border flex items-center space-x-1 ${
                                             lab.location === 'Kampus 1' 
                                                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
                                                 : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                         }`}>
-                                            📍 {lab.location}
+                                            <MapPin className="w-3 h-3 shrink-0" />
+                                            <span>{lab.location}</span>
                                         </span>
                                     </div>
 

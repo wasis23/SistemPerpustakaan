@@ -108,7 +108,7 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
                     thumbnail_alt: ai.thumbnail_alt || prev.thumbnail_alt,
                 }));
                 setAiPrompt(ai.title || promptToUse);
-                setAiSuccessMessage('✨ Artikel berhasil diperbarui secara otomatis oleh AI!');
+                setAiSuccessMessage('Artikel berhasil diperbarui secara otomatis oleh AI!');
             } else {
                 setAiErrorMessage('Gagal membuat konten dengan AI. Silakan coba kembali.');
             }

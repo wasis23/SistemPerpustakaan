@@ -525,7 +525,19 @@ class LecturerBookController extends Controller
 
             while (($data = fgetcsv($handle, 8192, $delimiter)) !== false) {
                 if (!empty(array_filter($data, fn($x) => trim((string)$x) !== ''))) {
-                    $rowsData[] = array_map(fn($v) => trim((string)$v), $data);
+                    // Konversi encoding ke valid UTF-8 & bersihkan karakter spesial Windows-1252 / ISO-8859-1
+                    $cleanRow = array_map(function ($v) {
+                        $val = (string)$v;
+                        if (!mb_check_encoding($val, 'UTF-8')) {
+                            $val = mb_convert_encoding($val, 'UTF-8', 'Windows-1252, ISO-8859-1, ASCII');
+                        }
+                        // Ganti smart quotes / non-standard apostrophe jika ada
+                        $val = str_replace(["\x92", "\x91", '’', '‘', '`'], "'", $val);
+                        $val = str_replace(["\x93", "\x94", '“', '”'], '"', $val);
+                        return trim($val);
+                    }, $data);
+
+                    $rowsData[] = $cleanRow;
                 }
             }
             fclose($handle);
@@ -541,7 +553,8 @@ class LecturerBookController extends Controller
             array_shift($rowsData);
         }
 
-        $importedCount = 0;
+        // 1. Parsing & Normalisasi Semua Baris
+        $parsedItems = [];
 
         foreach ($rowsData as $cols) {
             if (count($cols) < 2) continue;
@@ -553,15 +566,15 @@ class LecturerBookController extends Controller
             // Format Mapping:
             // [0]NO, [1]JUDUL_BUKU, [2]PENGARANG, [3]NIDN, [4]PROGRAM_STUDI, [5]JENIS_KARYA, [6]ISBN, [7]PENERBIT, [8]TAHUN_TERBIT, [9]KOTA_TERBIT, [10]EDISI, [11]HALAMAN, [12]NOMOR_HKI, [13]LINK_DOI, [14]SINOPSIS
             $title = !empty($cols[1]) && is_numeric($cols[0]) ? trim($cols[1]) : trim($cols[0]);
-            $authors = !empty($cols[2]) && is_numeric($cols[0]) ? trim($cols[2]) : trim($cols[1] ?? '');
+            $author = !empty($cols[2]) && is_numeric($cols[0]) ? trim($cols[2]) : trim($cols[1] ?? '');
             $nidn = !empty($cols[3]) && is_numeric($cols[0]) ? trim($cols[3]) : trim($cols[2] ?? '');
-            $prodi = !empty($cols[4]) && is_numeric($cols[0]) ? trim($cols[4]) : trim($cols[3] ?? 'D4-Manajemen Informasi Kesehatan');
-            $type = !empty($cols[5]) && is_numeric($cols[0]) ? trim($cols[5]) : trim($cols[4] ?? 'Buku Ajar');
-            $isbn = !empty($cols[6]) && is_numeric($cols[0]) ? trim($cols[6]) : trim($cols[5] ?? '');
-            $publisher = !empty($cols[7]) && is_numeric($cols[0]) ? trim($cols[7]) : trim($cols[6] ?? 'Poltek Indonusa Surakarta Press');
+            $prodi = !empty($cols[4]) && is_numeric($cols[0]) ? trim($cols[4]) : trim($cols[3] ?? '');
+            $type = !empty($cols[5]) && is_numeric($cols[0]) ? trim($cols[5]) : trim($cols[4] ?? '');
+            $rawIsbn = !empty($cols[6]) && is_numeric($cols[0]) ? trim($cols[6]) : trim($cols[5] ?? '');
+            $publisher = !empty($cols[7]) && is_numeric($cols[0]) ? trim($cols[7]) : trim($cols[6] ?? '');
             $rawYear = !empty($cols[8]) && is_numeric($cols[0]) ? trim($cols[8]) : trim($cols[7] ?? '');
-            $city = !empty($cols[9]) && is_numeric($cols[0]) ? trim($cols[9]) : trim($cols[8] ?? 'Surakarta');
-            $edition = !empty($cols[10]) && is_numeric($cols[0]) ? trim($cols[10]) : trim($cols[9] ?? 'Cetakan Ke-1');
+            $city = !empty($cols[9]) && is_numeric($cols[0]) ? trim($cols[9]) : trim($cols[8] ?? '');
+            $edition = !empty($cols[10]) && is_numeric($cols[0]) ? trim($cols[10]) : trim($cols[9] ?? '');
             $pages = !empty($cols[11]) && is_numeric($cols[0]) ? trim($cols[11]) : trim($cols[10] ?? '');
             $hki = !empty($cols[12]) && is_numeric($cols[0]) ? trim($cols[12]) : trim($cols[11] ?? '');
             $doi = !empty($cols[13]) && is_numeric($cols[0]) ? trim($cols[13]) : trim($cols[12] ?? '');
@@ -569,38 +582,148 @@ class LecturerBookController extends Controller
 
             if (empty($title)) continue;
 
-            $slug = Str::slug($title);
+            // Bersihkan placeholder '-'
+            $cleanVal = function (?string $v) {
+                $trimmed = trim((string)$v);
+                return ($trimmed === '' || $trimmed === '-' || $trimmed === 'null' || $trimmed === 'NULL') ? null : $trimmed;
+            };
+
+            $cleanIsbn = preg_replace('/[^0-9X]/i', '', (string)$cleanVal($rawIsbn));
+            $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : (int)date('Y');
+            $pageCount = is_numeric($pages) && (int)$pages > 0 ? (int)$pages : null;
+
+            // Kunci unik untuk pengelompokan duplikat: Prioritas ISBN murni, jika tidak ada gunakan Normalisasi Judul + Tahun
+            $normalizedTitle = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $title));
+            if (!empty($cleanIsbn) && strlen($cleanIsbn) >= 8) {
+                $groupKey = 'ISBN_' . $cleanIsbn;
+            } else {
+                $groupKey = 'TITLE_' . md5($normalizedTitle . '_' . $publishYear);
+            }
+
+            $parsedItems[] = [
+                'group_key' => $groupKey,
+                'title' => mb_convert_encoding($title, 'UTF-8', 'UTF-8'),
+                'author' => $cleanVal($author),
+                'nidn' => $cleanVal($nidn),
+                'prodi' => $cleanVal($prodi) ?? 'D4-Manajemen Informasi Kesehatan',
+                'publication_type' => $cleanVal($type) ?? 'Buku Ajar',
+                'isbn' => $cleanVal($rawIsbn),
+                'publisher' => $cleanVal($publisher) ?? 'Poltek Indonusa Surakarta Press',
+                'publish_year' => $publishYear,
+                'city' => $cleanVal($city) ?? 'Surakarta',
+                'edition' => $cleanVal($edition) ?? 'Cetakan Ke-1',
+                'pages' => $pageCount,
+                'synopsis' => $cleanVal($synopsis),
+                'doi_url' => $cleanVal($doi),
+                'hki_number' => $cleanVal($hki),
+            ];
+        }
+
+        // 2. Grouping Berdasarkan Buku (Menggabungkan Penulis 1, Penulis 2, dst.)
+        $groupedBooks = [];
+        foreach ($parsedItems as $item) {
+            $key = $item['group_key'];
+            if (!isset($groupedBooks[$key])) {
+                $groupedBooks[$key] = [
+                    'title' => $item['title'],
+                    'prodi' => $item['prodi'],
+                    'publication_type' => $item['publication_type'],
+                    'isbn' => $item['isbn'],
+                    'publisher' => $item['publisher'],
+                    'publish_year' => $item['publish_year'],
+                    'city' => $item['city'],
+                    'edition' => $item['edition'],
+                    'pages' => $item['pages'],
+                    'synopsis' => $item['synopsis'],
+                    'doi_url' => $item['doi_url'],
+                    'hki_number' => $item['hki_number'],
+                    'primary_nidn' => $item['nidn'],
+                    'authors_list' => [],
+                    'nidn_list' => [],
+                ];
+            } else {
+                // Lengkapi kolom yang masih kosong dari baris berikutnya jika baris pertama belum lengkap
+                foreach (['isbn', 'synopsis', 'doi_url', 'hki_number', 'pages'] as $field) {
+                    if (empty($groupedBooks[$key][$field]) && !empty($item[$field])) {
+                        $groupedBooks[$key][$field] = $item[$field];
+                    }
+                }
+            }
+
+            // Tambahkan penulis ke daftar secara berurutan
+            if (!empty($item['author'])) {
+                $authorName = $item['author'];
+                if (!in_array($authorName, $groupedBooks[$key]['authors_list'])) {
+                    $groupedBooks[$key]['authors_list'][] = $authorName;
+                }
+            }
+
+            // Simpan NIDN jika belum ada
+            if (!empty($item['nidn']) && !in_array($item['nidn'], $groupedBooks[$key]['nidn_list'])) {
+                $groupedBooks[$key]['nidn_list'][] = $item['nidn'];
+            }
+        }
+
+        // 3. Simpan ke Database
+        $importedCount = 0;
+        $failedCount = 0;
+
+        foreach ($groupedBooks as $bookData) {
+            $authorsList = $bookData['authors_list'];
+            
+            // Format Penggabungan Nama Penulis:
+            // Penulis 1 (paling atas) tetap nama utama, diikuti penulis berikutnya dipisah semicolon ';'
+            if (!empty($authorsList)) {
+                $combinedAuthors = implode('; ', $authorsList);
+            } else {
+                $combinedAuthors = 'Tim Dosen Politeknik Indonusa';
+            }
+
+            $primaryNidn = $bookData['primary_nidn'] ?? (!empty($bookData['nidn_list']) ? $bookData['nidn_list'][0] : null);
+
+            $slug = Str::slug($bookData['title']);
+            if (empty($slug)) {
+                $slug = 'buku-dosen-' . time() . '-' . mt_rand(100, 999);
+            }
             $originalSlug = $slug;
             $counter = 1;
             while (LecturerBook::where('slug', $slug)->exists()) {
                 $slug = $originalSlug . '-' . $counter++;
             }
 
-            $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : (int)date('Y');
-            $pageCount = is_numeric($pages) && (int)$pages > 0 ? (int)$pages : null;
+            try {
+                LecturerBook::create([
+                    'title' => $bookData['title'],
+                    'slug' => $slug,
+                    'authors' => $combinedAuthors,
+                    'nidn' => $primaryNidn,
+                    'prodi' => $bookData['prodi'],
+                    'publication_type' => $bookData['publication_type'],
+                    'isbn' => $bookData['isbn'],
+                    'publisher' => $bookData['publisher'],
+                    'publish_year' => $bookData['publish_year'],
+                    'city' => $bookData['city'],
+                    'edition' => $bookData['edition'],
+                    'pages' => $bookData['pages'],
+                    'synopsis' => $bookData['synopsis'],
+                    'doi_url' => $bookData['doi_url'],
+                    'hki_number' => $bookData['hki_number'],
+                    'is_featured' => false,
+                ]);
 
-            LecturerBook::create([
-                'title' => $title,
-                'slug' => $slug,
-                'authors' => !empty($authors) ? $authors : 'Tim Dosen Politeknik Indonusa',
-                'nidn' => !empty($nidn) ? $nidn : null,
-                'prodi' => !empty($prodi) ? $prodi : 'D4-Manajemen Informasi Kesehatan',
-                'publication_type' => !empty($type) ? $type : 'Buku Ajar',
-                'isbn' => !empty($isbn) ? $isbn : null,
-                'publisher' => !empty($publisher) ? $publisher : 'Poltek Indonusa Surakarta Press',
-                'publish_year' => $publishYear,
-                'city' => !empty($city) ? $city : 'Surakarta',
-                'edition' => !empty($edition) ? $edition : 'Cetakan Ke-1',
-                'pages' => $pageCount,
-                'synopsis' => !empty($synopsis) ? $synopsis : null,
-                'doi_url' => !empty($doi) ? $doi : null,
-                'hki_number' => !empty($hki) ? $hki : null,
-                'is_featured' => false,
-            ]);
-
-            $importedCount++;
+                $importedCount++;
+            } catch (\Throwable $e) {
+                \Log::warning("Gagal simpan buku dosen [{$bookData['title']}]: " . $e->getMessage());
+                $failedCount++;
+            }
         }
 
-        return redirect()->route('petugas.lecturer-books.index')->with('success', "Berhasil mengimpor {$importedCount} data karya buku dosen!");
+        $totalRawRows = count($parsedItems);
+        $msg = "Berhasil mengimpor {$importedCount} judul karya buku dosen dari total {$totalRawRows} baris data (data dengan judul/ISBN sama otomatis digabung)!";
+        if ($failedCount > 0) {
+            $msg .= " ({$failedCount} data gagal).";
+        }
+
+        return redirect()->route('petugas.lecturer-books.index')->with('success', $msg);
     }
 }

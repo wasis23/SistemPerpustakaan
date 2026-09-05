@@ -183,12 +183,15 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                                                     Estimasi Denda: <strong>{item.fineable_days ?? item.overdue_days} hari</strong> dikenakan denda (@ Rp {finePerDay.toLocaleString('id-ID')}/hari)
                                                 </p>
                                                 {item.exempt_days > 0 && (
-                                                    <p className="text-[10px] text-emerald-700 font-bold">
-                                                        ✓ Bebas Denda: {item.exempt_days} hari (
-                                                        {item.sunday_exempt_days > 0 ? `${item.sunday_exempt_days} Minggu` : ''}
-                                                        {item.sunday_exempt_days > 0 && item.holiday_exempt_days > 0 ? ' + ' : ''}
-                                                        {item.holiday_exempt_days > 0 ? `${item.holiday_exempt_days} Tanggal Merah` : ''}
-                                                        )
+                                                    <p className="text-[10px] text-emerald-700 font-bold flex items-center space-x-1">
+                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                                        <span>
+                                                            Bebas Denda: {item.exempt_days} hari (
+                                                            {item.sunday_exempt_days > 0 ? `${item.sunday_exempt_days} Minggu` : ''}
+                                                            {item.sunday_exempt_days > 0 && item.holiday_exempt_days > 0 ? ' + ' : ''}
+                                                            {item.holiday_exempt_days > 0 ? `${item.holiday_exempt_days} Tanggal Merah` : ''}
+                                                            )
+                                                        </span>
                                                     </p>
                                                 )}
                                             </div>

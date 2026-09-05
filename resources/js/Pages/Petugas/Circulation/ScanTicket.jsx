@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, QrCode, CheckCircle2, AlertCircle, Sparkles, User, BookOpen, Calendar } from 'lucide-react';
+import { ArrowLeft, QrCode, CheckCircle2, AlertCircle, Sparkles, User, BookOpen, Calendar, ArrowRight } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
 export default function ScanTicket() {
@@ -48,9 +48,10 @@ export default function ScanTicket() {
 
                     <Link
                         href="/petugas/circulations/scan-return"
-                        className="px-4 py-2.5 bg-white border border-slate-300 hover:border-amber-500 rounded-2xl text-xs font-bold text-slate-700 hover:text-amber-700 transition-all shadow-sm"
+                        className="px-4 py-2.5 bg-white border border-slate-300 hover:border-amber-500 rounded-2xl text-xs font-bold text-slate-700 hover:text-amber-700 transition-all shadow-sm flex items-center space-x-1.5"
                     >
-                        Pindah ke Scan Pengembalian ➔
+                        <span>Pindah ke Scan Pengembalian</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                 </div>
 

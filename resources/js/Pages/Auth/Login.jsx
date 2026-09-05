@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm, Head, Link } from '@inertiajs/react';
-import { BookOpen, User, Lock, ArrowRight, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
@@ -24,22 +24,16 @@ export default function Login() {
             <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-orange-400/20 rounded-full blur-3xl pointer-events-none" />
 
             <div className="w-full max-w-md relative z-10">
-                {/* Back to Home Button */}
-                <div className="mb-6 flex justify-start">
-                    <Link href="/" className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-600 hover:text-amber-700 transition-colors">
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Kembali ke Beranda</span>
-                    </Link>
-                </div>
-
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500 text-slate-950 shadow-xl mb-4">
-                        <BookOpen className="w-8 h-8 stroke-[2.5]" />
-                    </div>
-                    <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
-                        SIMPUS<span className="text-amber-600">.</span>
-                    </h1>
+                    <Link href="/" className="inline-flex flex-col items-center group">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500 text-slate-950 shadow-xl mb-4 group-hover:scale-105 transition-transform">
+                            <BookOpen className="w-8 h-8 stroke-[2.5]" />
+                        </div>
+                        <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
+                            SIMPUS<span className="text-amber-600">.</span>
+                        </h1>
+                    </Link>
                     <p className="text-xs text-slate-600 mt-1 font-medium">
                         Portal Otentikasi Perpustakaan Digital Politeknik Indonusa Surakarta
                     </p>
@@ -128,11 +122,10 @@ export default function Login() {
                 </div>
 
                 {/* Role Switch Info Footer */}
-                <div className="mt-6 text-center space-y-2">
-                    <div className="inline-flex items-center space-x-1.5 text-xs text-slate-600 bg-white/80 border border-amber-900/10 px-4 py-2 rounded-full shadow-sm">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                        <span>Autentikasi Otomatis (Anggota & Petugas Pustakawan)</span>
-                    </div>
+                <div className="mt-6 text-center">
+                    <p className="text-xs text-slate-500 font-medium">
+                        Autentikasi Otomatis (Anggota & Petugas Pustakawan)
+                    </p>
                 </div>
             </div>
         </div>

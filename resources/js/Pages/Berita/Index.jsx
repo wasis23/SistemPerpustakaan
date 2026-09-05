@@ -111,11 +111,6 @@ export default function BeritaIndex({ posts, featuredPosts = [], categories = []
             {/* Header Hero Section */}
             <section className="py-12 sm:py-16 bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent border-b border-amber-900/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-center">
-                    <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-900 px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Kabar Literasi & Pengumuman Resmi</span>
-                    </div>
-
                     <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight">
                         Warta Perpustakaan Digital
                     </h1>

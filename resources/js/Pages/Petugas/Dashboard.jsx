@@ -11,7 +11,8 @@ import {
     Monitor, 
     Sparkles,
     ChevronRight,
-    CheckCircle2
+    CheckCircle2,
+    ArrowRight
 } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
@@ -29,10 +30,6 @@ export default function Dashboard({ stats }) {
                         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
                         <div className="relative z-10 space-y-4 max-w-2xl">
-                            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
-                                <Sparkles className="w-3.5 h-3.5" />
-                                <span>Meja Operasional Pustakawan</span>
-                            </div>
                             <h1 className="text-2xl sm:text-3xl font-black leading-tight tracking-tight">
                                 Pengesahan Tiket HP & Pengembalian Buku Real-Time
                             </h1>
@@ -154,7 +151,8 @@ export default function Dashboard({ stats }) {
                             className="w-full py-3 bg-slate-950 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold shadow text-center flex items-center justify-center space-x-2"
                         >
                             <Monitor className="w-4 h-4 text-amber-400" />
-                            <span>Buka Presensi ➔</span>
+                            <span>Buka Presensi</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
 
@@ -171,9 +169,10 @@ export default function Dashboard({ stats }) {
                         </p>
                         <Link
                             href="/petugas/circulations/scan-ticket"
-                            className="inline-block px-5 py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-2xl text-xs shadow transition-all"
+                            className="inline-flex items-center space-x-1.5 px-5 py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-2xl text-xs shadow transition-all"
                         >
-                            Mulai Scan Tiket ➔
+                            <span>Mulai Scan Tiket</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
 
@@ -195,9 +194,10 @@ export default function Dashboard({ stats }) {
 
                         <Link
                             href="/petugas/circulations/scan-ticket"
-                            className="w-full py-2.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 rounded-2xl text-xs font-bold text-center block transition-all"
+                            className="w-full py-2.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 rounded-2xl text-xs font-bold text-center flex items-center justify-center space-x-1.5 transition-all"
                         >
-                            Buka Pemindai Tiket HP ➔
+                            <span>Buka Pemindai Tiket HP</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
                 </div>

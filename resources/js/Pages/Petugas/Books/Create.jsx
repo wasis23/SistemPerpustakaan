@@ -196,10 +196,6 @@ export default function Create({ categories: initialCategories, racks }) {
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="relative z-10 space-y-2">
-                        <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
-                            <Globe className="w-3.5 h-3.5 text-amber-400" />
-                            <span>3 Metode Auto-Fill Barcode ISBN (Open Library, OneSearch & OpenAI LLM)</span>
-                        </div>
                         <h2 className="text-lg font-black tracking-tight">
                             Pindai Barcode ISBN Buku
                         </h2>
@@ -302,7 +298,10 @@ export default function Create({ categories: initialCategories, racks }) {
                                         </div>
                                         <p className="text-[11px] text-slate-500 font-medium">
                                             {data.cover_url ? (
-                                                <span className="text-emerald-700 font-bold">✓ Sampul terhubung dari Open Library API.</span>
+                                                <span className="text-emerald-700 font-bold flex items-center space-x-1">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                    <span>Sampul terhubung dari Open Library API.</span>
+                                                </span>
                                             ) : (
                                                 'Format yang didukung: JPG, PNG, WEBP. Ukuran maksimal: 2 MB.'
                                             )}

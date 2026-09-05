@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { BookOpen, Plus, Search, Filter, Printer, FileText, ArrowLeft, Eye, Trash2, Edit, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BookOpen, Plus, Search, Filter, Printer, FileText, ArrowLeft, Eye, Trash2, Edit, CheckCircle2, AlertCircle, Tag, MapPin } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
 export default function Index({ books, categories, racks, filters }) {
@@ -357,8 +357,9 @@ export default function Index({ books, categories, racks, filters }) {
                                                         <p className="text-slate-600 text-xs font-medium mt-0.5">Penulis: {book.author}</p>
                                                         <div className="flex flex-wrap items-center gap-2 mt-1">
                                                             <span className="text-[10px] text-slate-500 font-mono">ISBN: {book.isbn || '-'}</span>
-                                                            <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
-                                                                🏷️ {book.call_number || '-'}
+                                                            <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60 flex items-center space-x-1">
+                                                                <Tag className="w-2.5 h-2.5 shrink-0" />
+                                                                <span>{book.call_number || '-'}</span>
                                                             </span>
                                                         </div>
                                                     </div>
@@ -369,8 +370,9 @@ export default function Index({ books, categories, racks, filters }) {
                                                     <span className="inline-block bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
                                                         {book.category?.name || 'Umum'}
                                                     </span>
-                                                    <p className="text-[11px] text-slate-600 font-mono font-medium">
-                                                        📍 {book.rack?.code_rack} ({book.rack?.location})
+                                                    <p className="text-[11px] text-slate-600 font-mono font-medium flex items-center space-x-1">
+                                                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                        <span>{book.rack?.code_rack} ({book.rack?.location})</span>
                                                     </p>
                                                 </div>
                                             </td>

@@ -160,10 +160,6 @@ export default function NationalJournalsIndex({
                 {/* Header Title & Action Buttons */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="space-y-1">
-                        <div className="inline-flex items-center space-x-2 bg-amber-500/10 text-amber-900 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider">
-                            <BookMarked className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Direktori Jurnal Nasional, Internasional & Prosiding</span>
-                        </div>
                         <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
                             Publikasi Ilmiah
                         </h1>

@@ -102,6 +102,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/books/reset-all', [PetugasBookController::class, 'resetAll'])->name('books.reset-all');
         Route::get('/books/{book}/print-barcodes', [PetugasBookController::class, 'printBarcodes'])->name('books.print-barcodes');
         Route::post('/books/{book}/add-copies', [PetugasBookController::class, 'addCopies'])->name('books.add-copies');
+        Route::post('/books/{book}/reduce-copies', [PetugasBookController::class, 'reduceCopies'])->name('books.reduce-copies');
+        Route::delete('/books/{book}/copies/{copy}', [PetugasBookController::class, 'destroyCopy'])->name('books.copies.destroy');
+        Route::put('/books/{book}/copies/{copy}', [PetugasBookController::class, 'updateCopy'])->name('books.copies.update');
         Route::resource('books', PetugasBookController::class);
 
         // Manajemen Master Data (Kategori DDC & Lokasi Rak Fisik)

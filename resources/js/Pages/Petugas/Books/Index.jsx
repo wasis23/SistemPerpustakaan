@@ -393,6 +393,13 @@ export default function Index({ books, categories, racks, filters }) {
                                                         <Eye className="w-4 h-4" />
                                                     </Link>
                                                     <Link
+                                                        href={`/petugas/books/${book.id}/edit`}
+                                                        className="p-2 text-amber-700 hover:text-amber-800 bg-amber-50 border border-amber-200 rounded-xl transition-all"
+                                                        title="Edit Data Buku & Eksemplar"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </Link>
+                                                    <Link
                                                         href={`/petugas/books/${book.id}/print-barcodes`}
                                                         target="_blank"
                                                         className="p-2 text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl transition-all"

@@ -631,10 +631,26 @@ class BookController extends Controller
      */
     public function edit(Book $book): Response
     {
+        $book->load(['category', 'rack', 'copies']);
+
+        // Lampirkan string Barcode SVG untuk setiap eksemplar
+        $copiesWithBarcode = $book->copies->map(function ($copy) {
+            return [
+                'id' => $copy->id,
+                'copy_code' => $copy->copy_code,
+                'barcode_hash' => $copy->barcode_hash,
+                'barcode_svg' => BarcodeService::generateSvg($copy->barcode_hash),
+                'condition' => $copy->condition,
+                'status' => $copy->status,
+                'created_at' => $copy->created_at ? $copy->created_at->format('d M Y') : '-',
+            ];
+        });
+
         return Inertia::render('Petugas/Books/Edit', [
             'book' => $book,
+            'copies' => $copiesWithBarcode,
             'categories' => Category::select('id', 'code', 'name')->get(),
-            'racks' => Rack::select('id', 'code_rack', 'location')->get(),
+            'racks' => Rack::with('laboratory')->get(),
         ]);
     }
 
@@ -656,6 +672,7 @@ class BookController extends Controller
             'call_number' => ['nullable', 'string', 'max:100'],
             'cover_image' => ['nullable'],
             'cover_url' => ['nullable', 'string'],
+            'remove_cover' => ['nullable', 'boolean'],
         ]);
 
         if ($request->hasFile('cover_image')) {
@@ -663,7 +680,15 @@ class BookController extends Controller
             $validated['cover_image'] = '/storage/' . $coverPath;
         } elseif ($request->filled('cover_url')) {
             $validated['cover_image'] = $request->cover_url;
+        } else {
+            if ($request->boolean('remove_cover')) {
+                $validated['cover_image'] = null;
+            } else {
+                unset($validated['cover_image']);
+            }
         }
+
+        unset($validated['cover_url'], $validated['remove_cover']);
 
         $book->update($validated);
 
@@ -687,7 +712,7 @@ class BookController extends Controller
     public function addCopies(Request $request, Book $book)
     {
         $request->validate([
-            'count' => ['required', 'integer', 'min:1', 'max:20'],
+            'count' => ['required', 'integer', 'min:1', 'max:50'],
         ]);
 
         $procurementYear = !empty($book->procurement_year) 
@@ -734,6 +759,86 @@ class BookController extends Controller
             Log::error('Gagal tambah eksemplar: ' . $e->getMessage());
             return back()->with('error', 'Gagal menambahkan eksemplar fisik: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Kurangi Jumlah Eksemplar Fisik yang Tersedia Sekaligus
+     */
+    public function reduceCopies(Request $request, Book $book)
+    {
+        $request->validate([
+            'count' => ['required', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $count = (int)$request->count;
+        $availableCopies = $book->copies()
+            ->where('status', 'available')
+            ->orderBy('id', 'desc')
+            ->take($count)
+            ->get();
+
+        if ($availableCopies->count() < $count) {
+            return back()->with('error', "Hanya terdapat {$availableCopies->count()} eksemplar berstatus 'Tersedia' yang dapat dikurangi.");
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($availableCopies as $copy) {
+                $copy->delete();
+            }
+            $book->update(['total_copies' => $book->copies()->count()]);
+            DB::commit();
+
+            return back()->with('success', "{$count} eksemplar fisik berhasil dikurangi.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Gagal mengurangi eksemplar: ' . $e->getMessage());
+            return back()->with('error', 'Gagal mengurangi eksemplar: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hapus 1 Eksemplar Fisik Tertentu
+     */
+    public function destroyCopy(Book $book, BookCopy $copy)
+    {
+        if ((int)$copy->book_id !== (int)$book->id) {
+            return back()->with('error', 'Eksemplar tidak sesuai dengan buku.');
+        }
+
+        if (in_array($copy->status, ['borrowed', 'ticketed'])) {
+            return back()->with('error', 'Eksemplar sedang dipinjam atau tertahan tiket dan tidak dapat dihapus.');
+        }
+
+        $copyCode = $copy->copy_code;
+        $copy->delete();
+
+        $book->update(['total_copies' => $book->copies()->count()]);
+
+        return back()->with('success', "Eksemplar {$copyCode} berhasil dihapus.");
+    }
+
+    /**
+     * Update Status & Kondisi Eksemplar Fisik
+     */
+    public function updateCopy(Request $request, Book $book, BookCopy $copy)
+    {
+        if ((int)$copy->book_id !== (int)$book->id) {
+            return back()->with('error', 'Eksemplar tidak sesuai dengan buku.');
+        }
+
+        $validated = $request->validate([
+            'condition' => ['required', 'string', 'in:good,fair,damaged'],
+            'status' => ['required', 'string', 'in:available,damaged,lost'],
+        ]);
+
+        if (in_array($copy->status, ['borrowed', 'ticketed']) && $validated['status'] !== $copy->status) {
+            return back()->with('error', 'Eksemplar yang sedang dipinjam atau tertahan tiket tidak dapat diubah statusnya.');
+        }
+
+        $copy->update($validated);
+
+        return back()->with('success', "Data eksemplar {$copy->copy_code} berhasil diperbarui.");
     }
 
     /**

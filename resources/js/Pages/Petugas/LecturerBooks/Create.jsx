@@ -115,7 +115,9 @@ export default function LecturerBooksCreate({ prodiList = [], publicationTypes =
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/petugas/lecturer-books');
+        post('/petugas/lecturer-books', {
+            forceFormData: true,
+        });
     };
 
     return (

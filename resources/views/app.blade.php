@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>SIMPUS - Sistem Informasi Perpustakaan Digital</title>
+    <title>Website Perpustakaan - Politeknik Indonusa Surakarta</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

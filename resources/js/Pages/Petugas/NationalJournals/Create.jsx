@@ -68,7 +68,7 @@ export default function NationalJournalsCreate({
 
     return (
         <PetugasLayout activeMenu="national-journals">
-            <Head title="Tambah Publikasi Ilmiah - SIMPUS Petugas" />
+            <Head title="Tambah Publikasi Ilmiah - Website Perpustakaan" />
 
             <form onSubmit={handleSubmit} className="space-y-8 w-full">
                 {/* Header Navigation Bar */}

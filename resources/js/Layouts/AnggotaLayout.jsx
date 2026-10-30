@@ -10,7 +10,8 @@ import {
     Sparkles, 
     UserCog,
     Menu,
-    X
+    X,
+    HelpCircle
 } from 'lucide-react';
 
 export default function AnggotaLayout({ children, activeMenu, activeTicketsCount }) {
@@ -53,6 +54,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
         { key: 'borrowings', label: 'Buku Dipinjam Saya', href: '/anggota/borrowings', icon: BookmarkCheck },
         { key: 'catalog', label: 'Katalog Buku', href: '/anggota/katalog', icon: BookOpen },
         { key: 'scan', label: 'Scan Barcode Rak', href: '/anggota/scan', icon: QrCode },
+        { key: 'panduan', label: 'Panduan Layanan', href: '/panduan', icon: HelpCircle },
         { key: 'profile', label: 'Profil & Password', href: '/anggota/profile', icon: UserCog },
     ];
 
@@ -67,8 +69,8 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
                             <BookOpen className="w-5 h-5 stroke-[2.5]" />
                         </div>
                         <div>
-                            <span className="font-extrabold text-xl text-slate-950 tracking-tight">SIMPUS.</span>
-                            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-2 font-bold uppercase">Anggota</span>
+                            <span className="font-extrabold text-sm text-slate-950 tracking-tight">Website Perpustakaan</span>
+                            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-1.5 font-bold uppercase">Anggota</span>
                         </div>
                     </Link>
 
@@ -151,7 +153,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
                                         <BookOpen className="w-5 h-5 stroke-[2.5]" />
                                     </div>
                                     <div>
-                                        <span className="font-extrabold text-lg text-slate-950 tracking-tight">SIMPUS.</span>
+                                        <span className="font-extrabold text-sm text-slate-950 tracking-tight">Website Perpustakaan</span>
                                         <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-1.5 font-bold uppercase">Anggota</span>
                                     </div>
                                 </Link>
@@ -250,7 +252,7 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
                             <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm">
                                 <BookOpen className="w-4 h-4" />
                             </div>
-                            <span className="font-extrabold text-base text-slate-950 tracking-tight">SIMPUS</span>
+                            <span className="font-extrabold text-sm text-slate-950 tracking-tight">Website Perpustakaan</span>
                         </Link>
                     </div>
 

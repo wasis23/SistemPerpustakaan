@@ -163,7 +163,7 @@ export default function PostsEdit({ post, categories = [], authors = [] }) {
 
     return (
         <PetugasLayout activeMenu="posts">
-            <Head title={`Edit Berita: ${post.title} - SIMPUS Petugas`} />
+            <Head title={`Edit Berita: ${post.title} - Website Perpustakaan`} />
 
             <form onSubmit={handleSubmit} className="space-y-8 w-full">
                 {/* Header Navigation */}

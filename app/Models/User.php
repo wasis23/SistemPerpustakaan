@@ -27,11 +27,54 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is member (Anggota: Mahasiswa / Dosen)
+     * Check if user is member (Anggota: Mahasiswa / Dosen / Tendik)
      */
     public function isAnggota(): bool
     {
         return $this->role === 'anggota';
+    }
+
+    /**
+     * Check if user is Dosen or Tenaga Kependidikan (Tendik)
+     */
+    public function isDosenOrTendik(): bool
+    {
+        $prodi = strtolower($this->prodi ?? '');
+        $username = strtolower($this->username ?? '');
+        
+        // Cek indikator prodi atau username dosen/tendik/pegawai
+        if (str_contains($prodi, 'dosen') || str_contains($prodi, 'tendik') || str_contains($prodi, 'pegawai') || str_contains($prodi, 'staf') || str_contains($prodi, 'staff')) {
+            return true;
+        }
+
+        // Format username dosen biasanya diawali dsn, nidn, nip, atau berawalan huruf bukan nim mhs
+        if (str_starts_with($username, 'dsn') || str_starts_with($username, 'nip') || str_starts_with($username, 'nidn')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Dapatkan batas maksimal peminjaman buku berdasarkan tipe anggota
+     */
+    public function getMaxBorrowLimit(): int
+    {
+        if ($this->isDosenOrTendik()) {
+            return (int) Setting::get('max_borrow_limit_lecturer', 4);
+        }
+        return (int) Setting::get('max_borrow_limit', 3);
+    }
+
+    /**
+     * Dapatkan durasi masa pinjam (hari) berdasarkan tipe anggota
+     */
+    public function getBorrowDurationDays(): int
+    {
+        if ($this->isDosenOrTendik()) {
+            return (int) Setting::get('borrow_duration_days_lecturer', 14);
+        }
+        return (int) Setting::get('borrow_duration_days', 7);
     }
 
     /**

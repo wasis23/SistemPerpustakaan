@@ -35,7 +35,7 @@ export default function PostsCreate({ categories = [], authors = [], defaultAuth
         title: '',
         slug: '',
         category: categories[0] || 'Pengumuman',
-        author_name: defaultAuthor?.name || 'Pustakawan SIMPUS',
+        author_name: defaultAuthor?.name || 'Pustakawan Perpustakaan',
         user_id: defaultAuthor?.id || '',
         excerpt: '',
         content: '',
@@ -173,7 +173,7 @@ export default function PostsCreate({ categories = [], authors = [], defaultAuth
 
     return (
         <PetugasLayout activeMenu="posts">
-            <Head title="Buat Berita & Artikel SEO - SIMPUS Petugas" />
+            <Head title="Buat Berita & Artikel SEO - Website Perpustakaan" />
 
             <form onSubmit={handleSubmit} className="space-y-8 w-full">
                 {/* Header Navigation */}

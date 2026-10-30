@@ -17,7 +17,7 @@ export default function Login() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] px-4 py-12 relative overflow-hidden font-sans">
-            <Head title="Masuk Ke Portal - SIMPUS Digital" />
+            <Head title="Masuk Ke Portal - Website Perpustakaan" />
 
             {/* Background Ambient Warm Glows */}
             <div className="absolute -top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
@@ -30,8 +30,8 @@ export default function Login() {
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500 text-slate-950 shadow-xl mb-4 group-hover:scale-105 transition-transform">
                             <BookOpen className="w-8 h-8 stroke-[2.5]" />
                         </div>
-                        <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
-                            SIMPUS<span className="text-amber-600">.</span>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+                            Website Perpustakaan<span className="text-amber-600">.</span>
                         </h1>
                     </Link>
                     <p className="text-xs text-slate-600 mt-1 font-medium">

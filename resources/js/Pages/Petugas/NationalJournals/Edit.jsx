@@ -68,7 +68,7 @@ export default function NationalJournalsEdit({
 
     return (
         <PetugasLayout activeMenu="national-journals">
-            <Head title={`Edit: ${journal.title} - SIMPUS Petugas`} />
+            <Head title={`Edit: ${journal.title} - Website Perpustakaan`} />
 
             <form onSubmit={handleSubmit} className="space-y-8 w-full">
                 {/* Header Navigation Bar */}

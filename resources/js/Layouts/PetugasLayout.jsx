@@ -20,7 +20,8 @@ import {
     BookMarked,
     Menu,
     X,
-    ExternalLink
+    ExternalLink,
+    HelpCircle
 } from 'lucide-react';
 
 export default function PetugasLayout({ children, activeMenu, todayVisitsCount }) {
@@ -34,13 +35,16 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
         { key: 'presensi', label: 'Rekap Presensi', href: '/petugas/presensi', icon: Users },
         { key: 'members', label: 'Data Anggota', href: '/petugas/members', icon: UserCheck },
         { key: 'books', label: 'Katalog Buku Fisik', href: '/petugas/books', icon: BookOpen },
+        { key: 'stock-opname', label: 'Stock Opname', href: '/petugas/stock-opname', icon: FileSpreadsheet },
         { key: 'lecturer-books', label: 'Karya Buku Dosen', href: '/petugas/lecturer-books', icon: GraduationCap },
-        { key: 'national-journals', label: 'Publikasi Ilmiah', href: '/petugas/national-journals', icon: BookMarked },
+        { key: 'indonusa-publisher', label: 'Indonusa Publisher', href: '/petugas/indonusa-publisher', icon: BookMarked },
+        { key: 'national-journals', label: 'Publikasi Ilmiah', href: '/petugas/national-journals', icon: Library },
         { key: 'categories', label: 'Kategori DDC', href: '/petugas/categories', icon: Tag },
         { key: 'racks', label: 'Lokasi Rak Fisik', href: '/petugas/racks', icon: MapPin },
         { key: 'posts', label: 'Manajemen Berita', href: '/petugas/posts', icon: Newspaper },
         { key: 'laboratories', label: 'Perpustakaan 360°', href: '/petugas/laboratories', icon: Library },
         { key: 'reports', label: 'Laporan Analytics', href: '/petugas/reports', icon: FileSpreadsheet },
+        { key: 'panduan', label: 'Buku Panduan', href: '/panduan', icon: HelpCircle },
         { key: 'settings', label: 'Pengaturan Sirkulasi', href: '/petugas/settings', icon: SlidersHorizontal },
         { key: 'profile', label: 'Profil Pustakawan', href: '/petugas/profile', icon: UserCog },
     ];
@@ -58,7 +62,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                             </div>
                             <div>
                                 <div className="flex items-center space-x-1.5">
-                                    <span className="font-extrabold text-lg text-slate-950 tracking-tight">SIMPUS.</span>
+                                    <span className="font-extrabold text-sm text-slate-950 tracking-tight leading-tight">Website Perpustakaan</span>
                                     <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded-md font-extrabold uppercase">Petugas</span>
                                 </div>
                                 <span className="text-[10px] text-slate-500 font-medium block">Politeknik Indonusa</span>
@@ -156,7 +160,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                                         <Shield className="w-5 h-5 stroke-[2.5]" />
                                     </div>
                                     <div>
-                                        <span className="font-extrabold text-base text-slate-950 tracking-tight">SIMPUS.</span>
+                                        <span className="font-extrabold text-sm text-slate-950 tracking-tight">Website Perpustakaan</span>
                                         <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md ml-1 font-bold uppercase">Petugas</span>
                                     </div>
                                 </Link>
@@ -251,7 +255,7 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                             <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm">
                                 <Shield className="w-4 h-4" />
                             </div>
-                            <span className="font-extrabold text-base text-slate-950 tracking-tight">SIMPUS</span>
+                            <span className="font-extrabold text-sm text-slate-950 tracking-tight">Website Perpustakaan</span>
                         </Link>
                     </div>
 

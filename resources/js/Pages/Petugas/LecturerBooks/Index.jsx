@@ -32,8 +32,13 @@ export default function LecturerBooksIndex({
     prodiList = [],
     publicationTypes = [],
     availableYears = [],
-    stats = {}
+    stats = {},
+    isIndonusaPublisher = false,
+    pageTitle = 'Karya Buku Dosen'
 }) {
+    const currentBaseUrl = isIndonusaPublisher ? '/petugas/indonusa-publisher' : '/petugas/lecturer-books';
+    const activeNavKey = isIndonusaPublisher ? 'indonusa-publisher' : 'lecturer-books';
+
     const [search, setSearch] = useState(filters.search || '');
     const [prodiFilter, setProdiFilter] = useState(filters.prodi || '');
     const [typeFilter, setTypeFilter] = useState(filters.publication_type || '');
@@ -60,7 +65,7 @@ export default function LecturerBooksIndex({
     };
 
     const applyFilters = (params) => {
-        router.get('/petugas/lecturer-books', params, {
+        router.get(currentBaseUrl, params, {
             preserveState: true,
             replace: true,
         });
@@ -133,18 +138,27 @@ export default function LecturerBooksIndex({
     };
 
     return (
-        <PetugasLayout activeMenu="lecturer-books">
-            <Head title="Manajemen Karya Buku Dosen - SIMPUS Petugas" />
+        <PetugasLayout activeMenu={activeNavKey}>
+            <Head title={`Manajemen ${pageTitle} - Website Perpustakaan`} />
 
             <div className="space-y-8 w-full">
                 {/* Header Title & Action Buttons */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="space-y-1">
-                        <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-                            Karya Buku Dosen
-                        </h1>
+                        <div className="flex items-center space-x-2">
+                            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+                                {pageTitle}
+                            </h1>
+                            {isIndonusaPublisher && (
+                                <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold uppercase">
+                                    Official Publisher
+                                </span>
+                            )}
+                        </div>
                         <p className="text-slate-600 text-xs sm:text-sm max-w-3xl">
-                            Kelola data publikasi buku ajar, monograf, buku referensi, dan modul praktikum karya dosen Politeknik Indonusa Surakarta (terpisah dari katalog sirkulasi fisik).
+                            {isIndonusaPublisher
+                                ? 'Koleksi khusus buku karya dosen dan civitas akademika yang diterbitkan resmi oleh Indonusa Publisher.'
+                                : 'Kelola data publikasi buku ajar, monograf, buku referensi, dan modul praktikum karya dosen Politeknik Indonusa Surakarta (terpisah dari katalog sirkulasi fisik).'}
                         </p>
                     </div>
 

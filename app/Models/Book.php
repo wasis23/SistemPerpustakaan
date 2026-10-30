@@ -21,6 +21,7 @@ class Book extends Model
         'procurement_month',
         'category_id',
         'rack_id',
+        'collection_type',
         'cover_image',
         'call_number',
         'total_copies',

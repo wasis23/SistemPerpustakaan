@@ -176,7 +176,7 @@ export default function LecturerBooksEdit({ book, prodiList = [], publicationTyp
 
     return (
         <PetugasLayout activeMenu="lecturer-books">
-            <Head title={`Edit Karya: ${book.title} - SIMPUS Petugas`} />
+            <Head title={`Edit Karya: ${book.title} - Website Perpustakaan`} />
 
             <form onSubmit={handleSubmit} className="space-y-8 w-full">
                 {/* Header Navigation Bar */}

@@ -60,7 +60,7 @@ export default function BeritaIndex({ posts, featuredPosts = [], categories = []
                         </div>
                         <div>
                             <span className="font-extrabold text-xl tracking-tight text-slate-900 block leading-tight">
-                                SIMPUS<span className="text-amber-600">.</span>
+                                Website Perpustakaan<span className="text-amber-600">.</span>
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase block">
                                 Politeknik Indonusa Surakarta
@@ -360,7 +360,7 @@ export default function BeritaIndex({ posts, featuredPosts = [], categories = []
                         <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm">
                             <BookOpen className="w-4 h-4 stroke-[2.5]" />
                         </div>
-                        <span className="font-extrabold text-white text-base">SIMPUS Politeknik Indonusa Surakarta</span>
+                        <span className="font-extrabold text-white text-base">Website Perpustakaan Politeknik Indonusa Surakarta</span>
                     </div>
                     <p className="text-xs text-slate-500 max-w-md mx-auto">
                         Sistem Informasi Manajemen Perpustakaan Digital Berbasis Self-Service & Optimasi Akses Literasi Ilmiah.

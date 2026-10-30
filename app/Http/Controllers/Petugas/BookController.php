@@ -431,39 +431,15 @@ class BookController extends Controller
         }
 
 
-        // Process DDC & Auto-register Category if not exists
-        $ddcCode = !empty($bookData['ddc']) ? $bookData['ddc'] : '000';
+        // Process DDC & Normalisasi ke Kelas Utama 000-900
+        $rawDdc = !empty($bookData['ddc']) ? $bookData['ddc'] : '000';
+        $num = (int) preg_replace('/[^0-9]/', '', $rawDdc);
+        $ddcCode = str_pad((string)(floor($num / 100) * 100), 3, '0', STR_PAD_LEFT);
+
         $category = Category::where('code', $ddcCode)->first();
 
         if (!$category) {
-            $mainDdc = substr(preg_replace('/[^0-9]/', '', $ddcCode), 0, 3);
-            if ($mainDdc !== '') {
-                $category = Category::where('code', $mainDdc)->first();
-            }
-        }
-
-        if (!$category) {
-            $standardNames = [
-                '000' => 'Karya Umum & Komputer',
-                '004' => 'Pemrograman & Rekayasa Perangkat Lunak',
-                '100' => 'Filsafat & Psikologi',
-                '200' => 'Agama & Kepercayaan',
-                '300' => 'Ilmu Sosial & Hukum',
-                '400' => 'Bahasa & Linguistik',
-                '500' => 'Sains & Matematika',
-                '600' => 'Teknologi & Ilmu Terapan',
-                '610' => 'Kesehatan & Rekam Medis',
-                '650' => 'Manajemen & Akuntansi',
-                '700' => 'Kesenian & Olahraga',
-                '800' => 'Kesusastraan & Novel',
-                '900' => 'Sejarah & Geografi',
-            ];
-            $categoryName = $standardNames[$ddcCode] ?? "Kategori DDC " . $ddcCode;
-            $category = Category::create([
-                'code' => $ddcCode,
-                'name' => $categoryName,
-                'description' => "Otomatis terdaftar dari pencarian katalog global API",
-            ]);
+            $category = Category::where('code', '000')->first() ?: Category::first();
         }
 
         // Generate Call Number: [DDC] [3-Letter Author] [1-Letter Title (lower)]
@@ -514,6 +490,7 @@ class BookController extends Controller
             'procurement_month' => ['nullable', 'integer', 'min:1', 'max:12'],
             'category_id' => ['required', 'exists:categories,id'],
             'rack_id' => ['required', 'exists:racks,id'],
+            'collection_type' => ['nullable', 'string', 'in:Buku Teks,Proposal,Laporan PI/PKL'],
             'call_number' => ['nullable', 'string', 'max:100'],
             'initial_copies' => ['required', 'integer', 'min:1', 'max:50'],
             'cover_image' => ['nullable'],
@@ -564,6 +541,7 @@ class BookController extends Controller
             'procurement_month' => $procurementMonth,
             'category_id' => $validated['category_id'],
             'rack_id' => $validated['rack_id'],
+            'collection_type' => $validated['collection_type'] ?? 'Buku Teks',
             'cover_image' => $coverPath,
             'call_number' => $callNumber,
             'total_copies' => $validated['initial_copies'],
@@ -669,6 +647,7 @@ class BookController extends Controller
             'procurement_month' => ['nullable', 'integer', 'min:1', 'max:12'],
             'category_id' => ['required', 'exists:categories,id'],
             'rack_id' => ['required', 'exists:racks,id'],
+            'collection_type' => ['nullable', 'string', 'in:Buku Teks,Proposal,Laporan PI/PKL'],
             'call_number' => ['nullable', 'string', 'max:100'],
             'cover_image' => ['nullable'],
             'cover_url' => ['nullable', 'string'],
@@ -854,6 +833,7 @@ class BookController extends Controller
                 'barcode_hash' => $copy->barcode_hash,
                 'barcode_svg' => BarcodeService::generateSvg($copy->barcode_hash),
                 'title' => $book->title,
+                'call_number' => $book->call_number ?: "{$book->category?->code} " . strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $book->author), 0, 3)) . " " . strtolower(substr(preg_replace('/[^A-Za-z]/', '', $book->title), 0, 1)),
                 'rack_code' => $book->rack->code_rack ?? 'RAK-01',
                 'rack_location' => $book->rack->location ?? 'Perpustakaan',
             ];

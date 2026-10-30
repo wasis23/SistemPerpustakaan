@@ -86,6 +86,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/profile/password', [PetugasProfileController::class, 'updatePassword'])->name('profile.password.update');
 
         // Manajemen Anggota Perpustakaan (Mahasiswa & Dosen)
+        Route::get('/members/download-template', [PetugasMemberController::class, 'downloadTemplate'])->name('members.download-template');
+        Route::post('/members/import-csv', [PetugasMemberController::class, 'importCsv'])->name('members.import');
+        Route::post('/members/sync-siakad', [PetugasMemberController::class, 'syncSiakad'])->name('members.sync-siakad');
         Route::get('/members', [PetugasMemberController::class, 'index'])->name('members.index');
         Route::post('/members', [PetugasMemberController::class, 'store'])->name('members.store');
         Route::put('/members/{member}', [PetugasMemberController::class, 'update'])->name('members.update');

@@ -20,7 +20,11 @@ import {
     Search,
     ChevronDown,
     UserCheck,
-    X
+    X,
+    Plus,
+    Trash2,
+    Users,
+    User
 } from 'lucide-react';
 
 export default function LecturerBooksCreate({ prodiList = [], publicationTypes = [], siakadLecturers = [] }) {
@@ -52,10 +56,27 @@ export default function LecturerBooksCreate({ prodiList = [], publicationTypes =
     const [docMode, setDocMode] = useState('file'); // 'file' | 'url'
     const [coverPreview, setCoverPreview] = useState(null);
 
-    // SIAKAD Dosen Searchable Dropdown State
+    const handleCoverChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setData('cover_file', file);
+            setCoverPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleDocChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setData('document_file', file);
+        }
+    };
+
+    // Multi-Author Dynamic List State
+    const [authorsList, setAuthorsList] = useState([
+        { name: '', nidn: '' }
+    ]);
+    const [activeDropdownIndex, setActiveDropdownIndex] = useState(null);
     const [dosenSearchQuery, setDosenSearchQuery] = useState('');
-    const [selectedDosenNidn, setSelectedDosenNidn] = useState('');
-    const [dosenDropdownOpen, setDosenDropdownOpen] = useState(false);
 
     const filteredLecturers = useMemo(() => {
         if (!dosenSearchQuery.trim()) {
@@ -67,50 +88,65 @@ export default function LecturerBooksCreate({ prodiList = [], publicationTypes =
         );
     }, [siakadLecturers, dosenSearchQuery]);
 
-    const handleCoverChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setData('cover_file', file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCoverPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
+    // Helper: Sinkronkan list authors ke form data
+    const syncAuthorsToForm = (list) => {
+        const combinedAuthors = list
+            .map((a) => (a.name || '').trim())
+            .filter(Boolean)
+            .join('; ');
+        
+        setData((prev) => ({
+            ...prev,
+            authors: combinedAuthors,
+            nidn: list[0]?.nidn || prev.nidn || '',
+        }));
     };
 
-    const handleDocChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setData('document_file', file);
-        }
+    const handleUpdateAuthor = (index, field, value) => {
+        const nextList = [...authorsList];
+        nextList[index] = { ...nextList[index], [field]: value };
+        setAuthorsList(nextList);
+        syncAuthorsToForm(nextList);
     };
 
-    const handleSelectSiakadDosen = (lecturer) => {
-        setSelectedDosenNidn(lecturer.nidn);
-        setDosenDropdownOpen(false);
+    const handleAddAuthor = () => {
+        const nextList = [...authorsList, { name: '', nidn: '' }];
+        setAuthorsList(nextList);
+        syncAuthorsToForm(nextList);
+    };
+
+    const handleRemoveAuthor = (index) => {
+        if (authorsList.length <= 1) return;
+        const nextList = authorsList.filter((_, i) => i !== index);
+        setAuthorsList(nextList);
+        syncAuthorsToForm(nextList);
+    };
+
+    const handleSelectSiakadDosenForAuthor = (index, lecturer) => {
+        const nextList = [...authorsList];
+        nextList[index] = {
+            ...nextList[index],
+            name: lecturer.name,
+            nidn: lecturer.nidn || '',
+        };
+        setAuthorsList(nextList);
+        setActiveDropdownIndex(null);
         setDosenSearchQuery('');
 
-        setData((prev) => {
-            let matchedProdi = prev.prodi;
-            if (lecturer.prodi) {
-                const foundProdi = prodiList.find(
-                    (p) => p.toLowerCase() === lecturer.prodi.toLowerCase() || p.toLowerCase().includes(lecturer.prodi.toLowerCase()) || lecturer.prodi.toLowerCase().includes(p.toLowerCase())
-                );
-                if (foundProdi) matchedProdi = foundProdi;
+        // Jika ini Penulis Utama (index 0), otomatis cocokkan Prodi Homebase
+        if (index === 0 && lecturer.prodi) {
+            const foundProdi = prodiList.find(
+                (p) => p.toLowerCase() === lecturer.prodi.toLowerCase() || p.toLowerCase().includes(lecturer.prodi.toLowerCase()) || lecturer.prodi.toLowerCase().includes(p.toLowerCase())
+            );
+            if (foundProdi) {
+                setData((prev) => ({
+                    ...prev,
+                    prodi: foundProdi,
+                }));
             }
+        }
 
-            return {
-                ...prev,
-                authors: lecturer.name,
-                nidn: lecturer.nidn,
-                prodi: matchedProdi,
-            };
-        });
-    };
-
-    const handleClearSelectedDosen = () => {
-        setSelectedDosenNidn('');
+        syncAuthorsToForm(nextList);
     };
 
     const handleSubmit = (e) => {
@@ -191,117 +227,181 @@ export default function LecturerBooksCreate({ prodiList = [], publicationTypes =
                                 {errors.title && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.title}</p>}
                             </div>
 
-                            {/* SIAKAD API Live Dosen Selector */}
-                            <div className="p-4 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-extrabold text-amber-950 flex items-center space-x-1.5">
-                                        <Sparkles className="w-4 h-4 text-amber-600" />
-                                        <span>Tarik Data Dosen dari API SIAKAD</span>
-                                    </span>
-                                    <span className="text-[10px] font-bold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">
-                                        {siakadLecturers.length} Dosen Terhubung
-                                    </span>
+                            {/* Section Multi-Author (Tim Penulis Dosen) */}
+                            <div className="space-y-4 pt-1">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-950 flex items-center space-x-1.5">
+                                            <Users className="w-4 h-4 text-amber-600" />
+                                            <span>Tim Penulis / Dosen <span className="text-rose-500">*</span></span>
+                                        </label>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                            Tambahkan Penulis Utama (Penulis 1), Penulis 2, Penulis 3, dan seterusnya.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddAuthor}
+                                        className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs self-start sm:self-center"
+                                    >
+                                        <Plus className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
+                                        <span>+ Tambah Penulis {authorsList.length + 1}</span>
+                                    </button>
                                 </div>
 
-                                <div className="relative">
-                                    {/* Dropdown Toggle Button */}
-                                    <div
-                                        onClick={() => setDosenDropdownOpen(!dosenDropdownOpen)}
-                                        className="w-full py-2.5 px-3.5 bg-white border border-amber-300/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-between cursor-pointer hover:border-amber-500 transition-all shadow-xs"
-                                    >
-                                        <span className={selectedDosenNidn ? 'text-slate-950 font-black' : 'text-slate-500 font-normal'}>
-                                            {selectedDosenNidn
-                                                ? siakadLecturers.find((d) => d.nidn === selectedDosenNidn)?.label || 'Dosen Terpilih'
-                                                : '-- Klik untuk memilih Nama Dosen - NIDN dari SIAKAD --'}
-                                        </span>
-                                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${dosenDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </div>
+                                {/* List of Author Cards */}
+                                <div className="space-y-3.5">
+                                    {authorsList.map((author, index) => (
+                                        <div
+                                            key={index}
+                                            className={`p-4 rounded-2xl border transition-all ${
+                                                index === 0
+                                                    ? 'bg-amber-50/40 border-amber-200/80 shadow-2xs'
+                                                    : 'bg-slate-50/70 border-slate-200/80'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                                        index === 0
+                                                            ? 'bg-amber-500 text-slate-950 font-extrabold shadow-2xs'
+                                                            : 'bg-slate-200 text-slate-800 font-bold'
+                                                    }`}>
+                                                        Penulis {index + 1} {index === 0 ? '(Penulis Utama)' : '(Penulis Pendamping / Co-Author)'}
+                                                    </span>
+                                                </div>
 
-                                    {/* Dropdown Menu with Live Search */}
-                                    {dosenDropdownOpen && (
-                                        <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-amber-200 rounded-2xl shadow-xl z-50 p-2 space-y-2 max-h-72 flex flex-col">
-                                            {/* Search input inside dropdown */}
-                                            <div className="relative">
-                                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                <input
-                                                    type="text"
-                                                    value={dosenSearchQuery}
-                                                    onChange={(e) => setDosenSearchQuery(e.target.value)}
-                                                    placeholder="Ketik nama dosen atau NIDN..."
-                                                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                                                    autoFocus
-                                                />
+                                                {index > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAuthor(index)}
+                                                        className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-all flex items-center space-x-1 text-[11px] font-bold cursor-pointer"
+                                                        title={`Hapus Penulis ${index + 1}`}
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                        <span>Hapus</span>
+                                                    </button>
+                                                )}
                                             </div>
 
-                                            {/* List of Lecturers */}
-                                            <div className="overflow-y-auto divide-y divide-slate-100 flex-1">
-                                                {filteredLecturers.length > 0 ? (
-                                                    filteredLecturers.map((lec) => (
-                                                        <button
-                                                            key={lec.nidn}
-                                                            type="button"
-                                                            onClick={() => handleSelectSiakadDosen(lec)}
-                                                            className="w-full text-left p-2.5 hover:bg-amber-50 rounded-xl transition-colors flex items-center justify-between group"
-                                                        >
-                                                            <div className="space-y-0.5">
-                                                                <p className="font-black text-xs text-slate-900 group-hover:text-amber-800">
-                                                                    {lec.name} - <span className="font-mono text-slate-500">{lec.nidn}</span>
-                                                                </p>
-                                                                {lec.prodi && (
-                                                                    <p className="text-[10px] text-slate-400 font-medium">
-                                                                        Homebase: {lec.prodi}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            {selectedDosenNidn === lec.nidn && (
-                                                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                            {/* SIAKAD Dropdown Quick Selector per Author Row */}
+                                            <div className="relative mb-3">
+                                                <div
+                                                    onClick={() => {
+                                                        setActiveDropdownIndex(activeDropdownIndex === index ? null : index);
+                                                        setDosenSearchQuery('');
+                                                    }}
+                                                    className="w-full py-2 px-3 bg-white border border-slate-200 hover:border-amber-400 rounded-xl text-xs text-slate-700 flex items-center justify-between cursor-pointer transition-all shadow-2xs"
+                                                >
+                                                    <span className="flex items-center space-x-1.5 text-slate-600 font-medium">
+                                                        <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                        <span>
+                                                            {author.nidn
+                                                                ? `Dosen Terpilih: ${author.name} (NIDN: ${author.nidn})`
+                                                                : `Pilih Penulis ${index + 1} dari Database Dosen SIAKAD...`}
+                                                        </span>
+                                                    </span>
+                                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${activeDropdownIndex === index ? 'rotate-180' : ''}`} />
+                                                </div>
+
+                                                {/* Search Dropdown Popup */}
+                                                {activeDropdownIndex === index && (
+                                                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-amber-200 rounded-2xl shadow-xl z-50 p-2.5 space-y-2 max-h-64 flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                                                        <div className="relative">
+                                                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                            <input
+                                                                type="text"
+                                                                value={dosenSearchQuery}
+                                                                onChange={(e) => setDosenSearchQuery(e.target.value)}
+                                                                placeholder="Cari nama dosen atau NIDN..."
+                                                                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none font-medium"
+                                                                autoFocus
+                                                            />
+                                                        </div>
+
+                                                        <div className="overflow-y-auto divide-y divide-slate-100 flex-1 max-h-48">
+                                                            {filteredLecturers.length > 0 ? (
+                                                                filteredLecturers.map((lec) => (
+                                                                    <button
+                                                                        key={lec.nidn}
+                                                                        type="button"
+                                                                        onClick={() => handleSelectSiakadDosenForAuthor(index, lec)}
+                                                                        className="w-full text-left p-2 hover:bg-amber-50 rounded-xl transition-colors flex items-center justify-between group cursor-pointer"
+                                                                    >
+                                                                        <div>
+                                                                            <p className="font-black text-xs text-slate-900 group-hover:text-amber-800">
+                                                                                {lec.name}
+                                                                            </p>
+                                                                            <p className="text-[10px] text-slate-500 font-mono">
+                                                                                NIDN: {lec.nidn || '-'} {lec.prodi ? `• ${lec.prodi}` : ''}
+                                                                            </p>
+                                                                        </div>
+                                                                        {author.nidn === lec.nidn && (
+                                                                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                                        )}
+                                                                    </button>
+                                                                ))
+                                                            ) : (
+                                                                <div className="p-3 text-center text-xs text-slate-400">
+                                                                    Tidak ada dosen SIAKAD yang cocok.
+                                                                </div>
                                                             )}
-                                                        </button>
-                                                    ))
-                                                ) : (
-                                                    <div className="p-4 text-center text-xs text-slate-400">
-                                                        Tidak ada dosen SIAKAD yang cocok dengan pencarian.
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Inputs for Name & NIDN */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                                <div className="sm:col-span-8 space-y-1">
+                                                    <label className="block text-[11px] font-bold text-slate-700">
+                                                        Nama Lengkap Penulis {index + 1} <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={author.name}
+                                                        onChange={(e) => handleUpdateAuthor(index, 'name', e.target.value)}
+                                                        placeholder={`Nama Penulis ${index + 1} (beserta gelar)`}
+                                                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="sm:col-span-4 space-y-1">
+                                                    <label className="block text-[11px] font-bold text-slate-700">
+                                                        NIDN / Identitas (Opsional)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={author.nidn}
+                                                        onChange={(e) => handleUpdateAuthor(index, 'nidn', e.target.value)}
+                                                        placeholder="NIDN / NIP / NIK"
+                                                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
 
-                                <p className="text-[10px] text-amber-900/70 leading-relaxed">
-                                    Memilih dosen dari API akan otomatis mengisi kolom <strong>Nama Penulis</strong>, <strong>NIDN</strong>, dan <strong>Program Studi Homebase</strong>.
-                                </p>
-                            </div>
-
-                            {/* Authors & NIDN Input */}
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                <div className="md:col-span-8 space-y-1.5">
-                                    <label className="block text-xs font-extrabold text-slate-900">
-                                        Nama Dosen Penulis / Tim Penulis <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.authors}
-                                        onChange={(e) => setData('authors', e.target.value)}
-                                        placeholder="Contoh: Dr. Indah Permata, M.Kom; Wasis Waluyo, S.Kom"
-                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                                        required
-                                    />
-                                    {errors.authors && <p className="text-rose-500 text-xs mt-1">{errors.authors}</p>}
+                                {/* Format Preview Banner */}
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center space-x-2 text-slate-600 font-medium">
+                                        <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                                        <span>
+                                            Format tersimpan: <strong className="text-slate-900 font-bold font-mono">"{data.authors || '-'}"</strong>
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddAuthor}
+                                        className="text-amber-800 hover:text-amber-950 font-bold text-[11px] flex items-center space-x-1 cursor-pointer underline self-start sm:self-center"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>+ Tambah Penulis ke-{authorsList.length + 1}</span>
+                                    </button>
                                 </div>
-
-                                <div className="md:col-span-4 space-y-1.5">
-                                    <label className="block text-xs font-extrabold text-slate-900">
-                                        NIDN Penulis Utama
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={data.nidn}
-                                        onChange={(e) => setData('nidn', e.target.value)}
-                                        placeholder="0618089301"
-                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                                    />
-                                </div>
+                                {errors.authors && <p className="text-rose-500 text-xs mt-1 font-bold">{errors.authors}</p>}
                             </div>
 
                             {/* Program Studi & Jenis Publikasi */}

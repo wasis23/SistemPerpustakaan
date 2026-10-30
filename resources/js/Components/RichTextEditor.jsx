@@ -166,13 +166,15 @@ export default function RichTextEditor({
     const openLinkModal = () => {
         if (typeof window === 'undefined') return;
         const sel = window.getSelection ? window.getSelection() : null;
-        if (sel && sel.rangeCount > 0) {
-            setSavedSelection(sel.getRangeAt(0).cloneRange());
+        if (sel && sel.rangeCount > 0 && editorRef.current && editorRef.current.contains(sel.anchorNode)) {
+            const range = sel.getRangeAt(0);
+            setSavedSelection(range.cloneRange());
             const text = sel.toString();
             setLinkText(text);
             setLinkUrl('');
             setShowLinkModal(true);
         } else {
+            setSavedSelection(null);
             setLinkText('');
             setLinkUrl('');
             setShowLinkModal(true);
@@ -181,34 +183,42 @@ export default function RichTextEditor({
 
     // Apply link
     const applyLink = (e) => {
-        e?.preventDefault();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         if (!linkUrl) return;
-
-        if (editorRef.current) {
-            editorRef.current.focus();
-        }
-
-        if (savedSelection && typeof window !== 'undefined') {
-            const sel = window.getSelection();
-            if (sel) {
-                sel.removeAllRanges();
-                sel.addRange(savedSelection);
-            }
-        }
 
         let formattedUrl = linkUrl.trim();
         if (!/^https?:\/\//i.test(formattedUrl) && !formattedUrl.startsWith('/') && !formattedUrl.startsWith('#') && !formattedUrl.startsWith('mailto:')) {
             formattedUrl = 'https://' + formattedUrl;
         }
 
-        try {
-            if (linkText && (!savedSelection || savedSelection.collapsed)) {
-                const linkHtml = `<a href="${formattedUrl}" target="_blank" rel="noopener noreferrer" class="text-amber-600 underline hover:text-amber-800">${linkText}</a>`;
-                document.execCommand('insertHTML', false, linkHtml);
-            } else {
-                document.execCommand('createLink', false, formattedUrl);
+        const displayText = linkText.trim() || formattedUrl;
+
+        if (editorRef.current) {
+            editorRef.current.focus();
+
+            if (savedSelection && typeof window !== 'undefined') {
+                const sel = window.getSelection();
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(savedSelection);
+                }
             }
-        } catch (err) {}
+
+            const linkHtml = `<a href="${formattedUrl}" target="_blank" rel="noopener noreferrer" class="text-amber-600 underline hover:text-amber-800 font-medium">${displayText}</a>`;
+
+            try {
+                if (!document.execCommand('insertHTML', false, linkHtml)) {
+                    document.execCommand('createLink', false, formattedUrl);
+                }
+            } catch (err) {
+                try {
+                    document.execCommand('createLink', false, formattedUrl);
+                } catch (e2) {}
+            }
+        }
 
         handleInput();
         setShowLinkModal(false);
@@ -218,7 +228,11 @@ export default function RichTextEditor({
     };
 
     // Unlink
-    const removeLink = () => {
+    const removeLink = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         executeCommand('unlink');
     };
 
@@ -262,6 +276,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('bold')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.bold
@@ -276,6 +291,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('italic')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.italic
@@ -290,6 +306,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('underline')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.underline
@@ -304,6 +321,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('strikeThrough')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.strikeThrough
@@ -322,6 +340,7 @@ export default function RichTextEditor({
                         <button
                             type="button"
                             disabled={mode !== 'visual'}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => executeCommand('justifyLeft')}
                             className={`p-1.5 rounded-lg transition-all ${
                                 activeFormats.justifyLeft
@@ -336,6 +355,7 @@ export default function RichTextEditor({
                         <button
                             type="button"
                             disabled={mode !== 'visual'}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => executeCommand('justifyCenter')}
                             className={`p-1.5 rounded-lg transition-all ${
                                 activeFormats.justifyCenter
@@ -350,6 +370,7 @@ export default function RichTextEditor({
                         <button
                             type="button"
                             disabled={mode !== 'visual'}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => executeCommand('justifyRight')}
                             className={`p-1.5 rounded-lg transition-all ${
                                 activeFormats.justifyRight
@@ -364,6 +385,7 @@ export default function RichTextEditor({
                         <button
                             type="button"
                             disabled={mode !== 'visual'}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => executeCommand('justifyFull')}
                             className={`p-1.5 rounded-lg transition-all ${
                                 activeFormats.justifyFull
@@ -382,6 +404,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('insertUnorderedList')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.insertUnorderedList
@@ -396,6 +419,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('insertOrderedList')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.insertOrderedList
@@ -410,6 +434,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleHeadingChange(activeFormats.heading === 'blockquote' ? 'p' : 'blockquote')}
                         className={`p-1.5 rounded-xl border text-xs transition-all ${
                             activeFormats.heading === 'blockquote'
@@ -427,6 +452,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={openLinkModal}
                         className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs transition-all disabled:opacity-50 shadow-xs"
                         title="Sisipkan Tautan Link"
@@ -437,6 +463,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={removeLink}
                         className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs transition-all disabled:opacity-50 shadow-xs"
                         title="Hapus Tautan Link"
@@ -447,6 +474,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('insertHorizontalRule')}
                         className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs transition-all disabled:opacity-50 shadow-xs"
                         title="Garis Pemisah Horizontal (Divider)"
@@ -457,6 +485,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('removeFormat')}
                         className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs transition-all disabled:opacity-50 shadow-xs"
                         title="Hapus Semua Format Teks"
@@ -470,6 +499,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('undo')}
                         className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs transition-all disabled:opacity-50 shadow-xs"
                         title="Urungkan (Undo) - Ctrl+Z"
@@ -480,6 +510,7 @@ export default function RichTextEditor({
                     <button
                         type="button"
                         disabled={mode !== 'visual'}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => executeCommand('redo')}
                         className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs transition-all disabled:opacity-50 shadow-xs"
                         title="Ulangi (Redo) - Ctrl+Y"
@@ -637,7 +668,16 @@ export default function RichTextEditor({
                             </button>
                         </div>
 
-                        <form onSubmit={applyLink} className="space-y-4">
+                        <div
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    applyLink(e);
+                                }
+                            }}
+                            className="space-y-4"
+                        >
                             <div>
                                 <label className="block text-xs font-bold text-slate-700 mb-1">
                                     Teks Tautan (Opsional jika sudah memilih teks)
@@ -675,14 +715,15 @@ export default function RichTextEditor({
                                     Batal
                                 </button>
                                 <button
-                                    type="submit"
+                                    type="button"
+                                    onClick={applyLink}
                                     className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-sm transition-all flex items-center space-x-1.5"
                                 >
                                     <Check className="w-3.5 h-3.5" />
                                     <span>Terapkan Tautan</span>
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}

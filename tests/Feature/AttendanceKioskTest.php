@@ -37,13 +37,12 @@ class AttendanceKioskTest extends TestCase
     }
 
     /**
-     * Test Presensi Kios sukses dengan kredensial valid
+     * Test Presensi Kios sukses hanya dengan NIM / Username valid
      */
-    public function test_kiosk_attendance_logging_with_valid_credentials(): void
+    public function test_kiosk_attendance_logging_with_valid_username(): void
     {
         $response = $this->from('/presensi')->post('/presensi', [
             'username' => 'mhs12345',
-            'password' => 'password',
             'visit_purpose' => 'reading',
         ]);
 
@@ -57,13 +56,12 @@ class AttendanceKioskTest extends TestCase
     }
 
     /**
-     * Test Kios Presensi menolak kredensial salah
+     * Test Kios Presensi menolak NIM tidak terdaftar
      */
-    public function test_kiosk_attendance_rejects_invalid_password(): void
+    public function test_kiosk_attendance_rejects_nonexistent_user(): void
     {
         $response = $this->from('/presensi')->post('/presensi', [
-            'username' => 'mhs12345',
-            'password' => 'passwordsalah',
+            'username' => 'nim_tidak_ada_99999',
             'visit_purpose' => 'reading',
         ]);
 

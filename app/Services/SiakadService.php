@@ -11,6 +11,125 @@ use Illuminate\Support\Facades\Log;
 class SiakadService
 {
     /**
+     * Cari pengguna di database lokal atau sinkronisasi dari SIAKAD berdasarkan NIM/NIDN/Username saja (tanpa password)
+     *
+     * @param string $username
+     * @return User|null
+     */
+    public function findUser(string $username): ?User
+    {
+        $cleanUsername = trim($username);
+        $upperUsername = strtoupper($cleanUsername);
+
+        // 1. Cek database lokal
+        $loginType = filter_var($cleanUsername, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $user = User::where($loginType, $cleanUsername)->first();
+        if ($user) {
+            return $user;
+        }
+
+        // 2. Fallback: Cari di Database SIAKAD jika belum pernah login
+        try {
+            // Cek Mahasiswa
+            $student = DB::connection('siakad')
+                ->table('viewMahasiswaPt')
+                ->where('nipd', $upperUsername)
+                ->first();
+
+            if (!$student) {
+                $student = DB::connection('siakad')
+                    ->table('viewMahasiswaKeluar')
+                    ->where('nipd', $upperUsername)
+                    ->first();
+            }
+
+            if ($student) {
+                $bio = null;
+                if (!empty($student->id_pd) || !empty($student->xid_pd)) {
+                    $bio = DB::connection('siakad')->table('wsia_mahasiswa')
+                        ->where(function ($q) use ($student) {
+                            if (!empty($student->id_pd)) $q->where('id_pd', $student->id_pd);
+                            if (!empty($student->xid_pd)) $q->orWhere('xid_pd', $student->xid_pd);
+                        })
+                        ->first();
+                }
+
+                return User::updateOrCreate(
+                    ['username' => $student->nipd ?? $upperUsername],
+                    [
+                        'name' => $bio->nm_pd ?? $student->nm_pd ?? $upperUsername,
+                        'email' => $bio->email_poltek ?: ($bio->email ?: strtolower($upperUsername) . '@students.poltekindonusa.ac.id'),
+                        'password' => Hash::make(uniqid('siakad_', true)),
+                        'role' => 'anggota',
+                        'prodi' => $student->nm_lemb ?? $student->nm_prodi ?? null,
+                        'phone' => $bio->telepon_seluler ?? $bio->telepon_rumah ?? $student->telepon_seluler ?? null,
+                        'status' => 'active',
+                    ]
+                );
+            }
+
+            // Cek Dosen
+            $dosen = DB::connection('siakad')
+                ->table('wsia_dosen')
+                ->where(function ($q) use ($cleanUsername, $upperUsername) {
+                    $q->where('nidn', $cleanUsername)
+                      ->orWhere('nip', $cleanUsername)
+                      ->orWhere('xid_ptk', $cleanUsername)
+                      ->orWhere('id_ptk', $cleanUsername)
+                      ->orWhere('niy_nigk', $cleanUsername)
+                      ->orWhere('nuptk', $cleanUsername)
+                      ->orWhere('email', $cleanUsername)
+                      ->orWhere('email_poltek', $cleanUsername)
+                      ->orWhere('nm_dsn', $cleanUsername);
+                })
+                ->first();
+
+            if ($dosen) {
+                $dosenPt = DB::connection('siakad')
+                    ->table('viewDosenPt')
+                    ->where(function ($q) use ($dosen) {
+                        if (!empty($dosen->id_ptk)) $q->where('id_ptk', $dosen->id_ptk);
+                        if (!empty($dosen->xid_ptk)) $q->orWhere('xid_ptk', $dosen->xid_ptk);
+                        if (!empty($dosen->nidn)) $q->orWhere('nidn', $dosen->nidn);
+                    })
+                    ->first();
+
+                $fullName = trim($dosen->nm_ptk);
+                $gelarDepan = trim((string)($dosen->gelar_depan ?? ''));
+                $gelarBelakang = trim((string)($dosen->gelar_belakang ?? ''));
+
+                if ($gelarDepan) {
+                    $fullName = $gelarDepan . ' ' . $fullName;
+                }
+                if ($gelarBelakang) {
+                    $fullName = $fullName . ', ' . $gelarBelakang;
+                }
+
+                $nidnOrUsername = $dosen->nidn ?: ($dosen->nip ?: ($dosen->niy_nigk ?: $cleanUsername));
+                $email = $dosen->email_poltek ?: ($dosen->email ?: strtolower($nidnOrUsername) . '@poltekindonusa.ac.id');
+                $prodi = $dosenPt->nm_prodi ?? 'Dosen Politeknik Indonusa';
+
+                return User::updateOrCreate(
+                    ['username' => $nidnOrUsername],
+                    [
+                        'name' => $fullName,
+                        'email' => $email,
+                        'password' => Hash::make(uniqid('siakad_', true)),
+                        'role' => 'anggota',
+                        'prodi' => $prodi,
+                        'phone' => $dosen->no_hp ?? null,
+                        'status' => 'active',
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Gagal sinkronisasi data pengguna dari SIAKAD: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
      * Autentikasi dan sinkronisasi data Mahasiswa atau Dosen dari SIAKAD
      *
      * @param string $username (NIM Mahasiswa / NIDN Dosen / NIP / Username)

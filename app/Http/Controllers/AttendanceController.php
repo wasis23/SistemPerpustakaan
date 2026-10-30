@@ -38,29 +38,20 @@ class AttendanceController extends Controller
     {
         $request->validate([
             'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
             'visit_purpose' => ['required', 'in:reading,borrowing,research,computer'],
         ], [
-            'username.required' => 'NIM / Username wajib diisi.',
-            'password.required' => 'Kata sandi wajib diisi.',
+            'username.required' => 'NIM / NIDN / Username wajib diisi.',
             'visit_purpose.required' => 'Pilih tujuan kunjungan Anda.',
         ]);
 
         $inputUsername = trim($request->username);
-        $inputPassword = $request->password;
 
-        // 1. Coba verifikasi akun lokal terlebih dahulu
-        $loginType = filter_var($inputUsername, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        $user = User::where($loginType, $inputUsername)->first();
-
-        if (! $user || ! Hash::check($inputPassword, $user->password)) {
-            // 2. Fallback: Verifikasi ke SIAKAD & auto-sync
-            $user = $siakadService->authenticate($inputUsername, $inputPassword);
-        }
+        // Cari data pengguna di DB SIMPUS atau sinkronisasi langsung dari SIAKAD
+        $user = $siakadService->findUser($inputUsername);
 
         if (! $user) {
             return back()->withErrors([
-                'username' => 'NIM/Username atau kata sandi tidak valid.',
+                'username' => 'NIM / NIDN tidak ditemukan di sistem perpustakaan atau SIAKAD.',
             ]);
         }
 

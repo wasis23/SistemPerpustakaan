@@ -8,6 +8,7 @@ use App\Services\SiakadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
+use Carbon\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,6 +29,8 @@ class AttendanceController extends Controller
         return Inertia::render('Presensi/Kiosk', [
             'recentVisitors' => $recentVisitors,
             'todayCount' => AttendanceLog::whereDate('checked_in_at', today())->count(),
+            'todayMemberCount' => AttendanceLog::whereDate('checked_in_at', today())->where('is_external', false)->count(),
+            'todayExternalCount' => AttendanceLog::whereDate('checked_in_at', today())->where('is_external', true)->count(),
         ]);
     }
 
@@ -37,14 +40,48 @@ class AttendanceController extends Controller
     public function store(Request $request, SiakadService $siakadService)
     {
         $request->validate([
-            'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
+            'visitor_type' => ['nullable', 'in:member,external'],
+            'username' => ['required_unless:visitor_type,external', 'nullable', 'string'],
+            'password' => ['required_unless:visitor_type,external', 'nullable', 'string'],
+            'visitor_name' => ['required_if:visitor_type,external', 'nullable', 'string', 'max:255'],
+            'visitor_institution' => ['nullable', 'string', 'max:255'],
+            'visitor_phone' => ['nullable', 'string', 'max:30'],
             'visit_purpose' => ['required', 'in:reading,borrowing,research,computer'],
         ], [
-            'username.required' => 'NIM / Username wajib diisi.',
-            'password.required' => 'Kata sandi wajib diisi.',
+            'username.required_unless' => 'NIM / Username wajib diisi.',
+            'password.required_unless' => 'Kata sandi wajib diisi.',
+            'visitor_name.required_if' => 'Nama lengkap pengunjung eksternal wajib diisi.',
             'visit_purpose.required' => 'Pilih tujuan kunjungan Anda.',
         ]);
+
+        $purposeLabels = [
+            'reading' => 'Membaca Mandiri',
+            'borrowing' => 'Peminjaman / Pengembalian Koleksi',
+            'research' => 'Pemberkasan',
+            'computer' => 'Akses Komputer & Digital Library',
+        ];
+
+        // Presensi Anggota Eksternal (tanpa akun / tanpa sesi login)
+        if ($request->visitor_type === 'external') {
+            AttendanceLog::create([
+                'user_id' => null,
+                'is_external' => true,
+                'visitor_name' => trim($request->visitor_name),
+                'visitor_institution' => $request->filled('visitor_institution') ? trim($request->visitor_institution) : null,
+                'visitor_phone' => $request->filled('visitor_phone') ? trim($request->visitor_phone) : null,
+                'visit_purpose' => $request->visit_purpose,
+                'checked_in_at' => now(),
+            ]);
+
+            return back()->with('success_visitor', [
+                'name' => trim($request->visitor_name),
+                'username' => $request->filled('visitor_phone') ? trim($request->visitor_phone) : 'Anggota Eksternal',
+                'prodi' => $request->filled('visitor_institution') ? trim($request->visitor_institution) : 'Anggota Eksternal',
+                'purpose' => $purposeLabels[$request->visit_purpose] ?? $request->visit_purpose,
+                'time' => now()->format('H:i:s'),
+                'is_external' => true,
+            ]);
+        }
 
         $inputUsername = trim($request->username);
         $inputPassword = $request->password;
@@ -73,16 +110,10 @@ class AttendanceController extends Controller
         // Catat Presensi Kunjungan
         $log = AttendanceLog::create([
             'user_id' => $user->id,
+            'is_external' => false,
             'visit_purpose' => $request->visit_purpose,
             'checked_in_at' => now(),
         ]);
-
-        $purposeLabels = [
-            'reading' => 'Membaca Mandiri',
-            'borrowing' => 'Peminjaman / Pengembalian Koleksi',
-            'research' => 'Pemberkasan',
-            'computer' => 'Akses Komputer & Digital Library',
-        ];
 
         return back()->with('success_visitor', [
             'name' => $user->name,
@@ -90,6 +121,7 @@ class AttendanceController extends Controller
             'prodi' => $user->prodi ?? 'Anggota Perpustakaan',
             'purpose' => $purposeLabels[$request->visit_purpose] ?? $request->visit_purpose,
             'time' => now()->format('H:i:s'),
+            'is_external' => false,
         ]);
     }
 
@@ -100,12 +132,16 @@ class AttendanceController extends Controller
     {
         $query = AttendanceLog::with('user:id,name,username,prodi,role');
 
-        // Filter Pencarian NIM / Nama
+        // Filter Pencarian NIM / Nama (termasuk nama pengunjung eksternal)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('visitor_name', 'like', "%{$search}%")
+                  ->orWhere('visitor_institution', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                          ->orWhere('username', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -114,24 +150,38 @@ class AttendanceController extends Controller
             $query->where('visit_purpose', $request->purpose);
         }
 
-        // Filter Tanggal
-        if ($request->filled('date')) {
+        // Filter Jenis Pengunjung (Anggota Terdaftar / Anggota Eksternal)
+        if ($request->filled('visitor_type')) {
+            $query->where('is_external', $request->visitor_type === 'external');
+        }
+
+        // Filter Rentang Tanggal (start_date & end_date) atau Tanggal Tunggal (date)
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('checked_in_at', [
+                Carbon::parse($request->start_date)->startOfDay(),
+                Carbon::parse($request->end_date)->endOfDay(),
+            ]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('checked_in_at', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('checked_in_at', '<=', $request->end_date);
+        } elseif ($request->filled('date')) {
             $query->whereDate('checked_in_at', $request->date);
-        } else {
-            $query->whereDate('checked_in_at', today());
         }
 
         $logs = $query->latest('checked_in_at')->paginate(15)->withQueryString();
 
         return Inertia::render('Petugas/Presensi/Index', [
             'logs' => $logs,
-            'filters' => $request->only(['search', 'purpose', 'date']),
+            'filters' => $request->only(['search', 'purpose', 'date', 'start_date', 'end_date', 'visitor_type']),
             'stats' => [
                 'today_total' => AttendanceLog::whereDate('checked_in_at', today())->count(),
                 'reading_total' => AttendanceLog::whereDate('checked_in_at', today())->where('visit_purpose', 'reading')->count(),
                 'borrowing_total' => AttendanceLog::whereDate('checked_in_at', today())->where('visit_purpose', 'borrowing')->count(),
                 'research_total' => AttendanceLog::whereDate('checked_in_at', today())->where('visit_purpose', 'research')->count(),
                 'computer_total' => AttendanceLog::whereDate('checked_in_at', today())->where('visit_purpose', 'computer')->count(),
+                'member_total' => AttendanceLog::whereDate('checked_in_at', today())->where('is_external', false)->count(),
+                'external_total' => AttendanceLog::whereDate('checked_in_at', today())->where('is_external', true)->count(),
             ],
         ]);
     }

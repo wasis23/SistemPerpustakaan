@@ -72,20 +72,30 @@ class LecturerBookController extends Controller
             $query->where('is_featured', true);
         }
 
+        $isIndonusaPublisher = $request->routeIs('petugas.indonusa-publisher.*') || $request->boolean('indonusa_only');
+        if ($isIndonusaPublisher) {
+            $query->where('publisher', 'like', '%Indonusa%');
+        }
+
         $lecturerBooks = $query->latest('id')->paginate(10)->withQueryString();
 
         // Statistik Ringkas
+        $statsQuery = LecturerBook::query();
+        if ($isIndonusaPublisher) {
+            $statsQuery->where('publisher', 'like', '%Indonusa%');
+        }
+
         $stats = [
-            'total' => LecturerBook::count(),
-            'buku_ajar' => LecturerBook::where('publication_type', 'Buku Ajar')->count(),
-            'monograf' => LecturerBook::where('publication_type', 'Monograf')->count(),
-            'buku_referensi' => LecturerBook::where('publication_type', 'Buku Referensi')->count(),
-            'modul_praktikum' => LecturerBook::where('publication_type', 'Modul Praktikum')->count(),
-            'with_hki' => LecturerBook::whereNotNull('hki_number')->where('hki_number', '!=', '')->count(),
+            'total' => (clone $statsQuery)->count(),
+            'buku_ajar' => (clone $statsQuery)->where('publication_type', 'Buku Ajar')->count(),
+            'monograf' => (clone $statsQuery)->where('publication_type', 'Monograf')->count(),
+            'buku_referensi' => (clone $statsQuery)->where('publication_type', 'Buku Referensi')->count(),
+            'modul_praktikum' => (clone $statsQuery)->where('publication_type', 'Modul Praktikum')->count(),
+            'with_hki' => (clone $statsQuery)->whereNotNull('hki_number')->where('hki_number', '!=', '')->count(),
         ];
 
         // Daftar tahun yang ada
-        $availableYears = LecturerBook::whereNotNull('publish_year')
+        $availableYears = (clone $statsQuery)->whereNotNull('publish_year')
             ->distinct()
             ->orderBy('publish_year', 'desc')
             ->pluck('publish_year');
@@ -97,6 +107,8 @@ class LecturerBookController extends Controller
             'publicationTypes' => $this->publicationTypes,
             'availableYears' => $availableYears,
             'stats' => $stats,
+            'isIndonusaPublisher' => $isIndonusaPublisher,
+            'pageTitle' => $isIndonusaPublisher ? 'Indonusa Publisher' : 'Karya Buku Dosen',
         ]);
     }
 

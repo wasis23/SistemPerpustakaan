@@ -39,7 +39,7 @@ export default function LecturerBooksShow({ book }) {
 
     return (
         <PetugasLayout activeMenu="lecturer-books">
-            <Head title={`Detail Karya: ${book.title} - SIMPUS Petugas`} />
+            <Head title={`Detail Karya: ${book.title} - Website Perpustakaan`} />
 
             <div className="space-y-8 w-full">
                 {/* Header Navigation */}

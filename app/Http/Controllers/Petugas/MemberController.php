@@ -26,7 +26,7 @@ class MemberController extends Controller
         'D4 Teknologi Laboratorium Medis',
         'D4 Bisnis Manajemen Ritel',
         'D4 Akuntansi Perpajakan',
-        'Anggota External',
+        'Anggota Eksternal',
     ];
 
     /**
@@ -120,7 +120,7 @@ class MemberController extends Controller
             'email' => !empty($validated['email']) ? trim($validated['email']) : null,
             'password' => Hash::make($validated['password']),
             'role' => 'anggota',
-            'prodi' => !empty($validated['prodi']) ? trim($validated['prodi']) : 'Anggota External',
+            'prodi' => !empty($validated['prodi']) ? trim($validated['prodi']) : 'Anggota Eksternal',
             'phone' => !empty($validated['phone']) ? trim($validated['phone']) : null,
             'status' => $validated['status'],
         ]);

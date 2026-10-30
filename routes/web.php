@@ -12,9 +12,11 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LecturerBookPublicController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\Petugas\BookController as PetugasBookController;
+use App\Http\Controllers\Petugas\BorrowingImportController;
 use App\Http\Controllers\Petugas\CategoryController as PetugasCategoryController;
 use App\Http\Controllers\Petugas\CirculationController as PetugasCirculationController;
 use App\Http\Controllers\Petugas\DashboardController as PetugasDashboardController;
+use App\Http\Controllers\Petugas\DigitalCollectionController as PetugasDigitalCollectionController;
 use App\Http\Controllers\Petugas\LaboratoryController as PetugasLaboratoryController;
 use App\Http\Controllers\Petugas\LecturerBookController as PetugasLecturerBookController;
 use App\Http\Controllers\Petugas\MemberController as PetugasMemberController;
@@ -39,6 +41,9 @@ Route::get('/jurnal', fn() => redirect()->route('jurnal.nasional'))->name('jurna
 Route::get('/berita', [NewsController::class, 'index'])->name('news.index');
 Route::get('/berita/{slug}', [NewsController::class, 'show'])->name('news.show');
 
+// Halaman Panduan Layanan (Manual Book, Peminjaman, Pengumpulan TA, dll)
+Route::get('/panduan', [\App\Http\Controllers\GuideController::class, 'index'])->name('panduan.index');
+
 // Kiosk Presensi Kunjungan Pintu Masuk
 Route::get('/presensi', [AttendanceController::class, 'kiosk'])->name('presensi.kiosk');
 Route::post('/presensi', [AttendanceController::class, 'store'])->name('presensi.store');
@@ -59,6 +64,7 @@ Route::middleware('auth')->group(function () {
 
         // Buku Sedang Dipinjam & Riwayat Pinjam Anggota
         Route::get('/borrowings', [AnggotaBorrowingController::class, 'index'])->name('borrowings.index');
+        Route::post('/borrowings/{borrowing}/extend', [AnggotaBorrowingController::class, 'extend'])->name('borrowings.extend');
 
         // Alias Rute Katalog Anggota
         Route::get('/katalog', [AnggotaCatalogController::class, 'index'])->name('catalog.index');
@@ -74,6 +80,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/ticket', [AnggotaTicketController::class, 'createTicket'])->name('ticket.store');
         Route::get('/ticket/{ticket}', [AnggotaTicketController::class, 'showTicket'])->name('ticket.show');
         Route::post('/ticket/{ticket}/cancel', [AnggotaTicketController::class, 'cancelTicket'])->name('ticket.cancel');
+
+        // Panduan Penggunaan Portal untuk Anggota
+        Route::get('/panduan', [\App\Http\Controllers\GuideController::class, 'index'])->name('panduan');
     });
 
     // Role Petugas (Pustakawan / Administrator)
@@ -121,6 +130,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/circulations/scan-return', [PetugasCirculationController::class, 'scanReturnForm'])->name('circulations.scan-return');
         Route::post('/circulations/process-return', [PetugasCirculationController::class, 'processReturn'])->name('circulations.process-return');
         Route::post('/circulations/{borrowing}/pay-fine', [PetugasCirculationController::class, 'payFine'])->name('circulations.pay-fine');
+        Route::post('/circulations/{borrowing}/extend', [PetugasCirculationController::class, 'extend'])->name('circulations.extend');
+
+        // Import Data Peminjaman
+        Route::get('/circulations/import/template', [BorrowingImportController::class, 'downloadTemplate'])->name('circulations.import.template');
+        Route::post('/circulations/import', [BorrowingImportController::class, 'import'])->name('circulations.import');
 
         // Pengaturan Aturan Sirkulasi, Tarif Denda & Hari Libur (Tanggal Merah)
         Route::get('/settings', [PetugasSettingController::class, 'index'])->name('settings.index');
@@ -140,6 +154,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/lecturer-books/{lecturer_book}/toggle-featured', [PetugasLecturerBookController::class, 'toggleFeatured'])->name('lecturer-books.toggle-featured');
         Route::resource('lecturer-books', PetugasLecturerBookController::class);
 
+        // Menu Indonusa Publisher Tersendiri (Buku Dosen Terbitan Indonusa Publisher)
+        Route::get('/indonusa-publisher', [PetugasLecturerBookController::class, 'index'])->name('indonusa-publisher.index');
+
+        // Menu Stock Opname (Audit Koleksi Fisik & Unduh Rekap Keseluruhan)
+        Route::get('/stock-opname', [\App\Http\Controllers\Petugas\StockOpnameController::class, 'index'])->name('stock-opname.index');
+        Route::get('/stock-opname/export-csv', [\App\Http\Controllers\Petugas\StockOpnameController::class, 'exportCsv'])->name('stock-opname.export-csv');
+
         // Manajemen Jurnal Nasional (SINTA, ISSN, e-ISSN, OJS Link)
         Route::get('/national-journals/download-template', [PetugasNationalJournalController::class, 'downloadTemplate'])->name('national-journals.download-template');
         Route::post('/national-journals/import-csv', [PetugasNationalJournalController::class, 'importCsv'])->name('national-journals.import-csv');
@@ -147,9 +168,39 @@ Route::middleware('auth')->group(function () {
         Route::post('/national-journals/{national_journal}/toggle-status', [PetugasNationalJournalController::class, 'toggleStatus'])->name('national-journals.toggle-status');
         Route::resource('national-journals', PetugasNationalJournalController::class);
 
+        // Koleksi Digital: Majalah, Surat Kabar, E-Book & Usulan Buku (Dimodelkan seperti Publikasi Ilmiah)
+        foreach ([
+            'magazines' => 'magazine',
+            'newspapers' => 'newspaper',
+            'ebooks' => 'ebook',
+            'book-proposals' => 'book_proposal',
+        ] as $path => $type) {
+            Route::get("/{$path}/download-template", [PetugasDigitalCollectionController::class, 'downloadTemplate'])->defaults('type', $type)->name("{$path}.download-template");
+            Route::post("/{$path}/import-csv", [PetugasDigitalCollectionController::class, 'importCsv'])->defaults('type', $type)->name("{$path}.import-csv");
+            Route::get("/{$path}/export-csv", [PetugasDigitalCollectionController::class, 'exportCsv'])->defaults('type', $type)->name("{$path}.export-csv");
+            Route::get("/{$path}/create", [PetugasDigitalCollectionController::class, 'create'])->defaults('type', $type)->name("{$path}.create");
+            Route::post("/{$path}", [PetugasDigitalCollectionController::class, 'store'])->defaults('type', $type)->name("{$path}.store");
+            Route::get("/{$path}/{digital_collection}/edit", [PetugasDigitalCollectionController::class, 'edit'])->defaults('type', $type)->name("{$path}.edit");
+            Route::put("/{$path}/{digital_collection}", [PetugasDigitalCollectionController::class, 'update'])->defaults('type', $type)->name("{$path}.update");
+            Route::delete("/{$path}/{digital_collection}", [PetugasDigitalCollectionController::class, 'destroy'])->defaults('type', $type)->name("{$path}.destroy");
+            Route::post("/{$path}/{digital_collection}/toggle-status", [PetugasDigitalCollectionController::class, 'toggleStatus'])->defaults('type', $type)->name("{$path}.toggle-status");
+            Route::get("/{$path}", [PetugasDigitalCollectionController::class, 'index'])->defaults('type', $type)->name("{$path}.index");
+        }
+
         // Laporan & Rekapitulasi Analytics
         Route::get('/reports', [PetugasReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export-csv', [PetugasReportController::class, 'exportCsv'])->name('reports.export-csv');
         Route::get('/reports/print-pdf', [PetugasReportController::class, 'printPdf'])->name('reports.print-pdf');
     });
 });
+
+
+// Dev Tools (Hanya untuk environment local)
+if (app()->environment('local')) {
+    Route::middleware(['auth', 'role:petugas'])->prefix('petugas')->name('petugas.')->group(function () {
+        Route::get('/dev/tools', [\App\Http\Controllers\Petugas\DevToolsController::class, 'index'])->name('dev.tools');
+        Route::post('/dev/tools/run-seeder', [\App\Http\Controllers\Petugas\DevToolsController::class, 'runSeeder'])->name('dev.tools.run-seeder');
+        Route::post('/dev/tools/clear-cache', [\App\Http\Controllers\Petugas\DevToolsController::class, 'clearCache'])->name('dev.tools.clear-cache');
+        Route::post('/dev/tools/migrate-fresh-seed', [\App\Http\Controllers\Petugas\DevToolsController::class, 'migrateFreshSeed'])->name('dev.tools.migrate-fresh-seed');
+    });
+}

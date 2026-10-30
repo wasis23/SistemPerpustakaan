@@ -48,6 +48,22 @@ class CirculationController extends Controller
 
         $borrowings = $query->latest('id')->paginate(12)->withQueryString();
 
+        $finePerDay = (float) Setting::get('fine_per_day', 1000);
+        $borrowings->getCollection()->transform(function ($item) use ($finePerDay) {
+            $isOverdue = $item->status === 'active' && $item->due_date && $item->due_date->isPast();
+            if ($isOverdue) {
+                $calc = FineCalculator::calculate($item->due_date, now(), $finePerDay);
+                $item->current_fine = $calc['fine_amount'];
+                $item->late_days = $calc['total_overdue_days'];
+                $item->fineable_days = $calc['fineable_days'];
+            } else {
+                $item->current_fine = 0;
+                $item->late_days = 0;
+                $item->fineable_days = 0;
+            }
+            return $item;
+        });
+
         return Inertia::render('Petugas/Circulation/Index', [
             'borrowings' => $borrowings,
             'filters' => $request->only(['search', 'status']),
@@ -112,9 +128,10 @@ class CirculationController extends Controller
                 $ticket->update(['status' => 'validated']);
                 $bookCopy->update(['status' => 'borrowed']);
 
-                // Buat Transaksi Sirkulasi dengan Durasi Pinjam sesuai Pengaturan
+                // Buat Transaksi Sirkulasi dengan Durasi Pinjam sesuai Pengaturan (Dosen/Tendik: 14 hari, Mahasiswa: 7 hari)
                 $borrowingCode = 'TRX-' . date('Ymd') . '-' . sprintf('%04d', Borrowing::count() + 1);
-                $durationDays = (int) Setting::get('borrow_duration_days', 7);
+                $borrower = $ticket->user;
+                $durationDays = $borrower ? $borrower->getBorrowDurationDays() : (int) Setting::get('borrow_duration_days', 7);
 
                 return Borrowing::create([
                     'borrowing_code' => $borrowingCode,
@@ -228,7 +245,7 @@ class CirculationController extends Controller
                 ];
             });
 
-            return back()->with('success_return', $result);
+            return back()->with('return_receipt', $result)->with('success_return', $result);
 
         } catch (\Exception $e) {
             return back()->withErrors([
@@ -248,5 +265,38 @@ class CirculationController extends Controller
         }
 
         return back();
+    }
+
+    /**
+     * Perpanjang Masa Pinjam Buku (Petugas Admin)
+     */
+    public function extend(Borrowing $borrowing)
+    {
+        if ($borrowing->status !== 'active') {
+            return back()->with('error', 'Hanya peminjaman aktif yang dapat diperpanjang.');
+        }
+
+        // Cek jika sudah terlambat
+        if ($borrowing->due_date && $borrowing->due_date->isPast()) {
+            return back()->with('error', 'Peminjaman yang sudah terlambat tidak dapat diperpanjang. Harap kembalikan buku dan selesaikan denda terlebih dahulu.');
+        }
+
+        // Maksimal perpanjangan 1 kali
+        if (($borrowing->extension_count ?? 0) >= 1) {
+            return back()->with('error', 'Peminjaman buku ini sudah pernah diperpanjang sebelumnya (Maksimal 1 kali).');
+        }
+
+        $borrower = $borrowing->user;
+        $extensionDays = $borrower ? $borrower->getBorrowDurationDays() : (int) Setting::get('borrow_duration_days', 7);
+
+        $newDueDate = $borrowing->due_date ? $borrowing->due_date->copy()->addDays($extensionDays) : now()->addDays($extensionDays);
+
+        $borrowing->update([
+            'due_date' => $newDueDate,
+            'extension_count' => ($borrowing->extension_count ?? 0) + 1,
+            'extended_at' => now(),
+        ]);
+
+        return back()->with('success', "Masa peminjaman buku berhasil diperpanjang {$extensionDays} hari hingga " . $newDueDate->format('d M Y') . ".");
     }
 }

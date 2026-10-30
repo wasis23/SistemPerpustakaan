@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { 
     BookmarkCheck, 
     BookOpen, 
@@ -96,7 +96,7 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                                 {stats.history_count} <span className="text-sm font-bold text-slate-400">Transaksi</span>
                             </p>
                             <span className="text-[10px] text-slate-500 font-medium">
-                                Jejak literasi di SIMPUS
+                                Jejak literasi di Perpustakaan
                             </span>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
@@ -196,12 +196,33 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center justify-between font-bold">
-                                                <span className="flex items-center space-x-1.5">
-                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>Status Berjalan</span>
-                                                </span>
-                                                <span className="font-mono text-emerald-700">Sisa {item.remaining_days} Hari</span>
+                                            <div className="space-y-2">
+                                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center justify-between font-bold">
+                                                    <span className="flex items-center space-x-1.5">
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                        <span>Status Berjalan</span>
+                                                    </span>
+                                                    <span className="font-mono text-emerald-700">Sisa {item.remaining_days} Hari</span>
+                                                </div>
+
+                                                {/* Tombol Perpanjangan Pinjaman Mandiri */}
+                                                {item.can_extend ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (confirm(`Ajukan perpanjangan masa pinjam buku "${item.book_title}" selama ${stats.borrow_duration || 7} hari?`)) {
+                                                                router.post(`/anggota/borrowings/${item.id}/extend`);
+                                                            }
+                                                        }}
+                                                        className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-2xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                                                    >
+                                                        <span>Perpanjang Masa Pinjam (+{stats.borrow_duration || 7} Hari)</span>
+                                                    </button>
+                                                ) : item.extension_count > 0 ? (
+                                                    <p className="text-[10px] text-center text-slate-500 font-semibold">
+                                                        Sudah diperpanjang ({item.extension_count}x). Maksimal 1 kali.
+                                                    </p>
+                                                ) : null}
                                             </div>
                                         )}
                                     </div>
@@ -324,7 +345,7 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                 <div className="bg-amber-50 border border-amber-200/80 rounded-3xl p-6 flex items-start space-x-3.5">
                     <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                     <div className="text-xs text-amber-900 leading-relaxed font-medium space-y-1">
-                        <p className="font-bold">Ketentuan Sirkulasi Peminjaman SIMPUS Politeknik Indonusa Surakarta:</p>
+                        <p className="font-bold">Ketentuan Sirkulasi Peminjaman Website Perpustakaan Politeknik Indonusa Surakarta:</p>
                         <ul className="list-disc list-inside space-y-0.5 text-amber-800 text-[11px]">
                             <li>Batas maksimal peminjaman aktif adalah <strong>{maxLimit} eksemplar buku</strong> secara bersamaan.</li>
                             <li>Batas waktu masa pinjam buku fisik adalah <strong>{durationDays} hari kalender</strong> terhitung sejak pengesahan petugas.</li>

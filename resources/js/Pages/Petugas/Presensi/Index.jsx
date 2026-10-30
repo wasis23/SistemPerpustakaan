@@ -1,24 +1,33 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Users, Search, Filter, BookOpen, FileText, Monitor, Library } from 'lucide-react';
+import { Users, Search, Filter, BookOpen, FileText, Monitor, Library, Building2, UserCheck } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
 export default function Index({ logs, filters, stats }) {
     const [search, setSearch] = useState(filters.search || '');
     const [purpose, setPurpose] = useState(filters.purpose || '');
-    const [date, setDate] = useState(filters.date || new Date().toISOString().split('T')[0]);
+    const [visitorType, setVisitorType] = useState(filters.visitor_type || '');
+    const [startDate, setStartDate] = useState(filters.start_date || '');
+    const [endDate, setEndDate] = useState(filters.end_date || '');
 
     const handleFilter = (e) => {
         e.preventDefault();
-        router.get('/petugas/presensi', { search, purpose, date }, { preserveState: true });
+        router.get('/petugas/presensi', { 
+            search, 
+            purpose, 
+            visitor_type: visitorType, 
+            start_date: startDate,
+            end_date: endDate
+        }, { preserveState: true });
     };
 
     const handleReset = () => {
         setSearch('');
         setPurpose('');
-        const todayStr = new Date().toISOString().split('T')[0];
-        setDate(todayStr);
-        router.get('/petugas/presensi', { date: todayStr }, { preserveState: true });
+        setVisitorType('');
+        setStartDate('');
+        setEndDate('');
+        router.get('/petugas/presensi', {}, { preserveState: true });
     };
 
     const purposeMap = {
@@ -37,7 +46,7 @@ export default function Index({ logs, filters, stats }) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
                     <div>
                         <h1 className="font-extrabold text-slate-950 text-xl tracking-tight">Rekap Presensi Kunjungan</h1>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Monitoring kehadiran mahasiswa & dosen di perpustakaan</p>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Monitoring kehadiran mahasiswa, dosen & anggota eksternal di perpustakaan</p>
                     </div>
 
                     <div className="flex items-center space-x-3">
@@ -53,13 +62,27 @@ export default function Index({ logs, filters, stats }) {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-500 font-bold uppercase">Total Pengunjung</span>
                             <Users className="w-4 h-4 text-amber-600" />
                         </div>
                         <p className="text-2xl font-extrabold text-slate-950 mt-2">{stats.today_total}</p>
+                    </div>
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500 font-bold uppercase">Anggota</span>
+                            <UserCheck className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <p className="text-2xl font-extrabold text-emerald-700 mt-2">{stats.member_total ?? 0}</p>
+                    </div>
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500 font-bold uppercase">Eksternal</span>
+                            <Building2 className="w-4 h-4 text-sky-600" />
+                        </div>
+                        <p className="text-2xl font-extrabold text-sky-700 mt-2">{stats.external_total ?? 0}</p>
                     </div>
                     <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
                         <div className="flex items-center justify-between">
@@ -70,7 +93,7 @@ export default function Index({ logs, filters, stats }) {
                     </div>
                     <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500 font-bold uppercase">Peminjaman Koleksi</span>
+                            <span className="text-xs text-slate-500 font-bold uppercase">Peminjaman</span>
                             <Library className="w-4 h-4 text-emerald-600" />
                         </div>
                         <p className="text-2xl font-extrabold text-emerald-700 mt-2">{stats.borrowing_total}</p>
@@ -87,7 +110,7 @@ export default function Index({ logs, filters, stats }) {
                 {/* Filter Form Bar */}
                 <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm">
                     <form onSubmit={handleFilter} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                        <div className="sm:col-span-4 relative">
+                        <div className="sm:col-span-3 relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                                 <Search className="w-4 h-4" />
                             </div>
@@ -95,34 +118,57 @@ export default function Index({ logs, filters, stats }) {
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Cari nama atau NIM..."
+                                placeholder="Cari nama, NIM, atau instansi..."
                                 className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium"
                             />
                         </div>
 
-                        <div className="sm:col-span-3">
+                        <div className="sm:col-span-2">
                             <select
                                 value={purpose}
                                 onChange={(e) => setPurpose(e.target.value)}
                                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
                             >
-                                <option value="">Semua Tujuan Kunjungan</option>
+                                <option value="">Semua Tujuan</option>
                                 <option value="reading">Membaca Mandiri</option>
                                 <option value="borrowing">Peminjaman Koleksi</option>
                                 <option value="research">Pemberkasan</option>
                             </select>
                         </div>
 
-                        <div className="sm:col-span-3">
+                        <div className="sm:col-span-2">
+                            <select
+                                value={visitorType}
+                                onChange={(e) => setVisitorType(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
+                            >
+                                <option value="">Semua Jenis</option>
+                                <option value="member">Anggota Perpustakaan</option>
+                                <option value="external">Anggota Eksternal</option>
+                            </select>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Mulai Tgl</label>
                             <input
                                 type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
                             />
                         </div>
 
-                        <div className="sm:col-span-2 flex space-x-2">
+                        <div className="sm:col-span-2">
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Sampai Tgl</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-medium"
+                            />
+                        </div>
+
+                        <div className="sm:col-span-3 flex space-x-2">
                             <button
                                 type="submit"
                                 className="flex-1 py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-xs font-bold flex items-center justify-center space-x-1 shadow"
@@ -148,9 +194,10 @@ export default function Index({ logs, filters, stats }) {
                             <thead className="bg-slate-100 text-slate-600 uppercase tracking-wider text-[10px] border-b border-slate-200 font-bold">
                                 <tr>
                                     <th className="px-6 py-3.5">Waktu Presensi</th>
-                                    <th className="px-6 py-3.5">NIM / Username</th>
+                                    <th className="px-6 py-3.5">NIM / Identitas</th>
                                     <th className="px-6 py-3.5">Nama Pengunjung</th>
-                                    <th className="px-6 py-3.5">Program Studi</th>
+                                    <th className="px-6 py-3.5">Prodi / Instansi</th>
+                                    <th className="px-6 py-3.5">Jenis</th>
                                     <th className="px-6 py-3.5">Tujuan Kunjungan</th>
                                 </tr>
                             </thead>
@@ -169,9 +216,29 @@ export default function Index({ logs, filters, stats }) {
                                                         minute: '2-digit',
                                                     })}
                                                 </td>
-                                                <td className="px-6 py-4 font-mono font-bold text-slate-900">{log.user?.username}</td>
-                                                <td className="px-6 py-4 font-bold text-slate-900">{log.user?.name}</td>
-                                                <td className="px-6 py-4 text-slate-600">{log.user?.prodi || '-'}</td>
+                                                <td className="px-6 py-4 font-mono font-bold text-slate-900">
+                                                    {log.is_external ? (log.visitor_phone || '-') : (log.user?.username || '-')}
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-900">
+                                                    {log.visitor_display_name}
+                                                    {log.is_external && (
+                                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200 text-[9px] font-bold">
+                                                            Eksternal
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-600">
+                                                    {log.is_external ? (log.visitor_institution || 'Anggota Eksternal') : (log.user?.prodi || '-')}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2.5 py-1 rounded-full border text-[10px] font-bold ${
+                                                        log.is_external
+                                                            ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                    }`}>
+                                                        {log.is_external ? 'Eksternal' : 'Anggota'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-2.5 py-1 rounded-full border text-[10px] font-bold ${purp.color}`}>
                                                         {purp.label}
@@ -182,7 +249,7 @@ export default function Index({ logs, filters, stats }) {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-medium">
+                                        <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-medium">
                                             Tidak ada log presensi kunjungan yang ditemukan.
                                         </td>
                                     </tr>

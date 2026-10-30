@@ -42,7 +42,7 @@ export default function Index({ members, prodiList, filters, stats }) {
         name: '',
         email: '',
         password: '',
-        prodi: 'Anggota External',
+        prodi: 'Anggota Eksternal',
         phone: '',
         status: 'active',
     });
@@ -495,6 +495,25 @@ export default function Index({ members, prodiList, filters, stats }) {
                                     />
                                     {createForm.errors.name && (
                                         <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.name}</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">Program Studi / Jenis Anggota</label>
+                                    <select
+                                        value={createForm.data.prodi}
+                                        onChange={(e) => createForm.setData('prodi', e.target.value)}
+                                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-900 focus:outline-none focus:border-amber-500"
+                                    >
+                                        {prodiList && prodiList.map((p, idx) => (
+                                            <option key={idx} value={p}>{p}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[10px] text-slate-500 mt-1">
+                                        Pilih <strong>Anggota Eksternal</strong> untuk pengunjung umum di luar civitas akademika.
+                                    </p>
+                                    {createForm.errors.prodi && (
+                                        <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.prodi}</p>
                                     )}
                                 </div>
 

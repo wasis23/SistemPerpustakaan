@@ -48,6 +48,7 @@ export default function Create({ categories: initialCategories, racks }) {
         procurement_year: new Date().getFullYear(),
         category_id: categories[0]?.id || '',
         rack_id: racks[0]?.id || '',
+        collection_type: 'Buku Teks',
         call_number: '',
         initial_copies: 2,
         cover_image: null,
@@ -435,6 +436,23 @@ export default function Create({ categories: initialCategories, racks }) {
                                     {categories.map((c) => (
                                         <option key={c.id} value={c.id}>[{c.code}] {c.name}</option>
                                     ))}
+                                </select>
+                            </div>
+
+                            {/* Tipe Koleksi Buku */}
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-2">
+                                    Tipe Koleksi Buku <span className="text-rose-600">*</span>
+                                </label>
+                                <select
+                                    value={data.collection_type}
+                                    onChange={(e) => setData('collection_type', e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                                    required
+                                >
+                                    <option value="Buku Teks">Buku Teks</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Laporan PI/PKL">Laporan PI/PKL</option>
                                 </select>
                             </div>
 

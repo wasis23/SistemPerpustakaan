@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { BookOpen, User, Lock, CheckCircle2, Clock, Sparkles, BookMarked, Library, FileText, ShieldCheck, ArrowRight } from 'lucide-react';
+import { BookOpen, User, Lock, CheckCircle2, Clock, Sparkles, BookMarked, Library, FileText, ShieldCheck, ArrowRight, Building2, Phone, UserPlus, IdCard } from 'lucide-react';
 
-export default function Kiosk({ recentVisitors, todayCount }) {
+export default function Kiosk({ recentVisitors, todayCount, todayMemberCount = 0, todayExternalCount = 0 }) {
     const { flash } = usePage().props;
     const [time, setTime] = useState(new Date());
     const [successVisitor, setSuccessVisitor] = useState(null);
@@ -10,10 +10,16 @@ export default function Kiosk({ recentVisitors, todayCount }) {
     const usernameInputRef = useRef(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        visitor_type: 'member',
         username: '',
         password: '',
+        visitor_name: '',
+        visitor_institution: '',
+        visitor_phone: '',
         visit_purpose: 'reading',
     });
+
+    const isExternal = data.visitor_type === 'external';
 
     // Update Jam Live Kios
     useEffect(() => {
@@ -32,7 +38,7 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                     if (prev <= 1) {
                         clearInterval(interval);
                         setSuccessVisitor(null);
-                        reset('username', 'password');
+                        reset('username', 'password', 'visitor_name', 'visitor_institution', 'visitor_phone');
                         if (usernameInputRef.current) {
                             usernameInputRef.current.focus();
                         }
@@ -97,6 +103,12 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                         <h3 className="text-2xl font-extrabold text-slate-950 tracking-tight">Presensi Berhasil Dicatat!</h3>
                         <p className="text-lg font-bold text-emerald-700 mt-2">{successVisitor.name}</p>
                         <p className="text-xs text-slate-500 mt-1 font-medium">{successVisitor.username} • {successVisitor.prodi}</p>
+                        {successVisitor.is_external && (
+                            <span className="inline-flex items-center space-x-1 mt-3 px-3 py-1 rounded-full bg-sky-100 text-sky-800 text-[10px] font-bold border border-sky-200">
+                                <Building2 className="w-3 h-3" />
+                                <span>Anggota Eksternal</span>
+                            </span>
+                        )}
 
                         <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
                             <div className="flex items-center justify-between text-xs">
@@ -132,7 +144,10 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                 <div className="flex items-center space-x-6 text-right">
                     <div className="hidden md:block">
                         <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Total Pengunjung Hari Ini</p>
-                        <p className="text-lg font-extrabold text-emerald-700">{todayCount} Mahasiswa / Dosen</p>
+                        <p className="text-lg font-extrabold text-emerald-700">{todayCount} Pengunjung</p>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                            {todayMemberCount} Anggota • {todayExternalCount} Eksternal
+                        </p>
                     </div>
 
                     <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-center">
@@ -150,6 +165,45 @@ export default function Kiosk({ recentVisitors, todayCount }) {
             <main className="max-w-7xl w-full mx-auto my-6 grid grid-cols-1 lg:grid-cols-12 gap-6 z-10">
                 {/* Left Column: Purpose Selection & Form */}
                 <div className="lg:col-span-8 space-y-6">
+                    {/* Visitor Type Selector */}
+                    <div className="bg-white p-3 rounded-3xl border border-amber-900/10 shadow-sm grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setData('visitor_type', 'member')}
+                            className={`py-3 px-4 rounded-2xl text-left transition-all flex items-center space-x-3 border cursor-pointer ${
+                                !isExternal
+                                    ? 'bg-amber-500/15 border-amber-500 ring-1 ring-amber-500'
+                                    : 'bg-slate-50 border-slate-200 hover:border-amber-300'
+                            }`}
+                        >
+                            <div className={`p-2 rounded-xl ${!isExternal ? 'bg-amber-500 text-slate-950' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                                <IdCard className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-extrabold text-slate-950">Anggota Perpustakaan</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Mahasiswa, dosen & tenaga kependidikan</p>
+                            </div>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setData('visitor_type', 'external')}
+                            className={`py-3 px-4 rounded-2xl text-left transition-all flex items-center space-x-3 border cursor-pointer ${
+                                isExternal
+                                    ? 'bg-sky-500/15 border-sky-500 ring-1 ring-sky-500'
+                                    : 'bg-slate-50 border-slate-200 hover:border-sky-300'
+                            }`}
+                        >
+                            <div className={`p-2 rounded-xl ${isExternal ? 'bg-sky-500 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                                <UserPlus className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-extrabold text-slate-950">Anggota Eksternal</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Pengunjung umum tanpa akun perpustakaan</p>
+                            </div>
+                        </button>
+                    </div>
+
                     {/* Step 1: Select Purpose */}
                     <div className="bg-white p-6 sm:p-8 rounded-3xl space-y-4 border border-amber-900/10 shadow-sm">
                         <div className="flex items-center justify-between">
@@ -187,70 +241,144 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                         </div>
                     </div>
 
-                    {/* Step 2: Input Credentials Form */}
+                    {/* Step 2: Input Credentials / Data Pengunjung Eksternal */}
                     <div className="bg-white p-6 sm:p-8 rounded-3xl border border-amber-900/10 shadow-sm">
                         <h2 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center space-x-2 mb-6">
-                            <span className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-black">2</span>
-                            <span>Masukkan Kredensial Pengguna</span>
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${isExternal ? 'bg-sky-500 text-white' : 'bg-amber-500 text-slate-950'}`}>2</span>
+                            <span>{isExternal ? 'Lengkapi Data Anggota Eksternal' : 'Masukkan Kredensial Pengguna'}</span>
                         </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* Username Input */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-                                        NIM / NIDN / Username
-                                    </label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                            <User className="w-4 h-4" />
+                            {isExternal ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                                            Nama Lengkap Pengunjung <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <User className="w-4 h-4" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={data.visitor_name}
+                                                onChange={(e) => setData('visitor_name', e.target.value)}
+                                                placeholder="Contoh: Ahmad Fauzi"
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 text-xs font-medium transition-all"
+                                                required
+                                                autoFocus
+                                            />
                                         </div>
-                                        <input
-                                            ref={usernameInputRef}
-                                            type="text"
-                                            value={data.username}
-                                            onChange={(e) => setData('username', e.target.value)}
-                                            placeholder="Contoh: mhs12345"
-                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
-                                            required
-                                            autoFocus
-                                        />
+                                        {errors.visitor_name && (
+                                            <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.visitor_name}</p>
+                                        )}
                                     </div>
-                                    {errors.username && (
-                                        <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.username}</p>
-                                    )}
-                                </div>
 
-                                {/* Password Input */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-                                        Kata Sandi
-                                    </label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                            <Lock className="w-4 h-4" />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                                                Instansi / Asal
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                    <Building2 className="w-4 h-4" />
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={data.visitor_institution}
+                                                    onChange={(e) => setData('visitor_institution', e.target.value)}
+                                                    placeholder="Contoh: Universitas Sebelas Maret"
+                                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 text-xs font-medium transition-all"
+                                                />
+                                            </div>
                                         </div>
-                                        <input
-                                            type="password"
-                                            value={data.password}
-                                            onChange={(e) => setData('password', e.target.value)}
-                                            placeholder="••••••••"
-                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
-                                            required
-                                        />
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                                                No. HP / WhatsApp
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                    <Phone className="w-4 h-4" />
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={data.visitor_phone}
+                                                    onChange={(e) => setData('visitor_phone', e.target.value)}
+                                                    placeholder="08xxxxxxxxxx"
+                                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 text-xs font-medium transition-all"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                    {errors.password && (
-                                        <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.password}</p>
-                                    )}
+
+                                    <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 font-medium flex items-start space-x-2">
+                                        <IdCard className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+                                        <span>Silakan isi data diri Anda. Presensi anggota eksternal tidak memerlukan akun atau kata sandi perpustakaan.</span>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Username Input */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                                            NIM / NIDN / Username
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <User className="w-4 h-4" />
+                                            </div>
+                                            <input
+                                                ref={usernameInputRef}
+                                                type="text"
+                                                value={data.username}
+                                                onChange={(e) => setData('username', e.target.value)}
+                                                placeholder="Contoh: mhs12345"
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
+                                                required
+                                                autoFocus
+                                            />
+                                        </div>
+                                        {errors.username && (
+                                            <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.username}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Password Input */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                                            Kata Sandi
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <Lock className="w-4 h-4" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                value={data.password}
+                                                onChange={(e) => setData('password', e.target.value)}
+                                                placeholder="••••••••"
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
+                                                required
+                                            />
+                                        </div>
+                                        {errors.password && (
+                                            <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.password}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full py-4 px-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                                className={`w-full py-4 px-6 font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 ${
+                                    isExternal
+                                        ? 'bg-sky-500 hover:bg-sky-400 text-white'
+                                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                }`}
                             >
-                                <span>{processing ? 'Memverifikasi Presensi...' : 'SIMPAN PRESENSI KEHADIRAN'}</span>
+                                <span>{processing ? 'Menyimpan Presensi...' : 'SIMPAN PRESENSI KEHADIRAN'}</span>
                                 <ArrowRight className="w-5 h-5 stroke-[2.5]" />
                             </button>
                         </form>
@@ -273,10 +401,19 @@ export default function Kiosk({ recentVisitors, todayCount }) {
                                 recentVisitors.map((v) => (
                                     <div key={v.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                                         <div>
-                                            <p className="text-xs font-bold text-slate-900">{v.user?.name}</p>
-                                            <p className="text-[10px] text-slate-500">{v.user?.username} • {v.user?.prodi || 'Mahasiswa'}</p>
+                                            <p className="text-xs font-bold text-slate-900">{v.visitor_display_name || v.user?.name}</p>
+                                            <p className="text-[10px] text-slate-500">
+                                                {v.is_external
+                                                    ? `${v.visitor_institution || 'Anggota Eksternal'}${v.visitor_phone ? ` • ${v.visitor_phone}` : ''}`
+                                                    : `${v.user?.username} • ${v.user?.prodi || 'Mahasiswa'}`}
+                                            </p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right flex flex-col items-end space-y-1">
+                                            {v.is_external && (
+                                                <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-bold">
+                                                    Eksternal
+                                                </span>
+                                            )}
                                             <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-mono font-bold">
                                                 {new Date(v.checked_in_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
@@ -302,7 +439,7 @@ export default function Kiosk({ recentVisitors, todayCount }) {
 
             {/* Kiosk Footer Bar */}
             <footer className="max-w-7xl w-full mx-auto text-center py-2 text-xs text-slate-500 font-medium">
-                &copy; {new Date().getFullYear()} SIMPUS Politeknik Indonusa Surakarta. Hak Cipta Dilindungi.
+                &copy; {new Date().getFullYear()} Website Perpustakaan Politeknik Indonusa Surakarta. Hak Cipta Dilindungi.
             </footer>
         </div>
     );

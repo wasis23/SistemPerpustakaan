@@ -14,7 +14,7 @@ export default function Print({ type, startDate, endDate, data, officer }) {
             {/* Print Trigger Floating Bar (Hidden when printing) */}
             <div className="no-print max-w-4xl mx-auto mb-6 flex items-center justify-between bg-slate-800 p-4 rounded-2xl border border-slate-700 text-white">
                 <div>
-                    <h1 className="font-bold text-sm">Pratinjau Cetak Laporan Resmi SIMPUS</h1>
+                    <h1 className="font-bold text-sm">Pratinjau Cetak Laporan Resmi Perpustakaan</h1>
                     <p className="text-xs text-slate-400">Politeknik Indonusa Surakarta • Periode: {startDate} s/d {endDate}</p>
                 </div>
                 <button
@@ -135,7 +135,7 @@ export default function Print({ type, startDate, endDate, data, officer }) {
                 {/* Institutional Signature Section */}
                 <div className="flex justify-between items-end pt-8 text-xs text-slate-900">
                     <div>
-                        <p className="text-[10px] text-slate-500">Dicetak otomatis dari Sistem Informasi Perpustakaan (SIMPUS)</p>
+                        <p className="text-[10px] text-slate-500">Dicetak otomatis dari Sistem Informasi Perpustakaan (Website Perpustakaan)</p>
                         <p className="text-[10px] text-slate-500 font-mono">Waktu Cetak: {new Date().toLocaleString('id-ID')}</p>
                     </div>
 

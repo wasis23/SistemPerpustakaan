@@ -84,7 +84,7 @@ export default function PostsIndex({ posts, filters = {}, categories = [], count
 
     return (
         <PetugasLayout activeMenu="posts">
-            <Head title="Manajemen Berita & Artikel SEO - SIMPUS Petugas" />
+            <Head title="Manajemen Berita & Artikel SEO - Website Perpustakaan" />
 
             <div className="space-y-8 w-full">
                 {/* Header Title & Actions */}

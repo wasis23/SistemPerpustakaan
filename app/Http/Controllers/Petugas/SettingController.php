@@ -20,8 +20,10 @@ class SettingController extends Controller
     {
         $settings = [
             'max_borrow_limit' => (int) Setting::get('max_borrow_limit', 3),
+            'max_borrow_limit_lecturer' => (int) Setting::get('max_borrow_limit_lecturer', 4),
             'fine_per_day' => (float) Setting::get('fine_per_day', 1000),
             'borrow_duration_days' => (int) Setting::get('borrow_duration_days', 7),
+            'borrow_duration_days_lecturer' => (int) Setting::get('borrow_duration_days_lecturer', 14),
             'ticket_expire_minutes' => (int) Setting::get('ticket_expire_minutes', 5),
         ];
 
@@ -67,57 +69,29 @@ class SettingController extends Controller
     {
         $validated = $request->validate([
             'max_borrow_limit' => ['required', 'integer', 'min:1', 'max:50'],
+            'max_borrow_limit_lecturer' => ['required', 'integer', 'min:1', 'max:50'],
             'fine_per_day' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'borrow_duration_days' => ['required', 'integer', 'min:1', 'max:180'],
+            'borrow_duration_days_lecturer' => ['required', 'integer', 'min:1', 'max:180'],
             'ticket_expire_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
         ], [
-            'max_borrow_limit.required' => 'Batas maksimal eksemplar peminjaman wajib diisi.',
-            'max_borrow_limit.integer' => 'Batas maksimal eksemplar peminjaman harus berupa angka bulat.',
-            'max_borrow_limit.min' => 'Batas minimal peminjaman adalah 1 eksemplar.',
+            'max_borrow_limit.required' => 'Batas maksimal eksemplar peminjaman mahasiswa wajib diisi.',
+            'max_borrow_limit_lecturer.required' => 'Batas maksimal eksemplar peminjaman dosen & tendik wajib diisi.',
             'fine_per_day.required' => 'Nominal denda per hari wajib diisi.',
             'fine_per_day.numeric' => 'Nominal denda harus berupa angka.',
             'fine_per_day.min' => 'Nominal denda tidak boleh negatif.',
-            'borrow_duration_days.required' => 'Durasi masa peminjaman wajib diisi.',
-            'borrow_duration_days.min' => 'Durasi peminjaman minimal 1 hari.',
+            'borrow_duration_days.required' => 'Durasi masa peminjaman mahasiswa wajib diisi.',
+            'borrow_duration_days_lecturer.required' => 'Durasi masa peminjaman dosen & tendik wajib diisi.',
             'ticket_expire_minutes.required' => 'Batas kadaluarsa tiket wajib diisi.',
             'ticket_expire_minutes.min' => 'Batas kadaluarsa tiket minimal 1 menit.',
         ]);
 
-        Setting::set(
-            'max_borrow_limit',
-            (int)$validated['max_borrow_limit'],
-            'integer',
-            'Batas Maksimal Eksemplar Peminjaman',
-            'Jumlah maksimal eksemplar buku fisik yang dapat dipinjam secara bersamaan oleh seorang anggota perpustakaan (bukan berdasarkan jumlah judul).',
-            'circulation'
-        );
-
-        Setting::set(
-            'fine_per_day',
-            (float)$validated['fine_per_day'],
-            'integer',
-            'Tarif Denda Keterlambatan Per Hari (Rp)',
-            'Tarif denda per eksemplar buku untuk setiap 1 hari keterlambatan melewati batas tanggal jatuh tempo pengembalian.',
-            'circulation'
-        );
-
-        Setting::set(
-            'borrow_duration_days',
-            (int)$validated['borrow_duration_days'],
-            'integer',
-            'Durasi Masa Peminjaman (Hari)',
-            'Masa aktif durasi peminjaman buku sebelum jatuh tempo.',
-            'circulation'
-        );
-
-        Setting::set(
-            'ticket_expire_minutes',
-            (int)$validated['ticket_expire_minutes'],
-            'integer',
-            'Batas Kadaluarsa Tiket Peminjaman (Menit)',
-            'Batas toleransi waktu pengambilan buku fisik di rak dan validasi ke petugas sirkulasi.',
-            'circulation'
-        );
+        Setting::set('max_borrow_limit', (int)$validated['max_borrow_limit']);
+        Setting::set('max_borrow_limit_lecturer', (int)$validated['max_borrow_limit_lecturer']);
+        Setting::set('fine_per_day', (float)$validated['fine_per_day']);
+        Setting::set('borrow_duration_days', (int)$validated['borrow_duration_days']);
+        Setting::set('borrow_duration_days_lecturer', (int)$validated['borrow_duration_days_lecturer']);
+        Setting::set('ticket_expire_minutes', (int)$validated['ticket_expire_minutes']);
 
         return back()->with('success', 'Pengaturan batas maksimal eksemplar peminjaman dan tarif denda sirkulasi berhasil diperbarui!');
     }

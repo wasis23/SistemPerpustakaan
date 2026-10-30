@@ -56,12 +56,24 @@ export default function PrintBarcodes({ book, labels }) {
                             key={idx} 
                             className="border-2 border-dashed border-slate-300 p-4 rounded-2xl text-center flex flex-col items-center justify-between bg-slate-50/70 hover:border-amber-400 transition-colors"
                         >
-                            <p className="text-[9px] font-extrabold text-slate-700 uppercase tracking-wider line-clamp-1 w-full">
-                                POLINDONUSA LIBRARY
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-wider line-clamp-1 w-full border-b border-slate-200 pb-1">
+                                Indonusa Library
                             </p>
-                            <p className="text-[10px] font-mono font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md my-1.5 border border-amber-300/60">
-                                {item.copy_code}
-                            </p>
+                            <div className="my-1.5 flex items-center justify-center space-x-1.5 w-full">
+                                <span className="text-[10px] font-mono font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/60">
+                                    {item.copy_code}
+                                </span>
+                            </div>
+
+                            {/* Nomor Panggil Buku (Call Number) */}
+                            {item.call_number && (
+                                <div className="w-full my-1 px-2 py-1 bg-white rounded border border-slate-200">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase block">No Panggil</span>
+                                    <p className="font-mono font-black text-xs text-slate-950 tracking-wider">
+                                        {item.call_number}
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Render Barcode SVG */}
                             <div className="w-full flex justify-center py-1">

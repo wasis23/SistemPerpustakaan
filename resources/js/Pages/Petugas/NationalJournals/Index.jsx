@@ -154,7 +154,7 @@ export default function NationalJournalsIndex({
 
     return (
         <PetugasLayout activeMenu="national-journals">
-            <Head title="Manajemen Publikasi Ilmiah (Jurnal & Prosiding) - SIMPUS Petugas" />
+            <Head title="Manajemen Publikasi Ilmiah (Jurnal & Prosiding) - Website Perpustakaan" />
 
             <div className="space-y-8 w-full">
                 {/* Header Title & Action Buttons */}

@@ -44,7 +44,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-slate-900 selection:bg-amber-500 selection:text-slate-950 font-sans">
-            <Head title="SIMPUS - Perpustakaan Digital Politeknik Indonusa Surakarta" />
+            <Head title="Website Perpustakaan - Politeknik Indonusa Surakarta" />
 
             {/* 1. TOP NAVIGATION BAR (Warm) */}
             <header className="sticky top-0 z-50 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-amber-900/10">
@@ -56,7 +56,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
                         </div>
                         <div>
                             <span className="font-extrabold text-xl tracking-tight text-slate-900 block leading-tight">
-                                SIMPUS<span className="text-amber-600">.</span>
+                                Website Perpustakaan<span className="text-amber-600">.</span>
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase block">
                                 Politeknik Indonusa Surakarta
@@ -66,6 +66,12 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
 
                     {/* Right CTA Actions: Portal Anggota */}
                     <div className="flex items-center space-x-3">
+                        <Link
+                            href="/panduan"
+                            className="hidden sm:inline-flex items-center space-x-1.5 px-4 py-2 text-xs font-bold text-slate-700 hover:text-amber-800 hover:bg-amber-50 rounded-full transition-all"
+                        >
+                            <span>Panduan</span>
+                        </Link>
                         {auth && auth.user ? (
                             <Link
                                 href={auth.user.role === 'petugas' ? '/petugas/dashboard' : '/anggota/dashboard'}
@@ -584,7 +590,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
                 </section>
             )}
 
-            {/* 6. WHY SIMPUS? (5. Warm #FDFBF7) */}
+            {/* 6. WHY WEBSITE PERPUSTAKAAN? (5. Warm #FDFBF7) */}
             <section id="fitur" className="py-16 bg-[#FDFBF7] border-t border-amber-900/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 border border-amber-500/30 rounded-3xl p-8 sm:p-12 shadow-xl space-y-8 relative overflow-hidden backdrop-blur-sm">
@@ -593,7 +599,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
 
                         <div className="text-center max-w-2xl mx-auto space-y-2">
                             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
-                                Mengapa Menggunakan Sistem Sirkulasi SIMPUS?
+                                Mengapa Menggunakan Sistem Sirkulasi Perpustakaan?
                             </h2>
                             <p className="text-slate-600 text-xs sm:text-sm">
                                 Inovasi sirkulasi mandiri berbasis teknologi modern untuk menjamin kenyamanan dan kecepatan transaksi peminjaman Anda.
@@ -682,7 +688,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
                                 <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg">
                                     <BookOpen className="w-5 h-5 stroke-[2.5]" />
                                 </div>
-                                <span className="font-extrabold text-xl text-white tracking-tight">SIMPUS</span>
+                                <span className="font-extrabold text-xl text-white tracking-tight">Website Perpustakaan</span>
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
                                 Sistem Informasi Perpustakaan Digital UPT Perpustakaan Politeknik Indonusa Surakarta. Mendukung sirkulasi mandiri berbasis scan barcode HP, locking transaksional, dan repositori karya buku dosen.
@@ -697,6 +703,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
                                 <li><Link href="/karya-dosen" className="hover:text-amber-400">Karya Buku Dosen</Link></li>
                                 <li><Link href="/jurnal" className="hover:text-amber-400">Publikasi & Jurnal</Link></li>
                                 <li><Link href="/berita" className="hover:text-amber-400">Berita & Informasi</Link></li>
+                                <li><Link href="/panduan" className="hover:text-amber-400">Buku Panduan</Link></li>
                                 <li><Link href="/presensi" target="_blank" className="hover:text-amber-400">Presensi Kunjungan</Link></li>
                                 <li><Link href="/login" className="hover:text-amber-400">Portal Login</Link></li>
                             </ul>
@@ -713,7 +720,7 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
 
                     <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500">
                         <p>© {new Date().getFullYear()} UPT Perpustakaan Politeknik Indonusa Surakarta. All rights reserved.</p>
-                        <p>SIMPUS Digital Circulation System v2.0</p>
+                        <p>Website Perpustakaan Digital v2.0</p>
                     </div>
                 </div>
             </footer>

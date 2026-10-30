@@ -75,16 +75,17 @@ class TicketController extends Controller
             ]);
         }
 
-        // 3. Cek batas maksimal peminjaman aktif anggota
-        $maxBorrowLimit = (int) Setting::get('max_borrow_limit', 3);
+        // 3. Cek batas maksimal peminjaman aktif anggota (Dosen/Tendik: 4 buku, Mahasiswa: 3 buku)
+        $maxBorrowLimit = $user->getMaxBorrowLimit();
         $activeBorrowingsCount = Borrowing::where('user_id', $user->id)
             ->where('status', 'active')
             ->count();
 
         if ($activeBorrowingsCount >= $maxBorrowLimit) {
+            $userTypeLabel = $user->isDosenOrTendik() ? 'Dosen / Tendik' : 'Mahasiswa';
             return back()->withErrors([
-                'copy_code' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
-                'barcode_hash' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
+                'copy_code' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif untuk {$userTypeLabel}. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
+                'barcode_hash' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif untuk {$userTypeLabel}. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
             ]);
         }
 

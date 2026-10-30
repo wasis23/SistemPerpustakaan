@@ -77,7 +77,7 @@ export default function BeritaShow({ post, relatedPosts = [], popularPosts = [],
                 <meta property="og:description" content={seoDescription} />
                 <meta property="og:image" content={seoImage} />
                 <meta property="og:url" content={fullUrl} />
-                <meta property="og:site_name" content="SIMPUS Politeknik Indonusa Surakarta" />
+                <meta property="og:site_name" content="Website Perpustakaan Politeknik Indonusa Surakarta" />
                 {post.published_at && <meta property="article:published_time" content={post.published_at} />}
                 <meta property="article:section" content={post.category} />
 
@@ -102,7 +102,7 @@ export default function BeritaShow({ post, relatedPosts = [], popularPosts = [],
                         </div>
                         <div>
                             <span className="font-extrabold text-xl tracking-tight text-slate-900 block leading-tight">
-                                SIMPUS<span className="text-amber-600">.</span>
+                                Website Perpustakaan<span className="text-amber-600">.</span>
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase block">
                                 Politeknik Indonusa Surakarta
@@ -180,7 +180,7 @@ export default function BeritaShow({ post, relatedPosts = [], popularPosts = [],
                                         <div className="w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xs">
                                             {(post.author_name || 'P')[0]}
                                         </div>
-                                        <span>{post.author_name || 'Pustakawan SIMPUS'}</span>
+                                        <span>{post.author_name || 'Pustakawan Perpustakaan'}</span>
                                     </div>
 
                                     <div className="flex items-center space-x-1">
@@ -366,7 +366,7 @@ export default function BeritaShow({ post, relatedPosts = [], popularPosts = [],
                         <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm">
                             <BookOpen className="w-4 h-4 stroke-[2.5]" />
                         </div>
-                        <span className="font-extrabold text-white text-base">SIMPUS Politeknik Indonusa Surakarta</span>
+                        <span className="font-extrabold text-white text-base">Website Perpustakaan Politeknik Indonusa Surakarta</span>
                     </div>
                     <p className="text-xs text-slate-500 max-w-md mx-auto">
                         Sistem Informasi Manajemen Perpustakaan Digital Berbasis Self-Service & Optimasi Akses Literasi Ilmiah.

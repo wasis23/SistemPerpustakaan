@@ -8,7 +8,8 @@ import {
     Search, 
     ChevronRight, 
     Sparkles,
-    ArrowRight
+    ArrowRight,
+    HelpCircle
 } from 'lucide-react';
 import AnggotaLayout from '@/Layouts/AnggotaLayout';
 
@@ -47,6 +48,13 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                     <Search className="w-4 h-4" />
                                     <span>Jelajahi Katalog</span>
                                 </Link>
+                                <Link
+                                    href="/panduan"
+                                    className="px-5 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-amber-300 font-bold rounded-2xl text-xs border border-amber-400/30 transition-all flex items-center space-x-1.5"
+                                >
+                                    <HelpCircle className="w-4 h-4" />
+                                    <span>Buku Panduan</span>
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -72,7 +80,7 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                 </div>
                                 <span className="text-[10px] font-bold text-amber-800 uppercase bg-amber-100 px-2 py-0.5 rounded-full">DDC 600</span>
                                 <h4 className="font-bold text-slate-950 text-xs mt-2 line-clamp-1 group-hover:text-amber-700">Rekam Medis & Kesehatan</h4>
-                                <p className="text-[10px] text-slate-500 mt-0.5">Penulis Utama SIMPUS</p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">Penulis Utama Website Perpustakaan</p>
                             </Link>
 
                             <Link href="/anggota/katalog" className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all group">

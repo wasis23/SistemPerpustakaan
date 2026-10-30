@@ -76,6 +76,7 @@ export default function Edit({ book, copies: initialCopies, categories: initialC
         procurement_year: book.procurement_year || book.publish_year || new Date().getFullYear(),
         category_id: book.category_id || (categories[0]?.id || ''),
         rack_id: book.rack_id || (racks[0]?.id || ''),
+        collection_type: book.collection_type || 'Buku Teks',
         call_number: book.call_number || '',
         cover_image: null,
         cover_url: '',
@@ -629,6 +630,23 @@ export default function Edit({ book, copies: initialCopies, categories: initialC
                                     ))}
                                 </select>
                                 {errors.rack_id && <p className="text-[10px] text-rose-600 font-bold">{errors.rack_id}</p>}
+                            </div>
+
+                            {/* Tipe Koleksi Buku */}
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-bold text-slate-800">
+                                    Tipe Koleksi Buku <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    required
+                                    value={data.collection_type}
+                                    onChange={(e) => setData('collection_type', e.target.value)}
+                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.collection_type ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'} rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-semibold`}
+                                >
+                                    <option value="Buku Teks">Buku Teks</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Laporan PI/PKL">Laporan PI/PKL</option>
+                                </select>
                             </div>
 
                             {/* Nomor Panggil (Call Number) */}

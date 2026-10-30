@@ -122,7 +122,7 @@ export default function LecturerBooksCreate({ prodiList = [], publicationTypes =
 
     return (
         <PetugasLayout activeMenu="lecturer-books">
-            <Head title="Tambah Karya Buku Dosen - SIMPUS Petugas" />
+            <Head title="Tambah Karya Buku Dosen - Website Perpustakaan" />
 
             <form onSubmit={handleSubmit} className="space-y-8 w-full">
                 {/* Header Navigation Bar */}

@@ -54,6 +54,8 @@ class BorrowingController extends Controller
                     'borrowed_at' => $borrowing->borrowed_at ? $borrowing->borrowed_at->format('d M Y (H:i)') : '-',
                     'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d M Y (H:i)') : '-',
                     'due_date_raw' => $borrowing->due_date?->toISOString(),
+                    'extension_count' => $borrowing->extension_count ?? 0,
+                    'can_extend' => ! $calc['is_overdue'] && ($borrowing->extension_count ?? 0) < 1,
                     'is_overdue' => $calc['is_overdue'],
                     'remaining_days' => $remainingDays,
                     'overdue_days' => $calc['total_overdue_days'],
@@ -83,11 +85,48 @@ class BorrowingController extends Controller
             'historyBorrowings' => $historyBorrowings,
             'stats' => [
                 'active_count' => $activeBorrowings->count(),
-                'max_limit' => (int) Setting::get('max_borrow_limit', 3),
+                'max_limit' => $user->getMaxBorrowLimit(),
+                'borrow_duration' => $user->getBorrowDurationDays(),
+                'user_type' => $user->isDosenOrTendik() ? 'Dosen / Tendik' : 'Mahasiswa',
                 'overdue_count' => $activeBorrowings->where('is_overdue', true)->count(),
                 'history_count' => Borrowing::where('user_id', $user->id)->count(),
                 'unpaid_fines' => $unpaidFinesTotal,
             ],
         ]);
+    }
+
+    /**
+     * Ajukan Perpanjangan Pinjaman Mandiri oleh Anggota
+     */
+    public function extend(Borrowing $borrowing)
+    {
+        $user = auth()->user();
+
+        if ($borrowing->user_id !== $user->id) {
+            abort(403, 'Akses tidak diizinkan.');
+        }
+
+        if ($borrowing->status !== 'active') {
+            return back()->with('error', 'Hanya peminjaman aktif yang dapat diperpanjang.');
+        }
+
+        if ($borrowing->due_date && $borrowing->due_date->isPast()) {
+            return back()->with('error', 'Peminjaman yang telah melewati jatuh tempo tidak dapat diperpanjang mandiri. Silakan ke meja petugas sirkulasi.');
+        }
+
+        if (($borrowing->extension_count ?? 0) >= 1) {
+            return back()->with('error', 'Anda telah mencapai batas maksimal perpanjangan (1 kali per peminjaman).');
+        }
+
+        $extensionDays = $user->getBorrowDurationDays();
+        $newDueDate = $borrowing->due_date->copy()->addDays($extensionDays);
+
+        $borrowing->update([
+            'due_date' => $newDueDate,
+            'extension_count' => ($borrowing->extension_count ?? 0) + 1,
+            'extended_at' => now(),
+        ]);
+
+        return back()->with('success', "Perpanjangan berhasil! Jatuh tempo diperpanjang {$extensionDays} hari hingga " . $newDueDate->format('d M Y') . ".");
     }
 }

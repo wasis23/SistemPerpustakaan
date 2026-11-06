@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\BookCopy;
 use App\Models\Borrowing;
 use App\Models\Category;
+use App\Models\JournalVisitor;
 use App\Models\Laboratory;
 use App\Models\LecturerBook;
 use App\Models\NationalJournal;
@@ -59,6 +60,11 @@ class LandingController extends Controller
             'total_national_journals' => NationalJournal::where('is_active', true)->where('journal_type', 'Nasional')->count(),
             'total_international_journals' => NationalJournal::where('is_active', true)->where('journal_type', 'Internasional')->count(),
             'total_proceedings' => NationalJournal::where('is_active', true)->where('journal_type', 'Prosiding')->count(),
+            'total_journal_visitors' => JournalVisitor::count(),
+            'total_journal_civitas_visitors' => JournalVisitor::whereNotNull('user_id')->count(),
+            'nasional_visitors' => JournalVisitor::where('journal_type', 'nasional')->count(),
+            'internasional_visitors' => JournalVisitor::where('journal_type', 'internasional')->count(),
+            'prosiding_visitors' => JournalVisitor::where('journal_type', 'prosiding')->count(),
         ];
 
         // Berita & Informasi Terbaru

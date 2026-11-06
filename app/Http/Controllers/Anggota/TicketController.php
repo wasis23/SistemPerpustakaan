@@ -26,20 +26,25 @@ class TicketController extends Controller
 
         $user = $request->user();
 
+        // Info aturan peminjaman sesuai tipe anggota
+        $borrowRule = [
+            'member_type' => $user->member_type ?? ($user->isEksternal() ? 'eksternal' : ($user->isDosenOrTendik() ? 'dosen_tendik' : 'mahasiswa')),
+            'member_type_label' => $user->member_type_label,
+            'can_borrow' => $user->canBorrow(),
+            'max_limit' => $user->getMaxBorrowLimit(),
+            'duration_days' => $user->getBorrowDurationDays(),
+            'rule_description' => $user->getBorrowRuleDescription(),
+        ];
+
         // Jika anggota sudah memiliki tiket pending aktif yang belum kadaluwarsa
         $activeTicket = BorrowTicket::where('user_id', $user->id)
             ->where('status', 'pending')
             ->where('expires_at', '>', now())
             ->first();
 
-        if ($activeTicket) {
-            return Inertia::render('Anggota/Scan', [
-                'activeTicket' => $activeTicket->load('bookCopy.book'),
-            ]);
-        }
-
         return Inertia::render('Anggota/Scan', [
-            'activeTicket' => null,
+            'activeTicket' => $activeTicket ? $activeTicket->load('bookCopy.book') : null,
+            'borrowRule' => $borrowRule,
         ]);
     }
 
@@ -62,7 +67,15 @@ class TicketController extends Controller
 
         $user = $request->user();
 
-        // 2. Cek apakah anggota sudah punya tiket pending aktif
+        // 2. Cek hak peminjaman (Anggota Eksternal tidak boleh meminjam buku fisik ke luar perpustakaan)
+        if (! $user->canBorrow()) {
+            return back()->withErrors([
+                'copy_code' => 'Sesuai kebijakan perpustakaan, Anggota Eksternal tidak diperbolehkan meminjam buku fisik ke luar perpustakaan (hanya dapat membaca di tempat).',
+                'barcode_hash' => 'Sesuai kebijakan perpustakaan, Anggota Eksternal tidak diperbolehkan meminjam buku fisik ke luar perpustakaan (hanya dapat membaca di tempat).',
+            ]);
+        }
+
+        // 3. Cek apakah anggota sudah punya tiket pending aktif
         $existingTicket = BorrowTicket::where('user_id', $user->id)
             ->where('status', 'pending')
             ->where('expires_at', '>', now())
@@ -75,14 +88,14 @@ class TicketController extends Controller
             ]);
         }
 
-        // 3. Cek batas maksimal peminjaman aktif anggota (Dosen/Tendik: 4 buku, Mahasiswa: 3 buku)
+        // 4. Cek batas maksimal peminjaman aktif anggota (Dosen/Tendik: 4 buku, Mahasiswa: 2 buku)
         $maxBorrowLimit = $user->getMaxBorrowLimit();
         $activeBorrowingsCount = Borrowing::where('user_id', $user->id)
             ->where('status', 'active')
             ->count();
 
         if ($activeBorrowingsCount >= $maxBorrowLimit) {
-            $userTypeLabel = $user->isDosenOrTendik() ? 'Dosen / Tendik' : 'Mahasiswa';
+            $userTypeLabel = $user->member_type_label;
             return back()->withErrors([
                 'copy_code' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif untuk {$userTypeLabel}. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",
                 'barcode_hash' => "Anda telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif untuk {$userTypeLabel}. Kembalikan eksemplar buku fisik sebelumnya terlebih dahulu.",

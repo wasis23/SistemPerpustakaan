@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import { 
     QrCode, 
     AlertCircle, 
@@ -11,12 +11,19 @@ import {
     RefreshCw, 
     Clock, 
     ExternalLink,
-    BookOpen
+    BookOpen,
+    Info,
+    ShieldAlert
 } from 'lucide-react';
 import AnggotaLayout from '@/Layouts/AnggotaLayout';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
-export default function Scan({ activeTicket, error }) {
+export default function Scan({ activeTicket, error, borrowRule }) {
+    const { auth } = usePage().props;
+    const canBorrow = borrowRule?.can_borrow ?? auth?.user?.can_borrow ?? true;
+    const memberTypeLabel = borrowRule?.member_type_label || auth?.user?.member_type_label || 'Anggota';
+    const ruleDescription = borrowRule?.rule_description || auth?.user?.borrow_rule_description || 'Maksimal 2 buku / 7 hari';
+
     const [scannerActive, setScannerActive] = useState(false);
     const [cameraLoading, setCameraLoading] = useState(false);
     const [cameraError, setCameraError] = useState(null);
@@ -214,6 +221,28 @@ export default function Scan({ activeTicket, error }) {
                     </div>
                 </div>
 
+                {/* Rule Information Banner */}
+                <div className={`p-4 rounded-3xl border flex items-center space-x-3 text-xs ${
+                    canBorrow 
+                        ? 'bg-amber-50/70 border-amber-200 text-amber-950' 
+                        : 'bg-rose-50 border-rose-200 text-rose-900'
+                }`}>
+                    {canBorrow ? (
+                        <Info className="w-5 h-5 text-amber-700 shrink-0" />
+                    ) : (
+                        <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+                    )}
+                    <div className="leading-relaxed">
+                        <span className="font-extrabold">Ketentuan Peminjaman ({memberTypeLabel}):</span>{' '}
+                        <span>{ruleDescription}.</span>
+                        {!canBorrow && (
+                            <span className="block mt-0.5 font-bold text-rose-700">
+                                Anggota Eksternal hanya diperkenankan membaca buku langsung di tempat. Untuk meminjam koleksi fisik ke luar perpustakaan, hubungi meja pustakawan.
+                            </span>
+                        )}
+                    </div>
+                </div>
+
                 {/* Banner Jika Anggota Sudah Memiliki Tiket Aktif Berjalan */}
                 {activeTicket && (
                     <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-3xl p-6 shadow-md space-y-4">
@@ -289,15 +318,21 @@ export default function Scan({ activeTicket, error }) {
                                         </p>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => startScanner(selectedCameraId)}
-                                        disabled={cameraLoading || processing}
-                                        className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
-                                    >
-                                        <Camera className="w-4 h-4" />
-                                        <span>{cameraLoading ? 'Menghubungkan Kamera...' : 'Nyalakan Kamera Scanner'}</span>
-                                    </button>
+                                    {canBorrow ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => startScanner(selectedCameraId)}
+                                            disabled={cameraLoading || processing}
+                                            className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                                        >
+                                            <Camera className="w-4 h-4" />
+                                            <span>{cameraLoading ? 'Menghubungkan Kamera...' : 'Nyalakan Kamera Scanner'}</span>
+                                        </button>
+                                    ) : (
+                                        <div className="px-5 py-2.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-2xl text-xs font-bold text-center">
+                                            Fitur scanner pinjam mandiri dinonaktifkan untuk Anggota Eksternal
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -389,11 +424,15 @@ export default function Scan({ activeTicket, error }) {
 
                             <button
                                 type="submit"
-                                disabled={processing}
+                                disabled={processing || !canBorrow}
                                 className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl font-extrabold text-xs shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
                             >
                                 <QrCode className="w-4 h-4 stroke-[2.5]" />
-                                <span>{processing ? 'Memproses Poin Barcode...' : 'Proses Tiket Pinjam Mandiri'}</span>
+                                <span>
+                                    {!canBorrow 
+                                        ? 'Peminjaman Khusus Mahasiswa & Dosen (Eksternal Hanya Baca)' 
+                                        : (processing ? 'Memproses Barcode...' : 'Proses Tiket Pinjam Mandiri')}
+                                </span>
                             </button>
                         </form>
                     </div>

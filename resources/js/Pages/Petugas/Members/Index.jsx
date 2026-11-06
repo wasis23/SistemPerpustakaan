@@ -30,6 +30,7 @@ export default function Index({ members, prodiList, filters, stats }) {
     const [search, setSearch] = useState(filters.search || '');
     const [prodi, setProdi] = useState(filters.prodi || '');
     const [status, setStatus] = useState(filters.status || '');
+    const [memberType, setMemberType] = useState(filters.member_type || '');
 
     // Modals State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -40,9 +41,10 @@ export default function Index({ members, prodiList, filters, stats }) {
     const createForm = useForm({
         username: '',
         name: '',
+        member_type: 'mahasiswa',
         email: '',
         password: '',
-        prodi: 'Anggota Eksternal',
+        prodi: 'D4 Teknologi Rekayasa Perangkat Lunak',
         phone: '',
         status: 'active',
     });
@@ -51,6 +53,7 @@ export default function Index({ members, prodiList, filters, stats }) {
     const editForm = useForm({
         username: '',
         name: '',
+        member_type: 'mahasiswa',
         email: '',
         prodi: '',
         phone: '',
@@ -65,14 +68,27 @@ export default function Index({ members, prodiList, filters, stats }) {
 
     const handleFilterSubmit = (e) => {
         e.preventDefault();
-        router.get('/petugas/members', { search, prodi, status }, { preserveState: true });
+        router.get('/petugas/members', { search, prodi, status, member_type: memberType }, { preserveState: true });
     };
 
     const handleReset = () => {
         setSearch('');
         setProdi('');
         setStatus('');
+        setMemberType('');
         router.get('/petugas/members', {}, { preserveState: true });
+    };
+
+    // Helper deteksi tipe anggota
+    const detectMemberType = (member) => {
+        if (member.member_type) return member.member_type;
+        const prodiLower = (member.prodi || '').toLowerCase();
+        const userLower = (member.username || '').toLowerCase();
+        if (prodiLower.includes('eksternal') || userLower.startsWith('eks')) return 'eksternal';
+        if (userLower.startsWith('dsn') || userLower.startsWith('nip') || userLower.startsWith('nidn') || prodiLower.includes('dosen') || prodiLower.includes('tendik')) {
+            return 'dosen_tendik';
+        }
+        return 'mahasiswa';
     };
 
     // Open Edit Modal
@@ -81,6 +97,7 @@ export default function Index({ members, prodiList, filters, stats }) {
         editForm.setData({
             username: member.username || '',
             name: member.name || '',
+            member_type: detectMemberType(member),
             email: member.email || '',
             prodi: member.prodi || '',
             phone: member.phone || '',
@@ -187,7 +204,7 @@ export default function Index({ members, prodiList, filters, stats }) {
                         <div>
                             <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Total Anggota</span>
                             <p className="text-3xl font-black text-slate-950 mt-1">{stats.total_members}</p>
-                            <span className="text-[10px] text-slate-500 font-semibold mt-1 inline-block">Mahasiswa & Dosen</span>
+                            <span className="text-[10px] text-slate-500 font-semibold mt-1 inline-block">Mahasiswa, Dosen, Eksternal</span>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
                             <Users className="w-6 h-6 stroke-[2.5]" />
@@ -196,23 +213,23 @@ export default function Index({ members, prodiList, filters, stats }) {
 
                     <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
                         <div>
-                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Anggota Aktif</span>
-                            <p className="text-3xl font-black text-emerald-700 mt-1">{stats.active_members}</p>
-                            <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold mt-1 inline-block">
-                                Terverifikasi
+                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Civitas Mahasiswa</span>
+                            <p className="text-3xl font-black text-indigo-700 mt-1">{stats.mahasiswa_count || 0}</p>
+                            <span className="text-[10px] text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full font-semibold mt-1 inline-block">
+                                Kuota: 2 Buku / 7 Hari
                             </span>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                            <UserCheck className="w-6 h-6 stroke-[2.5]" />
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+                            <GraduationCap className="w-6 h-6 stroke-[2.5]" />
                         </div>
                     </div>
 
                     <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
                         <div>
-                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Sedang Meminjam</span>
-                            <p className="text-3xl font-black text-amber-800 mt-1">{stats.borrowing_now}</p>
+                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Dosen & Tendik</span>
+                            <p className="text-3xl font-black text-amber-800 mt-1">{stats.dosen_count || 0}</p>
                             <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full font-semibold mt-1 inline-block">
-                                Membawa Buku
+                                Kuota: 4 Buku / 14 Hari
                             </span>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
@@ -222,14 +239,14 @@ export default function Index({ members, prodiList, filters, stats }) {
 
                     <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
                         <div>
-                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Akun Ditangguhkan</span>
-                            <p className="text-3xl font-black text-rose-600 mt-1">{stats.suspended_members}</p>
-                            <span className="text-[10px] text-rose-800 bg-rose-50 px-2 py-0.5 rounded-full font-semibold mt-1 inline-block">
-                                Suspended
+                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Anggota Eksternal</span>
+                            <p className="text-3xl font-black text-slate-700 mt-1">{stats.eksternal_count || 0}</p>
+                            <span className="text-[10px] text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full font-semibold mt-1 inline-block">
+                                Hanya Baca di Tempat
                             </span>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center font-bold">
-                            <AlertCircle className="w-6 h-6 stroke-[2.5]" />
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+                            <Shield className="w-6 h-6 stroke-[2.5]" />
                         </div>
                     </div>
                 </div>
@@ -237,18 +254,31 @@ export default function Index({ members, prodiList, filters, stats }) {
                 {/* Filter & Search Bar */}
                 <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm">
                     <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                        <div className="sm:col-span-5 relative">
+                        <div className="sm:col-span-4 relative">
                             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Cari NIM/NIDN, Nama Anggota, Email, atau No HP..."
+                                placeholder="Cari NIM/NIDN, Nama Anggota, Email..."
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 font-medium"
                             />
                         </div>
 
                         <div className="sm:col-span-3">
+                            <select
+                                value={memberType}
+                                onChange={(e) => setMemberType(e.target.value)}
+                                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
+                            >
+                                <option value="">Semua Kategori Anggota</option>
+                                <option value="mahasiswa">Mahasiswa (2 Buku / 7 Hari)</option>
+                                <option value="dosen_tendik">Dosen & Tendik (4 Buku / 14 Hari)</option>
+                                <option value="eksternal">Anggota Eksternal (Hanya Baca)</option>
+                            </select>
+                        </div>
+
+                        <div className="sm:col-span-2">
                             <select
                                 value={prodi}
                                 onChange={(e) => setProdi(e.target.value)}
@@ -261,13 +291,13 @@ export default function Index({ members, prodiList, filters, stats }) {
                             </select>
                         </div>
 
-                        <div className="sm:col-span-2">
+                        <div className="sm:col-span-1">
                             <select
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value)}
-                                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
+                                className="w-full px-2 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                             >
-                                <option value="">Semua Status</option>
+                                <option value="">Status</option>
                                 <option value="active">Aktif</option>
                                 <option value="suspended">Ditangguhkan</option>
                             </select>
@@ -281,7 +311,7 @@ export default function Index({ members, prodiList, filters, stats }) {
                                 <Filter className="w-3.5 h-3.5" />
                                 <span>Filter</span>
                             </button>
-                            {(search || prodi || status) && (
+                            {(search || prodi || status || memberType) && (
                                 <button
                                     type="button"
                                     onClick={handleReset}
@@ -310,52 +340,77 @@ export default function Index({ members, prodiList, filters, stats }) {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {members.data && members.data.length > 0 ? (
-                                    members.data.map((item) => (
-                                        <tr key={item.id} className="hover:bg-slate-50/80 transition-all">
-                                            <td className="px-6 py-4 font-mono font-bold text-amber-800 whitespace-nowrap align-top">
-                                                <span className="px-2.5 py-1 bg-amber-50 rounded-lg border border-amber-200">
-                                                    {item.username}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-4 align-top">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-950 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-                                                        {item.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-extrabold text-slate-950 text-xs">{item.name}</p>
-                                                        <p className="text-[10px] text-slate-500 flex items-center space-x-1 mt-0.5">
-                                                            <Mail className="w-3 h-3 text-slate-400" />
-                                                            <span>{item.email || '-'}</span>
-                                                            {item.phone && (
-                                                                <>
-                                                                    <span className="text-slate-300">•</span>
-                                                                    <Phone className="w-3 h-3 text-slate-400" />
-                                                                    <span>{item.phone}</span>
-                                                                </>
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-6 py-4 align-top whitespace-nowrap">
-                                                <span className="font-semibold text-slate-800">
-                                                    {item.prodi || 'Umum'}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-4 align-top text-center whitespace-nowrap">
-                                                {item.active_borrowings_count > 0 ? (
-                                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center space-x-1">
-                                                        <BookOpen className="w-3 h-3" />
-                                                        <span>{item.active_borrowings_count} Buku</span>
+                                    members.data.map((item) => {
+                                        const itemType = detectMemberType(item);
+                                        const maxQuota = itemType === 'dosen_tendik' ? 4 : (itemType === 'mahasiswa' ? 2 : 0);
+                                        return (
+                                            <tr key={item.id} className="hover:bg-slate-50/80 transition-all">
+                                                <td className="px-6 py-4 font-mono font-bold text-amber-800 whitespace-nowrap align-top">
+                                                    <span className="px-2.5 py-1 bg-amber-50 rounded-lg border border-amber-200">
+                                                        {item.username}
                                                     </span>
-                                                ) : (
-                                                    <span className="text-slate-400 text-[10px]">0 Buku</span>
-                                                )}
-                                            </td>
+                                                </td>
+
+                                                <td className="px-6 py-4 align-top">
+                                                    <div className="flex items-start space-x-3">
+                                                        <div className="w-8 h-8 rounded-full bg-slate-950 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                                                            {item.name.charAt(0)}
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center space-x-2">
+                                                                <p className="font-extrabold text-slate-950 text-xs">{item.name}</p>
+                                                                {itemType === 'dosen_tendik' ? (
+                                                                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center space-x-1">
+                                                                        <span>Dosen / Tendik</span>
+                                                                        <span className="text-amber-600 font-bold">• 4 Buku / 14 Hari</span>
+                                                                    </span>
+                                                                ) : itemType === 'eksternal' ? (
+                                                                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center space-x-1">
+                                                                        <span>Eksternal</span>
+                                                                        <span className="text-slate-500 font-bold">• Hanya Baca</span>
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center space-x-1">
+                                                                        <span>Mahasiswa</span>
+                                                                        <span className="text-indigo-500 font-bold">• 2 Buku / 7 Hari</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[10px] text-slate-500 flex items-center space-x-1">
+                                                                <Mail className="w-3 h-3 text-slate-400" />
+                                                                <span>{item.email || '-'}</span>
+                                                                {item.phone && (
+                                                                    <>
+                                                                        <span className="text-slate-300">•</span>
+                                                                        <Phone className="w-3 h-3 text-slate-400" />
+                                                                        <span>{item.phone}</span>
+                                                                    </>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-6 py-4 align-top whitespace-nowrap">
+                                                    <span className="font-semibold text-slate-800">
+                                                        {item.prodi || 'Umum'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-6 py-4 align-top text-center whitespace-nowrap">
+                                                    {itemType === 'eksternal' ? (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 inline-block">
+                                                            Hanya Baca di Tempat
+                                                        </span>
+                                                    ) : item.active_borrowings_count > 0 ? (
+                                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center space-x-1">
+                                                            <BookOpen className="w-3 h-3" />
+                                                            <span>{item.active_borrowings_count} / {maxQuota} Buku</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-[10px]">0 / {maxQuota} Buku</span>
+                                                    )}
+                                                </td>
 
                                             <td className="px-6 py-4 align-top text-center whitespace-nowrap">
                                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -401,8 +456,8 @@ export default function Index({ members, prodiList, filters, stats }) {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
+                                    );
+                                })) : (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-medium">
                                             <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
@@ -495,6 +550,73 @@ export default function Index({ members, prodiList, filters, stats }) {
                                     />
                                     {createForm.errors.name && (
                                         <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.name}</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                        Kategori Anggota & Aturan Peminjaman <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                createForm.setData(prev => ({
+                                                    ...prev,
+                                                    member_type: 'mahasiswa',
+                                                    prodi: prev.prodi === 'Anggota Eksternal' || prev.prodi === 'Dosen / Tendik' ? 'D4 Teknologi Rekayasa Perangkat Lunak' : prev.prodi
+                                                }));
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                createForm.data.member_type === 'mahasiswa'
+                                                    ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 ring-2 ring-indigo-500/30'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <p className="font-extrabold text-xs">Mahasiswa</p>
+                                            <p className="text-[10px] text-indigo-700 font-bold mt-0.5">2 Buku / 7 Hari</p>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                createForm.setData(prev => ({
+                                                    ...prev,
+                                                    member_type: 'dosen_tendik',
+                                                    prodi: 'Dosen / Tendik'
+                                                }));
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                createForm.data.member_type === 'dosen_tendik'
+                                                    ? 'border-amber-600 bg-amber-50/80 text-amber-950 ring-2 ring-amber-500/30'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <p className="font-extrabold text-xs">Dosen / Tendik</p>
+                                            <p className="text-[10px] text-amber-800 font-bold mt-0.5">4 Buku / 14 Hari</p>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                createForm.setData(prev => ({
+                                                    ...prev,
+                                                    member_type: 'eksternal',
+                                                    prodi: 'Anggota Eksternal'
+                                                }));
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                createForm.data.member_type === 'eksternal'
+                                                    ? 'border-slate-700 bg-slate-100 text-slate-950 ring-2 ring-slate-400/30'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <p className="font-extrabold text-xs">Eksternal</p>
+                                            <p className="text-[10px] text-rose-600 font-bold mt-0.5">Tidak Boleh Pinjam</p>
+                                        </button>
+                                    </div>
+                                    {createForm.errors.member_type && (
+                                        <p className="text-rose-600 text-[10px] font-bold mt-1">{createForm.errors.member_type}</p>
                                     )}
                                 </div>
 
@@ -653,6 +775,73 @@ export default function Index({ members, prodiList, filters, stats }) {
                                     />
                                     {editForm.errors.name && (
                                         <p className="text-rose-600 text-[10px] font-bold mt-1">{editForm.errors.name}</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                        Kategori Anggota & Aturan Peminjaman <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                editForm.setData(prev => ({
+                                                    ...prev,
+                                                    member_type: 'mahasiswa',
+                                                    prodi: prev.prodi === 'Anggota Eksternal' || prev.prodi === 'Dosen / Tendik' ? '' : prev.prodi
+                                                }));
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                editForm.data.member_type === 'mahasiswa'
+                                                    ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 ring-2 ring-indigo-500/30'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <p className="font-extrabold text-xs">Mahasiswa</p>
+                                            <p className="text-[10px] text-indigo-700 font-bold mt-0.5">2 Buku / 7 Hari</p>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                editForm.setData(prev => ({
+                                                    ...prev,
+                                                    member_type: 'dosen_tendik',
+                                                    prodi: prev.prodi && prev.prodi !== 'Anggota Eksternal' ? prev.prodi : 'Dosen / Tendik'
+                                                }));
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                editForm.data.member_type === 'dosen_tendik'
+                                                    ? 'border-amber-600 bg-amber-50/80 text-amber-950 ring-2 ring-amber-500/30'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <p className="font-extrabold text-xs">Dosen / Tendik</p>
+                                            <p className="text-[10px] text-amber-800 font-bold mt-0.5">4 Buku / 14 Hari</p>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                editForm.setData(prev => ({
+                                                    ...prev,
+                                                    member_type: 'eksternal',
+                                                    prodi: 'Anggota Eksternal'
+                                                }));
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                editForm.data.member_type === 'eksternal'
+                                                    ? 'border-slate-700 bg-slate-100 text-slate-950 ring-2 ring-slate-400/30'
+                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <p className="font-extrabold text-xs">Eksternal</p>
+                                            <p className="text-[10px] text-rose-600 font-bold mt-0.5">Tidak Boleh Pinjam</p>
+                                        </button>
+                                    </div>
+                                    {editForm.errors.member_type && (
+                                        <p className="text-rose-600 text-[10px] font-bold mt-1">{editForm.errors.member_type}</p>
                                     )}
                                 </div>
 

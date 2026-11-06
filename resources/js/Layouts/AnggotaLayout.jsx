@@ -8,16 +8,19 @@ import {
     Search, 
     Compass, 
     Sparkles, 
-    UserCog,
-    Menu,
-    X,
-    HelpCircle
+    UserCog, 
+    Menu, 
+    X, 
+    HelpCircle 
 } from 'lucide-react';
+import NotificationBell from '@/Components/NotificationBell';
+import TransactionPopupModal from '@/Components/TransactionPopupModal';
 
 export default function AnggotaLayout({ children, activeMenu, activeTicketsCount }) {
     const { auth, active_ticket_id, active_tickets_count } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [customReceipt, setCustomReceipt] = useState(null);
 
     const effectiveTicketsCount = activeTicketsCount ?? active_tickets_count ?? 0;
 
@@ -276,6 +279,9 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
 
                     {/* Right User Utility */}
                     <div className="flex items-center space-x-2 sm:space-x-3">
+                        {/* Notification Bell Dropdown */}
+                        <NotificationBell onOpenReceipt={(data) => setCustomReceipt(data)} />
+
                         <Link
                             href="/anggota/profile"
                             className="flex items-center space-x-2 p-1 sm:p-1.5 hover:bg-amber-100/50 rounded-2xl border border-slate-200/80 bg-white transition-all text-left group shadow-sm"
@@ -314,6 +320,12 @@ export default function AnggotaLayout({ children, activeMenu, activeTicketsCount
                     {children}
                 </main>
             </div>
+
+            {/* Global Transaction Success Popup Modal */}
+            <TransactionPopupModal 
+                customData={customReceipt} 
+                onCloseCustom={() => setCustomReceipt(null)} 
+            />
         </div>
     );
 }

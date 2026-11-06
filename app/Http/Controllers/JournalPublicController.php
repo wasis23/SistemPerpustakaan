@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\JournalVisitor;
 use App\Models\NationalJournal;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -32,6 +33,10 @@ class JournalPublicController extends Controller
      */
     public function nasional(Request $request): Response
     {
+        // Catat kunjungan pengunjung / civitas ke Jurnal Nasional
+        JournalVisitor::recordVisit($request, 'nasional');
+        $visitorStats = JournalVisitor::getStats('nasional');
+
         $query = NationalJournal::where('is_active', true)
             ->where('journal_type', 'Nasional')
             ->search($request->search);
@@ -63,6 +68,10 @@ class JournalPublicController extends Controller
             'sinta_top' => NationalJournal::where('is_active', true)->where('journal_type', 'Nasional')->whereIn('sinta', ['SINTA 1', 'SINTA 2', 'SINTA 3'])->count(),
             'sinta_all' => NationalJournal::where('is_active', true)->where('journal_type', 'Nasional')->where('sinta', 'like', 'SINTA%')->count(),
             'total_prodi' => NationalJournal::where('is_active', true)->where('journal_type', 'Nasional')->whereNotNull('prodi')->distinct('prodi')->count(),
+            'visitor_count' => $visitorStats['total_visits'],
+            'visitor_today' => $visitorStats['today_visits'],
+            'visitor_civitas' => $visitorStats['civitas_visits'],
+            'visitor_unique' => $visitorStats['unique_civitas'],
         ];
 
         $availableYears = NationalJournal::where('is_active', true)
@@ -84,6 +93,7 @@ class JournalPublicController extends Controller
                 'per_page' => $perPageInput,
             ],
             'stats' => $stats,
+            'visitorStats' => $visitorStats,
             'prodiList' => $this->prodiList,
             'sintaList' => $sintaList,
             'availableYears' => $availableYears,
@@ -95,6 +105,10 @@ class JournalPublicController extends Controller
      */
     public function internasional(Request $request): Response
     {
+        // Catat kunjungan pengunjung / civitas ke Jurnal Internasional
+        JournalVisitor::recordVisit($request, 'internasional');
+        $visitorStats = JournalVisitor::getStats('internasional');
+
         $query = NationalJournal::where('is_active', true)
             ->where('journal_type', 'Internasional')
             ->search($request->search);
@@ -130,6 +144,10 @@ class JournalPublicController extends Controller
                 $q->where('sinta', 'like', '%DOAJ%')->orWhere('sinta', 'like', '%Copernicus%');
             })->count(),
             'total_prodi' => NationalJournal::where('is_active', true)->where('journal_type', 'Internasional')->whereNotNull('prodi')->distinct('prodi')->count(),
+            'visitor_count' => $visitorStats['total_visits'],
+            'visitor_today' => $visitorStats['today_visits'],
+            'visitor_civitas' => $visitorStats['civitas_visits'],
+            'visitor_unique' => $visitorStats['unique_civitas'],
         ];
 
         $availableYears = NationalJournal::where('is_active', true)
@@ -151,6 +169,7 @@ class JournalPublicController extends Controller
                 'per_page' => $perPageInput,
             ],
             'stats' => $stats,
+            'visitorStats' => $visitorStats,
             'prodiList' => $this->prodiList,
             'indexList' => $indexList,
             'availableYears' => $availableYears,
@@ -162,6 +181,10 @@ class JournalPublicController extends Controller
      */
     public function prosiding(Request $request): Response
     {
+        // Catat kunjungan pengunjung / civitas ke Prosiding Seminar
+        JournalVisitor::recordVisit($request, 'prosiding');
+        $visitorStats = JournalVisitor::getStats('prosiding');
+
         $query = NationalJournal::where('is_active', true)
             ->where('journal_type', 'Prosiding')
             ->search($request->search);
@@ -189,6 +212,10 @@ class JournalPublicController extends Controller
             'with_issn' => NationalJournal::where('is_active', true)->where('journal_type', 'Prosiding')->whereNotNull('issn')->count(),
             'with_url' => NationalJournal::where('is_active', true)->where('journal_type', 'Prosiding')->whereNotNull('access_url')->count(),
             'total_prodi' => NationalJournal::where('is_active', true)->where('journal_type', 'Prosiding')->whereNotNull('prodi')->distinct('prodi')->count(),
+            'visitor_count' => $visitorStats['total_visits'],
+            'visitor_today' => $visitorStats['today_visits'],
+            'visitor_civitas' => $visitorStats['civitas_visits'],
+            'visitor_unique' => $visitorStats['unique_civitas'],
         ];
 
         $availableYears = NationalJournal::where('is_active', true)
@@ -207,6 +234,7 @@ class JournalPublicController extends Controller
                 'per_page' => $perPageInput,
             ],
             'stats' => $stats,
+            'visitorStats' => $visitorStats,
             'prodiList' => $this->prodiList,
             'availableYears' => $availableYears,
         ]);

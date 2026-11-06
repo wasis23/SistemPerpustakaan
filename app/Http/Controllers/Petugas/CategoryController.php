@@ -47,6 +47,11 @@ class CategoryController extends Controller
             'name.required' => 'Nama klasifikasi DDC wajib diisi.',
         ]);
 
+        $mainCode = Category::normalizeDdcToMainClass($request->code);
+        if ($request->code !== $mainCode) {
+            return back()->with('error', "Kode {$request->code} merupakan sub-kelas DDC. Seluruh sub-kelas seperti 001 atau 001.42 secara otomatis terdata di bawah kelas besar {$mainCode}. Master kategori dikhususkan untuk 10 kelas utama DDC (000-900).");
+        }
+
         Category::create($validated);
 
         return back()->with('success', 'Kategori DDC baru berhasil ditambahkan!');
@@ -66,6 +71,11 @@ class CategoryController extends Controller
             'code.unique' => 'Kode DDC tersebut sudah digunakan.',
             'name.required' => 'Nama klasifikasi DDC wajib diisi.',
         ]);
+
+        $mainCode = Category::normalizeDdcToMainClass($request->code);
+        if ($request->code !== $mainCode) {
+            return back()->with('error', "Kode {$request->code} merupakan sub-kelas DDC. Seluruh sub-kelas seperti 001 atau 001.42 secara otomatis terdata di bawah kelas besar {$mainCode}.");
+        }
 
         $category->update($validated);
 

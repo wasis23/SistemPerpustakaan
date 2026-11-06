@@ -18,7 +18,9 @@ import {
     Layers,
     X,
     Sparkles,
-    ShieldCheck
+    ShieldCheck,
+    Users,
+    Eye
 } from 'lucide-react';
 
 export default function Nasional({ journals, filters, prodiList, sintaList, availableYears, stats }) {
@@ -67,10 +69,14 @@ export default function Nasional({ journals, filters, prodiList, sintaList, avai
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div>
-                            <div className="flex items-center space-x-1.5">
+                            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                                 <span className="font-extrabold text-slate-900 text-lg tracking-tight">Jurnal Ilmiah Nasional</span>
                                 <span className="px-2 py-0.5 text-[10px] font-extrabold bg-blue-600 text-white rounded-full">
                                     {stats?.total || 0} Jurnal
+                                </span>
+                                <span className="px-2 py-0.5 text-[10px] font-extrabold bg-slate-900 text-amber-300 rounded-full flex items-center space-x-1" title="Total kunjungan halaman ini">
+                                    <Eye className="w-3 h-3" />
+                                    <span>{stats?.visitor_count || 0} Pengunjung</span>
                                 </span>
                             </div>
                             <p className="text-xs text-slate-500 font-medium">Pangkalan direktori jurnal nasional terakreditasi SINTA & ber-ISSN Politeknik Indonusa</p>
@@ -114,7 +120,7 @@ export default function Nasional({ journals, filters, prodiList, sintaList, avai
             {/* Main Content */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
                 {/* Highlight Stats Strip */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-black">
                             <FileText className="w-5 h-5" />
@@ -149,6 +155,18 @@ export default function Nasional({ journals, filters, prodiList, sintaList, avai
                         <div>
                             <p className="text-xs text-slate-500 font-semibold">Program Studi</p>
                             <p className="text-lg font-black text-slate-900">{stats?.total_prodi || 0}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3 col-span-2 sm:col-span-1">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-black">
+                            <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 font-semibold">Pengunjung Civitas</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.visitor_count || 0}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">
+                                {stats?.visitor_today || 0} hari ini
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -54,7 +54,7 @@ class CirculationLockingTest extends TestCase
             'status' => 'active',
         ]);
 
-        $category = Category::create(['code' => '000', 'name' => 'Karya Umum']);
+        $category = Category::firstOrCreate(['code' => '000'], ['name' => 'Karya Umum']);
         $rack = Rack::create(['code_rack' => 'RAK-TEST', 'location' => 'Lantai 1']);
 
         $book = Book::create([

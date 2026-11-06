@@ -104,6 +104,17 @@ export default function Index({ categories, filters }) {
                     </div>
                 )}
 
+                {/* Info Card Klasifikasi DDC */}
+                <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-3xl flex items-start space-x-3 shadow-sm">
+                    <BookOpen className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-950 space-y-1">
+                        <p className="font-extrabold">Standar 10 Kelas Utama DDC (Dewey Decimal Classification)</p>
+                        <p className="text-amber-800 font-medium leading-relaxed">
+                            Katalog perpustakaan dikelompokkan ke dalam 10 kelas besar (000 - 900). Seluruh sub-kelas lebih rinci (seperti <strong>001</strong> atau <strong>001.42</strong>) secara otomatis terdata sesuai kelas besarnya (misal: <strong>001 & 001.42 → 000</strong>). Nomor panggil fisik dapat tetap mencantumkan nomor spesifik untuk label punggung buku.
+                        </p>
+                    </div>
+                </div>
+
                 {/* Filter Bar */}
                 <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm">
                     <form onSubmit={handleFilter} className="flex gap-3">

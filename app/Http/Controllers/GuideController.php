@@ -26,7 +26,7 @@ class GuideController extends Controller
                     'Sistem akan otomatis mengunci (hold) stok buku selama 5 menit dan memunculkan tiket digital.',
                     'Bawa buku ke meja petugas sirkulasi dan tunjukkan tiket digital pada layar HP untuk disahkan.',
                 ],
-                'notes' => 'Batas maksimal peminjaman: Mahasiswa 3 buku (7 hari), Dosen/Tendik 4 buku (14 hari).',
+                'notes' => 'Ketentuan Peminjaman: Mahasiswa (2 buku / 7 hari / 1 minggu), Dosen & Tendik (4 buku / 14 hari / 2 minggu), Anggota Eksternal / Tamu (hanya baca di tempat, tidak boleh meminjam ke luar).',
             ],
             [
                 'id' => 'perpanjangan-buku',

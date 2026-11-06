@@ -8,6 +8,7 @@ export default function Index({
     summary = {}, 
     circulations = { data: [] }, 
     attendances = { data: [] },
+    journalVisitors = { data: [] },
     topBooks = [],
     categories = []
 }) {
@@ -62,9 +63,12 @@ export default function Index({
     const totalOverdue = summary.total_overdue ?? 0;
     const totalFines = summary.total_fines ?? 0;
     const totalVisits = summary.total_visits ?? 0;
+    const totalJournalVisitors = summary.total_journal_visitors ?? 0;
+    const civitasJournalVisitors = summary.civitas_journal_visitors ?? 0;
 
     const circulationsList = circulations.data || [];
     const attendancesList = attendances.data || [];
+    const journalVisitorsList = journalVisitors.data || [];
 
     return (
         <PetugasLayout activeMenu="reports" todayVisitsCount={totalVisits}>
@@ -181,6 +185,7 @@ export default function Index({
                             >
                                 <option value="circulation">Laporan Sirkulasi Peminjaman</option>
                                 <option value="attendance">Laporan Presensi Kunjungan</option>
+                                <option value="journal_visitors">Laporan Akses Civitas & Pengunjung Jurnal</option>
                                 <option value="books">Laporan Koleksi Buku</option>
                             </select>
                         </div>
@@ -296,6 +301,72 @@ export default function Index({
                                         <tr>
                                             <td colSpan="3" className="px-4 py-8 text-center text-slate-500">
                                                 Tidak ada log presensi kunjungan.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Log Kunjungan Halaman Jurnal Table */}
+                    <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-sm space-y-3 p-6 col-span-1 lg:col-span-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <h3 className="font-extrabold text-slate-950 text-sm flex items-center space-x-2">
+                                <Users className="w-4 h-4 text-purple-600" />
+                                <span>Data Log Kunjungan Halaman Jurnal ({journalVisitorsList.length})</span>
+                            </h3>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                                Total: {totalJournalVisitors} akses ({civitasJournalVisitors} civitas)
+                            </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs text-slate-700">
+                                <thead className="bg-slate-100 text-slate-600 uppercase tracking-wider text-[10px] border-b border-slate-200 font-bold">
+                                    <tr>
+                                        <th className="px-4 py-3">Waktu Akses</th>
+                                        <th className="px-4 py-3">Halaman Jurnal</th>
+                                        <th className="px-4 py-3">Pengunjung / Civitas</th>
+                                        <th className="px-4 py-3">NIM / NIDN</th>
+                                        <th className="px-4 py-3">Program Studi</th>
+                                        <th className="px-4 py-3 text-right">IP Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {journalVisitorsList.length > 0 ? (
+                                        journalVisitorsList.map((j) => (
+                                            <tr key={j.id} className="hover:bg-slate-50/80">
+                                                <td className="px-4 py-3 font-mono text-purple-900 font-bold whitespace-nowrap">
+                                                    {new Date(j.visited_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                        j.journal_type === 'internasional' ? 'bg-purple-100 text-purple-800' :
+                                                        j.journal_type === 'prosiding' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                                                    }`}>
+                                                        {j.journal_type_label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <p className="font-bold text-slate-900">{j.user?.name || 'Pengunjung Umum'}</p>
+                                                    <p className="text-[10px] text-slate-500">{j.user ? `Civitas (${j.user.role})` : 'Tamu / Umum'}</p>
+                                                </td>
+                                                <td className="px-4 py-3 font-mono font-bold text-slate-700">
+                                                    {j.user?.username || '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">
+                                                    {j.user?.prodi || '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono text-slate-400">
+                                                    {j.ip_address || '-'}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="px-4 py-8 text-center text-slate-500">
+                                                Tidak ada data kunjungan jurnal pada rentang tanggal ini.
                                             </td>
                                         </tr>
                                     )}

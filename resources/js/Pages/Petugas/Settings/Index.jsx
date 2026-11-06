@@ -28,9 +28,11 @@ export default function Index({ settings, stats, holidays = [] }) {
 
     // Form Pengaturan Sirkulasi
     const { data, setData, put, processing, errors, isDirty } = useForm({
-        max_borrow_limit: settings.max_borrow_limit || 3,
-        fine_per_day: settings.fine_per_day || 1000,
+        max_borrow_limit: settings.max_borrow_limit || 2,
+        max_borrow_limit_lecturer: settings.max_borrow_limit_lecturer || 4,
         borrow_duration_days: settings.borrow_duration_days || 7,
+        borrow_duration_days_lecturer: settings.borrow_duration_days_lecturer || 14,
+        fine_per_day: settings.fine_per_day || 1000,
         ticket_expire_minutes: settings.ticket_expire_minutes || 5,
     });
 
@@ -56,9 +58,11 @@ export default function Index({ settings, stats, holidays = [] }) {
 
     const handleResetDefaults = () => {
         setData({
-            max_borrow_limit: 3,
-            fine_per_day: 1000,
+            max_borrow_limit: 2,
+            max_borrow_limit_lecturer: 4,
             borrow_duration_days: 7,
+            borrow_duration_days_lecturer: 14,
+            fine_per_day: 1000,
             ticket_expire_minutes: 5,
         });
     };
@@ -185,19 +189,114 @@ export default function Index({ settings, stats, holidays = [] }) {
                 <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
                     <div className="border-b border-slate-100 pb-4">
                         <h2 className="text-base font-extrabold text-slate-950 flex items-center space-x-2">
-                            <span>Parameter Sirkulasi & Tarif Keterlambatan</span>
+                            <span>Parameter Sirkulasi Peminjaman & Tarif Denda</span>
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            Nilai berikut langsung mempengaruhi kuota peminjaman eksemplar, validasi tiket, dan besaran tarif denda harian.
+                            Konfigurasi aturan peminjaman yang membedakan hak mahasiswa, dosen/tendik, dan anggota eksternal serta tarif denda harian.
                         </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Summary Rule Comparison Card */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <div className="bg-white p-4 rounded-xl border border-indigo-100 space-y-1">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                    Civitas: Mahasiswa
+                                </span>
+                                <p className="text-sm font-black text-slate-900 mt-1">2 Buku / 1 Minggu (7 Hari)</p>
+                                <p className="text-[11px] text-slate-500">Maksimal 2 eksemplar fisik aktif selama 7 hari kalender.</p>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-xl border border-amber-200 space-y-1">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md">
+                                    Civitas: Dosen & Tendik
+                                </span>
+                                <p className="text-sm font-black text-slate-900 mt-1">4 Buku / 2 Minggu (14 Hari)</p>
+                                <p className="text-[11px] text-slate-500">Maksimal 4 eksemplar fisik aktif selama 14 hari kalender.</p>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-1">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                    Anggota Eksternal
+                                </span>
+                                <p className="text-sm font-black text-rose-600 mt-1">Tidak Boleh Meminjam</p>
+                                <p className="text-[11px] text-slate-500">Akses hanya membaca di tempat (presensi pengunjung).</p>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* 1. Maksimal Eksemplar yang Boleh Dipinjam */}
+                            {/* A1. Maksimal Eksemplar Mahasiswa */}
                             <div className="space-y-2">
                                 <label className="block text-xs font-extrabold text-slate-900">
-                                    1. Batas Maksimal Eksemplar per Anggota <span className="text-rose-600">*</span>
+                                    1. Batas Maksimal Eksemplar - Mahasiswa <span className="text-rose-600">*</span>
+                                </label>
+                                <div className="relative flex items-center">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <BookOpen className="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={data.max_borrow_limit}
+                                        onChange={(e) => setData('max_borrow_limit', e.target.value)}
+                                        className="w-full pl-10 pr-36 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-950 font-bold text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                                        placeholder="Default: 2"
+                                        required
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                        <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-xl">
+                                            Buku / Mahasiswa
+                                        </span>
+                                    </div>
+                                </div>
+                                {errors.max_borrow_limit ? (
+                                    <p className="text-xs font-bold text-rose-600">{errors.max_borrow_limit}</p>
+                                ) : (
+                                    <p className="text-[11px] text-slate-500">
+                                        Batas maksimal peminjaman untuk mahasiswa (Standar: <strong>2 buku</strong>).
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* A2. Durasi Masa Peminjaman Mahasiswa */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-extrabold text-slate-900">
+                                    2. Durasi Peminjaman - Mahasiswa <span className="text-rose-600">*</span>
+                                </label>
+                                <div className="relative flex items-center">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <Clock className="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="180"
+                                        value={data.borrow_duration_days}
+                                        onChange={(e) => setData('borrow_duration_days', e.target.value)}
+                                        className="w-full pl-10 pr-28 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-950 font-bold text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                                        placeholder="Default: 7"
+                                        required
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                        <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-xl">
+                                            Hari (1 Minggu)
+                                        </span>
+                                    </div>
+                                </div>
+                                {errors.borrow_duration_days ? (
+                                    <p className="text-xs font-bold text-rose-600">{errors.borrow_duration_days}</p>
+                                ) : (
+                                    <p className="text-[11px] text-slate-500">
+                                        Masa pinjam normal mahasiswa sejak tiket divalidasi (Standar: <strong>7 hari / 1 minggu</strong>).
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* B1. Maksimal Eksemplar Dosen & Tendik */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-extrabold text-slate-900">
+                                    3. Batas Maksimal Eksemplar - Dosen & Tendik <span className="text-rose-600">*</span>
                                 </label>
                                 <div className="relative flex items-center">
                                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -207,31 +306,65 @@ export default function Index({ settings, stats, holidays = [] }) {
                                         type="number"
                                         min="1"
                                         max="50"
-                                        value={data.max_borrow_limit}
-                                        onChange={(e) => setData('max_borrow_limit', e.target.value)}
+                                        value={data.max_borrow_limit_lecturer}
+                                        onChange={(e) => setData('max_borrow_limit_lecturer', e.target.value)}
                                         className="w-full pl-10 pr-36 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-950 font-bold text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
-                                        placeholder="Contoh: 3"
+                                        placeholder="Default: 4"
                                         required
                                     />
                                     <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
-                                        <span className="text-xs font-bold text-slate-500 bg-slate-200/80 px-2 py-1 rounded-xl">
-                                            Eksemplar / Orang
+                                        <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-1 rounded-xl">
+                                            Buku / Dosen & Tendik
                                         </span>
                                     </div>
                                 </div>
-                                {errors.max_borrow_limit ? (
-                                    <p className="text-xs font-bold text-rose-600">{errors.max_borrow_limit}</p>
+                                {errors.max_borrow_limit_lecturer ? (
+                                    <p className="text-xs font-bold text-rose-600">{errors.max_borrow_limit_lecturer}</p>
                                 ) : (
                                     <p className="text-[11px] text-slate-500">
-                                        Batas maksimal total eksemplar fisik buku aktif yang dapat dipinjam secara bersamaan oleh seorang anggota (dihitung per eksemplar fisik, bukan berdasarkan jumlah judul buku).
+                                        Batas maksimal peminjaman untuk dosen & tenaga kependidikan (Standar: <strong>4 buku</strong>).
                                     </p>
                                 )}
                             </div>
 
-                            {/* 2. Tarif Denda Keterlambatan per Eksemplar per Hari */}
+                            {/* B2. Durasi Masa Peminjaman Dosen & Tendik */}
                             <div className="space-y-2">
                                 <label className="block text-xs font-extrabold text-slate-900">
-                                    2. Tarif Denda Keterlambatan per Eksemplar per Hari <span className="text-rose-600">*</span>
+                                    4. Durasi Peminjaman - Dosen & Tendik <span className="text-rose-600">*</span>
+                                </label>
+                                <div className="relative flex items-center">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <Clock className="w-4 h-4 text-amber-600" />
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="180"
+                                        value={data.borrow_duration_days_lecturer}
+                                        onChange={(e) => setData('borrow_duration_days_lecturer', e.target.value)}
+                                        className="w-full pl-10 pr-28 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-950 font-bold text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                                        placeholder="Default: 14"
+                                        required
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                        <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-1 rounded-xl">
+                                            Hari (2 Minggu)
+                                        </span>
+                                    </div>
+                                </div>
+                                {errors.borrow_duration_days_lecturer ? (
+                                    <p className="text-xs font-bold text-rose-600">{errors.borrow_duration_days_lecturer}</p>
+                                ) : (
+                                    <p className="text-[11px] text-slate-500">
+                                        Masa pinjam normal dosen & tendik (Standar: <strong>14 hari / 2 minggu</strong>).
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* C. Tarif Denda Keterlambatan per Eksemplar per Hari */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-extrabold text-slate-900">
+                                    5. Tarif Denda Keterlambatan per Eksemplar per Hari <span className="text-rose-600">*</span>
                                 </label>
                                 <div className="relative flex items-center">
                                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -262,44 +395,10 @@ export default function Index({ settings, stats, holidays = [] }) {
                                 )}
                             </div>
 
-                            {/* 3. Durasi Masa Peminjaman */}
+                            {/* D. Batas Kadaluarsa Tiket Peminjaman */}
                             <div className="space-y-2">
                                 <label className="block text-xs font-extrabold text-slate-900">
-                                    3. Durasi Masa Peminjaman Standar <span className="text-rose-600">*</span>
-                                </label>
-                                <div className="relative flex items-center">
-                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                        <Clock className="w-4 h-4 text-amber-600" />
-                                    </div>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="180"
-                                        value={data.borrow_duration_days}
-                                        onChange={(e) => setData('borrow_duration_days', e.target.value)}
-                                        className="w-full pl-10 pr-28 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-950 font-bold text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
-                                        placeholder="Contoh: 7"
-                                        required
-                                    />
-                                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
-                                        <span className="text-xs font-bold text-slate-500 bg-slate-200/80 px-2 py-1 rounded-xl">
-                                            Hari Kalender
-                                        </span>
-                                    </div>
-                                </div>
-                                {errors.borrow_duration_days ? (
-                                    <p className="text-xs font-bold text-rose-600">{errors.borrow_duration_days}</p>
-                                ) : (
-                                    <p className="text-[11px] text-slate-500">
-                                        Jumlah hari masa pinjam normal sejak tiket divalidasi oleh petugas meja sirkulasi.
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* 4. Batas Kadaluarsa Tiket Peminjaman */}
-                            <div className="space-y-2">
-                                <label className="block text-xs font-extrabold text-slate-900">
-                                    4. Batas Kadaluarsa Tiket QR Mandiri <span className="text-rose-600">*</span>
+                                    6. Batas Kadaluarsa Tiket QR Mandiri <span className="text-rose-600">*</span>
                                 </label>
                                 <div className="relative flex items-center">
                                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

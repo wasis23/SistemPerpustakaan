@@ -19,7 +19,7 @@ class SettingController extends Controller
     public function index(): Response
     {
         $settings = [
-            'max_borrow_limit' => (int) Setting::get('max_borrow_limit', 3),
+            'max_borrow_limit' => (int) Setting::get('max_borrow_limit', 2),
             'max_borrow_limit_lecturer' => (int) Setting::get('max_borrow_limit_lecturer', 4),
             'fine_per_day' => (float) Setting::get('fine_per_day', 1000),
             'borrow_duration_days' => (int) Setting::get('borrow_duration_days', 7),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Petugas;
 
 use App\Http\Controllers\Controller;
+use App\Models\JournalVisitor;
 use App\Models\NationalJournal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -99,6 +100,22 @@ class NationalJournalController extends Controller
             'active_count' => NationalJournal::where('is_active', true)->count(),
         ];
 
+        // Statistik Pengunjung & Civitas Yang Mengakses Halaman Publikasi Ilmiah
+        $visitorStats = [
+            'total_all' => JournalVisitor::count(),
+            'today_all' => JournalVisitor::whereDate('visited_at', today())->count(),
+            'civitas_all' => JournalVisitor::whereNotNull('user_id')->count(),
+            'nasional' => JournalVisitor::getStats('nasional'),
+            'internasional' => JournalVisitor::getStats('internasional'),
+            'prosiding' => JournalVisitor::getStats('prosiding'),
+        ];
+
+        // 50 Log Kunjungan Terkini untuk Pemantauan Civitas
+        $recentVisitors = JournalVisitor::with(['user:id,name,username,role,prodi'])
+            ->latest('visited_at')
+            ->take(50)
+            ->get();
+
         return Inertia::render('Petugas/NationalJournals/Index', [
             'journals' => $journals,
             'filters' => $request->only(['search', 'type', 'prodi', 'sinta', 'status']),
@@ -106,6 +123,8 @@ class NationalJournalController extends Controller
             'nationalIndexings' => $this->nationalIndexings,
             'internationalIndexings' => $this->internationalIndexings,
             'stats' => $stats,
+            'visitorStats' => $visitorStats,
+            'recentVisitors' => $recentVisitors,
         ]);
     }
 
@@ -585,5 +604,50 @@ class NationalJournalController extends Controller
         }
 
         return redirect()->route('petugas.national-journals.index')->with('success', "Berhasil mengimpor {$importedCount} data publikasi ilmiah (Jurnal & Prosiding)!");
+    }
+
+    /**
+     * Ekspor Log Kunjungan Civitas & Pengunjung Halaman Jurnal ke Format CSV
+     */
+    public function exportVisitorsCsv(Request $request): StreamedResponse
+    {
+        $type = $request->input('type');
+        $query = JournalVisitor::with(['user:id,name,username,role,prodi'])->latest('visited_at');
+
+        if ($type && in_array(strtolower($type), ['nasional', 'internasional', 'prosiding'])) {
+            $query->where('journal_type', strtolower($type));
+        }
+
+        $filename = "rekap-kunjungan-jurnal-" . ($type ?: 'semua') . "-" . now()->format('Y-m-d') . ".csv";
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        return response()->stream(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+            fputcsv($handle, ['No', 'Waktu Akses', 'Halaman Jurnal', 'Kategori Pengunjung', 'NIM / NIDN', 'Nama Civitas', 'Peran', 'Program Studi', 'IP Address'], ',', '"', "\\");
+
+            $no = 1;
+            $query->chunk(200, function ($rows) use ($handle, &$no) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $no++,
+                        $row->visited_at ? $row->visited_at->format('Y-m-d H:i:s') : '-',
+                        $row->journal_type_label,
+                        $row->user_id ? 'Civitas Terdaftar' : 'Pengunjung Umum',
+                        $row->user?->username ?? '-',
+                        $row->user?->name ?? 'Tamu / Umum',
+                        $row->user?->role ? ucfirst($row->user->role) : 'Umum',
+                        $row->user?->prodi ?? '-',
+                        $row->ip_address ?? '-',
+                    ], ',', '"', "\\");
+                }
+            });
+
+            fclose($handle);
+        }, 200, $headers);
     }
 }

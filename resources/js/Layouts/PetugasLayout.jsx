@@ -23,10 +23,13 @@ import {
     ExternalLink,
     HelpCircle
 } from 'lucide-react';
+import NotificationBell from '@/Components/NotificationBell';
+import TransactionPopupModal from '@/Components/TransactionPopupModal';
 
 export default function PetugasLayout({ children, activeMenu, todayVisitsCount }) {
     const { auth } = usePage().props;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [customReceipt, setCustomReceipt] = useState(null);
 
     // Flat Navigation Items with the optimal UX order
     const navItems = [
@@ -261,6 +264,9 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
 
                     {/* Right User Utility */}
                     <div className="flex items-center space-x-2 sm:space-x-3">
+                        {/* Notification Bell */}
+                        <NotificationBell onOpenReceipt={(data) => setCustomReceipt(data)} />
+
                         <Link
                             href="/petugas/profile"
                             className="flex items-center space-x-2 p-1 sm:p-1.5 hover:bg-amber-100/50 rounded-2xl border border-slate-200/80 bg-white transition-all text-left group shadow-sm"
@@ -298,6 +304,12 @@ export default function PetugasLayout({ children, activeMenu, todayVisitsCount }
                     {children}
                 </main>
             </div>
+
+            {/* Global Transaction Success Popup Modal */}
+            <TransactionPopupModal 
+                customData={customReceipt} 
+                onCloseCustom={() => setCustomReceipt(null)} 
+            />
         </div>
     );
 }

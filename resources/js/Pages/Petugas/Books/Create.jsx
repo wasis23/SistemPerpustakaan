@@ -57,6 +57,19 @@ export default function Create({ categories: initialCategories, racks }) {
 
     const currentRomanMonth = MONTHS.find(m => m.value === Number(data.procurement_month))?.roman || 'I';
 
+    // Helper normalisasi DDC ke kelas besar 000-900 (misal: 001 atau 001.42 -> 000)
+    const normalizeDdcToMainCode = (raw) => {
+        if (!raw) return '000';
+        const match = String(raw).trim().match(/\b(\d{1,3}(?:\.\d+)?)\b/);
+        if (!match) return '000';
+        const intVal = parseInt(match[1].split('.')[0], 10);
+        const hundreds = Math.floor(intVal / 100) * 100;
+        if (hundreds >= 0 && hundreds <= 900) {
+            return String(hundreds).padStart(3, '0');
+        }
+        return '000';
+    };
+
     // Helper untuk kalkulasi Call Number: [DDC] [3-Huruf Penulis] [1-Huruf Judul (kecil)]
     const calculateCallNumber = (titleVal, authorVal, catIdVal) => {
         if (!titleVal || !authorVal) return '';
@@ -92,6 +105,16 @@ export default function Create({ categories: initialCategories, racks }) {
             const nextCallNumber = calculateCallNumber(prev.title, prev.author, val);
             return { ...prev, category_id: val, call_number: nextCallNumber };
         });
+    };
+
+    const handleCallNumberChange = (val) => {
+        const mainCode = normalizeDdcToMainCode(val);
+        const matchedCat = categories.find(c => c.code === mainCode);
+        if (matchedCat && String(data.category_id) !== String(matchedCat.id)) {
+            setData(prev => ({ ...prev, call_number: val, category_id: matchedCat.id }));
+            return;
+        }
+        setData('call_number', val);
     };
 
     const handleCoverChange = (e) => {
@@ -468,10 +491,26 @@ export default function Create({ categories: initialCategories, racks }) {
                                 <input
                                     type="text"
                                     value={data.call_number}
-                                    onChange={(e) => setData('call_number', e.target.value)}
-                                    placeholder="Contoh: 005.1 MAR c"
+                                    onChange={(e) => handleCallNumberChange(e.target.value)}
+                                    placeholder="Contoh: 001.42 SUG m atau 005.1 MAR c"
                                     className="w-full px-4 py-3 bg-amber-50/60 border border-amber-300 rounded-2xl text-slate-950 focus:outline-none focus:border-amber-500 text-xs font-mono font-black"
                                 />
+                                {(() => {
+                                    const match = data.call_number?.trim().match(/\b(\d{1,3}(?:\.\d+)?)\b/);
+                                    if (match) {
+                                        const ddcInput = match[1];
+                                        const mainCode = normalizeDdcToMainCode(ddcInput);
+                                        const matchedCat = categories.find(c => c.code === mainCode);
+                                        if (ddcInput !== mainCode && matchedCat) {
+                                            return (
+                                                <p className="text-[11px] text-amber-800 font-bold mt-1.5 flex items-center space-x-1">
+                                                    <span>💡 Sub-kelas <strong>{ddcInput}</strong> otomatis terdata ke kelas besar <strong>[{matchedCat.code}] {matchedCat.name}</strong></span>
+                                                </p>
+                                            );
+                                        }
+                                    }
+                                    return null;
+                                })()}
                             </div>
 
                             {/* Rak Lokasi */}

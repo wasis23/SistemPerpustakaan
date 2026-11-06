@@ -9,6 +9,11 @@ export default function Index({ books, categories, racks, filters }) {
     const [rackId, setRackId] = useState(filters.rack_id || '');
     const [perPage, setPerPage] = useState(filters.per_page || '12');
 
+    const selectCategory = (id) => {
+        setCategoryId(id);
+        router.get('/anggota/katalog', { search, category_id: id, rack_id: rackId, per_page: perPage }, { preserveState: true });
+    };
+
     const handleFilter = (e) => {
         if (e) e.preventDefault();
         router.get('/anggota/katalog', { search, category_id: categoryId, rack_id: rackId, per_page: perPage }, { preserveState: true });
@@ -116,6 +121,55 @@ export default function Index({ books, categories, racks, filters }) {
                             </button>
                         </div>
                     </form>
+
+                    {/* DDC 10 Main Classes Quick Navigation */}
+                    <div className="pt-3 border-t border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center space-x-1.5">
+                                <BookMarked className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Klasifikasi Kategori DDC (Dewey Decimal Classification):</span>
+                            </span>
+                            {categoryId && (
+                                <button
+                                    type="button"
+                                    onClick={() => selectCategory('')}
+                                    className="text-[10px] font-bold text-amber-700 hover:text-amber-800 underline cursor-pointer"
+                                >
+                                    Tampilkan Semua Kategori
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                            <button
+                                type="button"
+                                onClick={() => selectCategory('')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                                    !categoryId
+                                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                }`}
+                            >
+                                Semua Koleksi
+                            </button>
+                            {categories.map((c) => (
+                                <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => selectCategory(String(c.id))}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center space-x-1.5 cursor-pointer ${
+                                        String(categoryId) === String(c.id)
+                                            ? 'bg-slate-950 text-amber-400 shadow-sm ring-2 ring-amber-400'
+                                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                    }`}
+                                    title={c.name}
+                                >
+                                    <span className="font-mono text-[10px] opacity-75">{c.code}</span>
+                                    <span className="truncate max-w-[200px]">{c.name.split(' (')[0]}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Book Grid */}

@@ -110,8 +110,17 @@ export default function Dashboard({ stats, activeTickets, activeBorrowings }) {
                                 <BookmarkCheck className="w-6 h-6 stroke-[2.5]" />
                             </div>
                             <div>
-                                <p className="text-2xl font-extrabold text-slate-950">{stats.active_borrowings}</p>
-                                <p className="text-xs text-slate-500 font-medium">Buku Dipinjam</p>
+                                <p className="text-2xl font-extrabold text-slate-950">
+                                    {stats.active_borrowings}
+                                    {stats.can_borrow && stats.max_limit > 0 && (
+                                        <span className="text-xs font-bold text-slate-400"> / {stats.max_limit} Buku</span>
+                                    )}
+                                </p>
+                                <p className="text-xs text-slate-500 font-medium">
+                                    {stats.can_borrow 
+                                        ? `Pinjaman Aktif (${stats.member_type_label || 'Mahasiswa'})` 
+                                        : 'Akses Baca di Tempat Saja'}
+                                </p>
                             </div>
                         </div>
 

@@ -17,10 +17,11 @@ import {
 import AnggotaLayout from '@/Layouts/AnggotaLayout';
 
 export default function Index({ activeBorrowings, historyBorrowings, stats }) {
-    const { library_settings } = usePage().props;
-    const finePerDay = library_settings?.fine_per_day || 1000;
-    const durationDays = library_settings?.borrow_duration_days || 7;
-    const maxLimit = library_settings?.max_borrow_limit || 3;
+    const { library_settings, auth } = usePage().props;
+    const canBorrow = stats.can_borrow ?? auth?.user?.can_borrow ?? true;
+    const memberTypeLabel = stats.member_type_label || auth?.user?.member_type_label || 'Anggota Perpustakaan';
+    const ruleDesc = stats.rule_description || auth?.user?.borrow_rule_description || 'Maksimal 2 buku / 7 hari';
+
     return (
         <AnggotaLayout activeMenu="borrowings">
             <Head title="Buku Sedang Dipinjam - Anggota" />
@@ -42,13 +43,37 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                         </p>
                     </div>
 
-                    <Link
-                        href="/anggota/scan"
-                        className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center space-x-2 self-start sm:self-center shrink-0 cursor-pointer"
-                    >
-                        <QrCode className="w-4 h-4 stroke-[2.5]" />
-                        <span>+ Scan Pinjam Buku di Rak</span>
-                    </Link>
+                    {canBorrow ? (
+                        <Link
+                            href="/anggota/scan"
+                            className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition-all flex items-center space-x-2 self-start sm:self-center shrink-0 cursor-pointer"
+                        >
+                            <QrCode className="w-4 h-4 stroke-[2.5]" />
+                            <span>+ Scan Pinjam Buku di Rak</span>
+                        </Link>
+                    ) : (
+                        <span className="px-4 py-2.5 bg-slate-100 text-slate-600 font-bold text-xs rounded-2xl border border-slate-200 self-start sm:self-center">
+                            Akses Baca di Tempat Saja
+                        </span>
+                    )}
+                </div>
+
+                {/* Policy Notice Banner */}
+                <div className={`p-4 rounded-3xl border flex items-center space-x-3 text-xs ${
+                    canBorrow
+                        ? 'bg-amber-50/70 border-amber-200 text-amber-950'
+                        : 'bg-rose-50 border-rose-200 text-rose-900'
+                }`}>
+                    <Info className={`w-5 h-5 shrink-0 ${canBorrow ? 'text-amber-700' : 'text-rose-600'}`} />
+                    <div className="leading-relaxed">
+                        <span className="font-extrabold">Ketentuan Peminjaman ({memberTypeLabel}):</span>{' '}
+                        <span>{ruleDesc}.</span>
+                        {!canBorrow && (
+                            <span className="ml-1 font-semibold text-rose-700">
+                                Anggota Eksternal dapat membaca koleksi lengkap langsung di ruang baca perpustakaan setelah mengisi presensi.
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* 2. Quota & Status Cards */}
@@ -57,15 +82,26 @@ export default function Index({ activeBorrowings, historyBorrowings, stats }) {
                     <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex items-center justify-between">
                         <div className="space-y-1">
                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Kuota Pinjam Aktif</span>
-                            <p className="text-2xl font-black text-slate-950">
-                                {stats.active_count} <span className="text-sm font-bold text-slate-400">/ {stats.max_limit} Eksemplar</span>
-                            </p>
-                            <div className="w-36 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div 
-                                    className="bg-amber-500 h-full rounded-full transition-all"
-                                    style={{ width: `${Math.min(100, (stats.active_count / stats.max_limit) * 100)}%` }}
-                                />
-                            </div>
+                            {canBorrow ? (
+                                <>
+                                    <p className="text-2xl font-black text-slate-950">
+                                        {stats.active_count} <span className="text-sm font-bold text-slate-400">/ {stats.max_limit} Eksemplar</span>
+                                    </p>
+                                    <div className="w-36 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div 
+                                            className="bg-amber-500 h-full rounded-full transition-all"
+                                            style={{ width: `${Math.min(100, (stats.active_count / (stats.max_limit || 1)) * 100)}%` }}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-xl font-black text-slate-600">0 Eksemplar</p>
+                                    <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full inline-block">
+                                        Hanya Baca di Tempat
+                                    </span>
+                                </>
+                            )}
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
                             <BookmarkCheck className="w-6 h-6 stroke-[2.5]" />

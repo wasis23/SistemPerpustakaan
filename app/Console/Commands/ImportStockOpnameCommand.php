@@ -157,26 +157,13 @@ class ImportStockOpnameCommand extends Command
             foreach ($grouped as $groupKey => $itemRows) {
                 $firstRow = $itemRows[0];
                 
-                // Cari/Buat Category berdasarkan DDC dari kolom KODE (misal: "621.8 Sum a" -> DDC "621.8" atau "621")
-                $ddcCode = '000';
-                if (!empty($firstRow['kode']) && preg_match('/^(\d{3}(?:\.\d+)?)/', $firstRow['kode'], $matches)) {
-                    $ddcCode = $matches[1];
+                // Cari Category kelas utama DDC (Sub-kelas seperti 001 atau 001.42 otomatis terdata ke kelas utama 000)
+                $category = null;
+                if (!empty($firstRow['kode'])) {
+                    $category = Category::findMainCategory($firstRow['kode']);
                 }
-
-                $category = Category::where('code', $ddcCode)->first();
                 if (!$category) {
-                    $mainDdc = substr(preg_replace('/[^0-9]/', '', $ddcCode), 0, 3);
-                    if (!empty($mainDdc)) {
-                        $category = Category::where('code', $mainDdc)->first();
-                    }
-                }
-
-                if (!$category) {
-                    $category = Category::create([
-                        'code' => $ddcCode,
-                        'name' => "Kategori DDC " . $ddcCode,
-                        'description' => "Otomatis dibuat dari impor massal Stock Opname",
-                    ]);
+                    $category = $defaultCat;
                 }
 
                 // Generasi Call Number jika belum ada

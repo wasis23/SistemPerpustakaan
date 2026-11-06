@@ -28,8 +28,11 @@ import {
     Database,
     Smartphone,
     Globe,
-    FileText
+    FileText,
+    Users
 } from 'lucide-react';
+import GaleLogo from '@/Components/GaleLogo';
+import GaleSubjectCard, { GALE_DATABASES } from '@/Components/GaleSubjectCard';
 
 export default function Landing({ featuredBooks = [], categories = [], libraries = [], stats = {}, latestPosts = [] }) {
     const { auth } = usePage().props;
@@ -380,19 +383,24 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
                                     <div className="w-12 h-12 rounded-2xl bg-purple-600/10 text-purple-700 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                                         <Globe className="w-6 h-6" />
                                     </div>
-                                    <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded-full border border-purple-200">
-                                        {stats.total_international_journals ? `${stats.total_international_journals} Jurnal Terdata` : 'Indeks Global'}
-                                    </span>
+                                    <div className="flex items-center space-x-1.5">
+                                        <span className="px-2 py-0.5 bg-orange-100 text-orange-900 text-[10px] font-black rounded-md border border-orange-200">
+                                            GALE
+                                        </span>
+                                        <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded-full border border-purple-200">
+                                            {stats.total_international_journals ? `${stats.total_international_journals} Jurnal Terdata` : 'Indeks Global'}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-purple-700 transition-colors">
                                         Jurnal Internasional
                                     </h3>
                                     <p className="text-xs font-semibold text-purple-800">
-                                        Publikasi Bereputasi Internasional
+                                        Publikasi Bereputasi Internasional & GALE
                                     </p>
                                     <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                                        Koleksi dan direktori jurnal internasional bereputasi, terindeks dalam database ilmiah global, serta rujukan riset mutakhir.
+                                        Koleksi direktori jurnal internasional bereputasi serta akses login pangkalan data ilmiah berlisensi <span className="font-bold text-slate-800">GALE OneFile</span> (Periodicals, Science, Nursing & Allied Health).
                                     </p>
                                 </div>
                             </div>
@@ -441,6 +449,37 @@ export default function Landing({ featuredBooks = [], categories = [], libraries
                                     <ArrowRight className="w-3.5 h-3.5" />
                                 </Link>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* GALE E-RESOURCES INTERNATIONAL DATABASE */}
+                    <div className="mt-14 pt-12 border-t border-slate-200/90">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                            <div className="space-y-2">
+                                <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-orange-50 text-orange-950 border border-orange-200 text-xs font-bold shadow-xs">
+                                    <GaleLogo className="h-4 w-auto" />
+                                    <span>Pangkalan Data Ilmiah Internasional Berlisensi</span>
+                                </div>
+                                <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
+                                    Akses Database E-Resources GALE Cengage
+                                </h3>
+                                <p className="text-slate-600 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                                    Layanan pangkalan data jurnal ilmiah, artikel penelitian, dan referensi akademik global berlisensi institusi untuk seluruh civitas akademika Politeknik Indonusa Surakarta. Klik subjek di bawah ini untuk menuju portal akses login GALE.
+                                </p>
+                            </div>
+                            <Link
+                                href="/jurnal-internasional"
+                                className="inline-flex items-center space-x-2 text-xs font-bold text-purple-700 hover:text-purple-800 transition-colors bg-purple-50 hover:bg-purple-100 px-4 py-2.5 rounded-2xl border border-purple-200 self-start md:self-end shadow-sm"
+                            >
+                                <span>Panduan Lengkap di Jurnal Internasional</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {GALE_DATABASES.map((db) => (
+                                <GaleSubjectCard key={db.id} db={db} />
+                            ))}
                         </div>
                     </div>
                 </div>

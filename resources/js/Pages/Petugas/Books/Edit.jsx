@@ -83,6 +83,19 @@ export default function Edit({ book, copies: initialCopies, categories: initialC
         remove_cover: false,
     });
 
+    // Helper normalisasi DDC ke kelas besar 000-900 (misal: 001 atau 001.42 -> 000)
+    const normalizeDdcToMainCode = (raw) => {
+        if (!raw) return '000';
+        const match = String(raw).trim().match(/\b(\d{1,3}(?:\.\d+)?)\b/);
+        if (!match) return '000';
+        const intVal = parseInt(match[1].split('.')[0], 10);
+        const hundreds = Math.floor(intVal / 100) * 100;
+        if (hundreds >= 0 && hundreds <= 900) {
+            return String(hundreds).padStart(3, '0');
+        }
+        return '000';
+    };
+
     // Helper untuk kalkulasi Call Number: [DDC] [3-Huruf Penulis] [1-Huruf Judul (kecil)]
     const calculateCallNumber = (titleVal, authorVal, catIdVal) => {
         if (!titleVal || !authorVal) return '';
@@ -117,6 +130,20 @@ export default function Edit({ book, copies: initialCopies, categories: initialC
             ...prev,
             category_id: val,
         }));
+    };
+
+    const handleCallNumberChange = (val) => {
+        const mainCode = normalizeDdcToMainCode(val);
+        const matchedCat = categories.find(c => c.code === mainCode);
+        if (matchedCat && String(data.category_id) !== String(matchedCat.id)) {
+            setData(prev => ({
+                ...prev,
+                call_number: val,
+                category_id: matchedCat.id,
+            }));
+            return;
+        }
+        setData('call_number', val);
     };
 
     const handleGenerateCallNumber = () => {
@@ -667,12 +694,29 @@ export default function Edit({ book, copies: initialCopies, categories: initialC
                                 <input
                                     type="text"
                                     value={data.call_number}
-                                    onChange={(e) => setData('call_number', e.target.value)}
-                                    placeholder="Contoh: 004 AND b"
+                                    onChange={(e) => handleCallNumberChange(e.target.value)}
+                                    placeholder="Contoh: 001.42 SUG m atau 004 AND b"
                                     className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.call_number ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'} rounded-2xl text-slate-900 focus:outline-none focus:border-amber-500 text-xs font-mono font-bold`}
                                 />
+                                {(() => {
+                                    const match = data.call_number?.trim().match(/\b(\d{1,3}(?:\.\d+)?)\b/);
+                                    if (match) {
+                                        const ddcInput = match[1];
+                                        const mainCode = normalizeDdcToMainCode(ddcInput);
+                                        const matchedCat = categories.find(c => c.code === mainCode);
+                                        if (ddcInput !== mainCode && matchedCat) {
+                                            return (
+                                                <div className="flex items-center space-x-1.5 p-2 bg-amber-50/80 border border-amber-200/80 rounded-xl text-[11px] text-amber-900 font-semibold">
+                                                    <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                    <span>Sub-kelas <strong>{ddcInput}</strong> otomatis terdata ke kelas besar <strong>[{matchedCat.code}] {matchedCat.name}</strong></span>
+                                                </div>
+                                            );
+                                        }
+                                    }
+                                    return null;
+                                })()}
                                 <p className="text-[10px] text-slate-500">
-                                    Format standar: [Kode DDC] [3 Huruf Kapital Pengarang] [1 Huruf Kecil Judul]. Contoh: <strong>004 AND b</strong>
+                                    Format standar: [Kode DDC] [3 Huruf Kapital Pengarang] [1 Huruf Kecil Judul]. Contoh: <strong>001.42 SUG m</strong> atau <strong>004 AND b</strong>
                                 </p>
                                 {errors.call_number && <p className="text-[10px] text-rose-600 font-bold">{errors.call_number}</p>}
                             </div>

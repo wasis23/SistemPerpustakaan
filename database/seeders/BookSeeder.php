@@ -13,9 +13,9 @@ class BookSeeder extends Seeder
 {
     public function run(): void
     {
-        $catIT = Category::where('code', '004')->first();
-        $catHealth = Category::where('code', '610')->first();
-        $catMgmt = Category::where('code', '650')->first();
+        $catIT = Category::findMainCategory('004') ?: Category::first();
+        $catHealth = Category::findMainCategory('610') ?: Category::first();
+        $catMgmt = Category::findMainCategory('650') ?: Category::first();
 
         $rackA1 = Rack::where('code_rack', 'RAK-A1')->first();
         $rackB1 = Rack::where('code_rack', 'RAK-B1')->first();

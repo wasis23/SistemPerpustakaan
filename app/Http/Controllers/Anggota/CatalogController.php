@@ -22,7 +22,7 @@ class CatalogController extends Controller
 
         return Inertia::render('Anggota/Catalog/Index', [
             'books' => $books,
-            'categories' => Category::select('id', 'code', 'name')->get(),
+            'categories' => Category::select('id', 'code', 'name')->orderBy('code', 'asc')->get(),
             'racks' => Rack::select('id', 'code_rack', 'location')->get(),
             'filters' => [
                 'search' => $request->search ?? '',
@@ -55,7 +55,7 @@ class CatalogController extends Controller
 
         return Inertia::render('Katalog/Index', [
             'books' => $books,
-            'categories' => Category::select('id', 'code', 'name')->get(),
+            'categories' => Category::select('id', 'code', 'name')->orderBy('code', 'asc')->get(),
             'racks' => Rack::select('id', 'code_rack', 'location')->get(),
             'filters' => [
                 'search' => $request->search ?? '',
@@ -87,19 +87,23 @@ class CatalogController extends Controller
         $query = Book::with(['category', 'rack'])
             ->withCount(['copies', 'availableCopies']);
 
-        // Pencarian Kata Kunci
+        // Pencarian Kata Kunci (Judul, Pengarang, ISBN, Nomor Panggil)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhere('isbn', 'like', "%{$search}%");
+                  ->orWhere('isbn', 'like', "%{$search}%")
+                  ->orWhere('call_number', 'like', "%{$search}%");
             });
         }
 
-        // Filter Kategori
+        // Filter Kategori (Sub-kelas seperti 001 atau 001.42 dinormalisasi ke kelas utama 000)
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $mainCat = Category::findMainCategory($request->category_id);
+            if ($mainCat) {
+                $query->where('category_id', $mainCat->id);
+            }
         }
 
         // Filter Rak

@@ -26,19 +26,23 @@ class BookController extends Controller
         $query = Book::with(['category', 'rack'])
             ->withCount(['copies', 'availableCopies']);
 
-        // Filter Pencarian (Judul, Pengarang, ISBN)
+        // Filter Pencarian (Judul, Pengarang, ISBN, Nomor Panggil)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhere('isbn', 'like', "%{$search}%");
+                  ->orWhere('isbn', 'like', "%{$search}%")
+                  ->orWhere('call_number', 'like', "%{$search}%");
             });
         }
 
-        // Filter Kategori
+        // Filter Kategori (Mendukung ID atau kode kelas besar / sub-kelas DDC)
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $mainCat = Category::findMainCategory($request->category_id);
+            if ($mainCat) {
+                $query->where('category_id', $mainCat->id);
+            }
         }
 
         // Filter Rak
@@ -59,7 +63,7 @@ class BookController extends Controller
 
         return Inertia::render('Petugas/Books/Index', [
             'books' => $books,
-            'categories' => Category::select('id', 'code', 'name')->get(),
+            'categories' => Category::orderBy('code', 'asc')->select('id', 'code', 'name')->get(),
             'racks' => Rack::with('laboratory')->get(),
             'filters' => [
                 'search' => $request->search ?? '',
@@ -76,7 +80,7 @@ class BookController extends Controller
     public function create(): Response
     {
         return Inertia::render('Petugas/Books/Create', [
-            'categories' => Category::select('id', 'code', 'name')->get(),
+            'categories' => Category::orderBy('code', 'asc')->select('id', 'code', 'name')->get(),
             'racks' => Rack::with('laboratory')->get(),
         ]);
     }
@@ -431,18 +435,22 @@ class BookController extends Controller
         }
 
 
-        // Process DDC & Normalisasi ke Kelas Utama 000-900
+        // Process DDC & Normalisasi ke Kelas Utama 000-900 (misal: 001 atau 001.42 -> 000)
         $rawDdc = !empty($bookData['ddc']) ? $bookData['ddc'] : '000';
-        $num = (int) preg_replace('/[^0-9]/', '', $rawDdc);
-        $ddcCode = str_pad((string)(floor($num / 100) * 100), 3, '0', STR_PAD_LEFT);
+        $mainDdcCode = Category::normalizeDdcToMainClass($rawDdc);
 
-        $category = Category::where('code', $ddcCode)->first();
-
+        $category = Category::where('code', $mainDdcCode)->first();
         if (!$category) {
             $category = Category::where('code', '000')->first() ?: Category::first();
         }
 
-        // Generate Call Number: [DDC] [3-Letter Author] [1-Letter Title (lower)]
+        // Generate Call Number: [DDC spesifik/utama] [3-Letter Author] [1-Letter Title (lower)]
+        // Gunakan nomor DDC asli jika valid (misal: 001.42), atau fallback ke kode kategori utama (000)
+        $callDdc = $category->code;
+        if (!empty($bookData['ddc']) && preg_match('/\b(\d{1,3}(?:\.\d+)?)\b/', $bookData['ddc'], $matches)) {
+            $callDdc = $matches[1];
+        }
+
         $cleanAuthor = preg_replace('/[^A-Za-z]/', '', $bookData['author']);
         $authorCode = strtoupper(substr($cleanAuthor, 0, 3));
         if (strlen($authorCode) < 3) {
@@ -455,7 +463,7 @@ class BookController extends Controller
             $titleCode = 'a';
         }
 
-        $callNumber = "{$category->code} {$authorCode} {$titleCode}";
+        $callNumber = "{$callDdc} {$authorCode} {$titleCode}";
 
         return response()->json([
             'success' => true,
@@ -471,7 +479,7 @@ class BookController extends Controller
                 'ddc_code' => $category->code,
                 'call_number' => $callNumber,
             ],
-            'categories' => Category::select('id', 'code', 'name')->get(),
+            'categories' => Category::orderBy('code', 'asc')->select('id', 'code', 'name')->get(),
         ]);
     }
 
@@ -508,9 +516,22 @@ class BookController extends Controller
 
         // Auto-generate call_number if not supplied
         $callNumber = $validated['call_number'] ?? null;
+
+        // Normalisasi Kategori ke Kelas Utama DDC (000, 100, ..., 900)
+        // Sub-kelas seperti 001 atau 001.42 otomatis terdata ke kelas besarnya (000)
+        $mainCat = null;
+        if (!empty($callNumber)) {
+            $mainCat = Category::findMainCategory($callNumber);
+        }
+        if (!$mainCat) {
+            $mainCat = Category::findMainCategory($validated['category_id']);
+        }
+        if ($mainCat) {
+            $validated['category_id'] = $mainCat->id;
+        }
+
         if (empty($callNumber)) {
-            $category = Category::find($validated['category_id']);
-            $catCode = $category ? $category->code : '000';
+            $catCode = $mainCat ? $mainCat->code : '000';
 
             $cleanAuthor = preg_replace('/[^A-Za-z]/', '', $validated['author']);
             $authorCode = strtoupper(substr($cleanAuthor, 0, 3));
@@ -532,11 +553,11 @@ class BookController extends Controller
             : (int)date('n');
 
         $book = Book::create([
-            'isbn' => $validated['isbn'],
+            'isbn' => $validated['isbn'] ?? null,
             'title' => $validated['title'],
             'author' => $validated['author'],
-            'publisher' => $validated['publisher'],
-            'publish_year' => $validated['publish_year'],
+            'publisher' => $validated['publisher'] ?? null,
+            'publish_year' => $validated['publish_year'] ?? null,
             'procurement_year' => $procurementYear,
             'procurement_month' => $procurementMonth,
             'category_id' => $validated['category_id'],
@@ -627,7 +648,7 @@ class BookController extends Controller
         return Inertia::render('Petugas/Books/Edit', [
             'book' => $book,
             'copies' => $copiesWithBarcode,
-            'categories' => Category::select('id', 'code', 'name')->get(),
+            'categories' => Category::orderBy('code', 'asc')->select('id', 'code', 'name')->get(),
             'racks' => Rack::with('laboratory')->get(),
         ]);
     }
@@ -668,6 +689,19 @@ class BookController extends Controller
         }
 
         unset($validated['cover_url'], $validated['remove_cover']);
+
+        // Normalisasi Kategori ke Kelas Utama DDC (000, 100, ..., 900)
+        // Sub-kelas seperti 001 atau 001.42 otomatis terdata ke kelas besarnya (000)
+        $mainCat = null;
+        if (!empty($validated['call_number'])) {
+            $mainCat = Category::findMainCategory($validated['call_number']);
+        }
+        if (!$mainCat && !empty($validated['category_id'])) {
+            $mainCat = Category::findMainCategory($validated['category_id']);
+        }
+        if ($mainCat) {
+            $validated['category_id'] = $mainCat->id;
+        }
 
         $book->update($validated);
 
@@ -1031,21 +1065,13 @@ class BookController extends Controller
             foreach ($grouped as $groupKey => $itemRows) {
                 $firstRow = $itemRows[0];
 
-                // Penentuan Kategori & DDC
+                // Penentuan Kategori & DDC (Sub-kelas seperti 001 atau 001.42 dinormalisasi ke kelas utama 000)
                 $category = null;
                 if (!empty($firstRow['category_code'])) {
-                    $category = Category::where('code', $firstRow['category_code'])->orWhere('id', $firstRow['category_code'])->first();
+                    $category = Category::findMainCategory($firstRow['category_code']);
                 }
-                if (!$category && !empty($firstRow['kode']) && preg_match('/^(\d{3}(?:\.\d+)?)/', $firstRow['kode'], $matches)) {
-                    $ddcCode = $matches[1];
-                    $category = Category::where('code', $ddcCode)->first();
-                    if (!$category) {
-                        $category = Category::create([
-                            'code' => $ddcCode,
-                            'name' => "Kategori DDC " . $ddcCode,
-                            'description' => "Otomatis dibuat dari impor file Stock Opname",
-                        ]);
-                    }
+                if (!$category && !empty($firstRow['kode'])) {
+                    $category = Category::findMainCategory($firstRow['kode']);
                 }
                 $categoryId = $category ? $category->id : $defaultCat->id;
 

@@ -75,9 +75,16 @@ class BarcodeService
         }
 
         // Cek juga nomor urut tertinggi dari copy_code (misal: 0001/PERPUS-INDO/...)
-        $lastCopyCode = BookCopy::whereRaw("copy_code REGEXP '^[0-9]+/'")
-            ->orderBy('id', 'desc')
-            ->value('copy_code');
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+        if ($driver === 'sqlite') {
+            $lastCopyCode = BookCopy::where('copy_code', 'LIKE', '%/PERPUS-INDO/%')
+                ->orderBy('id', 'desc')
+                ->value('copy_code');
+        } else {
+            $lastCopyCode = BookCopy::whereRaw("copy_code REGEXP '^[0-9]+/'")
+                ->orderBy('id', 'desc')
+                ->value('copy_code');
+        }
         if ($lastCopyCode && preg_match('/^(\d+)/', $lastCopyCode, $m)) {
             $highestNumber = max($highestNumber, (int)$m[1]);
         }

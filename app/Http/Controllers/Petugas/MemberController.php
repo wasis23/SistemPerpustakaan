@@ -26,6 +26,7 @@ class MemberController extends Controller
         'D4 Teknologi Laboratorium Medis',
         'D4 Bisnis Manajemen Ritel',
         'D4 Akuntansi Perpajakan',
+        'Dosen / Tendik',
         'Anggota Eksternal',
     ];
 
@@ -58,6 +59,11 @@ class MemberController extends Controller
             $query->where('prodi', $request->prodi);
         }
 
+        // Filter Tipe Anggota (Mahasiswa / Dosen / Eksternal)
+        if ($request->filled('member_type')) {
+            $query->where('member_type', $request->member_type);
+        }
+
         // Filter Status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -81,12 +87,35 @@ class MemberController extends Controller
             'active_members' => User::where('role', 'anggota')->where('status', 'active')->count(),
             'suspended_members' => User::where('role', 'anggota')->where('status', 'suspended')->count(),
             'borrowing_now' => User::where('role', 'anggota')->whereHas('borrowings', fn($q) => $q->where('status', 'active'))->count(),
+            'mahasiswa_count' => User::where('role', 'anggota')->where(function($q) {
+                $q->where('member_type', 'mahasiswa')
+                  ->orWhere(function($sq) {
+                      $sq->whereNull('member_type')
+                         ->where('prodi', '!=', 'Anggota Eksternal')
+                         ->where('username', 'not like', 'dsn%')
+                         ->where('username', 'not like', 'nip%')
+                         ->where('username', 'not like', 'nidn%');
+                  });
+            })->count(),
+            'dosen_count' => User::where('role', 'anggota')->where(function($q) {
+                $q->where('member_type', 'dosen_tendik')
+                  ->orWhere('username', 'like', 'dsn%')
+                  ->orWhere('username', 'like', 'nip%')
+                  ->orWhere('username', 'like', 'nidn%')
+                  ->orWhere('prodi', 'like', '%dosen%')
+                  ->orWhere('prodi', 'like', '%tendik%');
+            })->count(),
+            'eksternal_count' => User::where('role', 'anggota')->where(function($q) {
+                $q->where('member_type', 'eksternal')
+                  ->orWhere('prodi', 'Anggota Eksternal')
+                  ->orWhere('username', 'like', 'eks%');
+            })->count(),
         ];
 
         return Inertia::render('Petugas/Members/Index', [
             'members' => $members,
             'prodiList' => $prodiList,
-            'filters' => $request->only(['search', 'prodi', 'status']),
+            'filters' => $request->only(['search', 'prodi', 'status', 'member_type']),
             'stats' => $stats,
         ]);
     }
@@ -99,6 +128,7 @@ class MemberController extends Controller
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:50', 'unique:users,username'],
             'name' => ['required', 'string', 'max:255'],
+            'member_type' => ['required', Rule::in(['mahasiswa', 'dosen_tendik', 'eksternal'])],
             'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'prodi' => ['nullable', 'string', 'max:100'],
@@ -108,19 +138,28 @@ class MemberController extends Controller
             'username.required' => 'NIM / NIDN / Username wajib diisi.',
             'username.unique' => 'NIM / Username ini sudah terdaftar.',
             'name.required' => 'Nama lengkap anggota wajib diisi.',
+            'member_type.required' => 'Jenis / tipe keanggotaan wajib dipilih.',
             'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Email ini sudah digunakan.',
             'password.required' => 'Password wajib diisi.',
             'password.min' => 'Password minimal 6 karakter.',
         ]);
 
+        $defaultProdi = 'D4 Teknologi Rekayasa Perangkat Lunak';
+        if ($validated['member_type'] === 'eksternal') {
+            $defaultProdi = 'Anggota Eksternal';
+        } elseif ($validated['member_type'] === 'dosen_tendik') {
+            $defaultProdi = 'Dosen / Tendik';
+        }
+
         User::create([
             'username' => trim($validated['username']),
             'name' => trim($validated['name']),
+            'member_type' => $validated['member_type'],
             'email' => !empty($validated['email']) ? trim($validated['email']) : null,
             'password' => Hash::make($validated['password']),
             'role' => 'anggota',
-            'prodi' => !empty($validated['prodi']) ? trim($validated['prodi']) : 'Anggota Eksternal',
+            'prodi' => !empty($validated['prodi']) ? trim($validated['prodi']) : $defaultProdi,
             'phone' => !empty($validated['phone']) ? trim($validated['phone']) : null,
             'status' => $validated['status'],
         ]);
@@ -140,6 +179,7 @@ class MemberController extends Controller
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:50', Rule::unique('users')->ignore($member->id)],
             'name' => ['required', 'string', 'max:255'],
+            'member_type' => ['required', Rule::in(['mahasiswa', 'dosen_tendik', 'eksternal'])],
             'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')->ignore($member->id)],
             'prodi' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:20'],
@@ -148,6 +188,7 @@ class MemberController extends Controller
             'username.required' => 'NIM / Username wajib diisi.',
             'username.unique' => 'NIM / Username sudah digunakan oleh akun lain.',
             'name.required' => 'Nama lengkap wajib diisi.',
+            'member_type.required' => 'Jenis / tipe keanggotaan wajib dipilih.',
             'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Email sudah digunakan oleh akun lain.',
         ]);
@@ -155,6 +196,7 @@ class MemberController extends Controller
         $member->update([
             'username' => trim($validated['username']),
             'name' => trim($validated['name']),
+            'member_type' => $validated['member_type'],
             'email' => $validated['email'] ? trim($validated['email']) : null,
             'prodi' => $validated['prodi'] ? trim($validated['prodi']) : null,
             'phone' => $validated['phone'] ? trim($validated['phone']) : null,

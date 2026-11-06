@@ -7,6 +7,7 @@ use App\Models\BookCopy;
 use App\Models\Borrowing;
 use App\Models\BorrowTicket;
 use App\Models\Setting;
+use App\Models\UserNotification;
 use App\Services\FineCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -124,14 +125,27 @@ class CirculationController extends Controller
                     throw new \Exception("Eksemplar buku tidak dalam status penahanan tiket valid.");
                 }
 
+                $borrower = $ticket->user;
+                if (! $borrower || ! $borrower->canBorrow()) {
+                    throw new \Exception("Anggota Eksternal / akun yang ditangguhkan tidak diperbolehkan meminjam buku fisik ke luar perpustakaan.");
+                }
+
+                $activeBorrowingsCount = Borrowing::where('user_id', $borrower->id)
+                    ->where('status', 'active')
+                    ->count();
+                $maxBorrowLimit = $borrower->getMaxBorrowLimit();
+
+                if ($activeBorrowingsCount >= $maxBorrowLimit) {
+                    throw new \Exception("Anggota {$borrower->name} ({$borrower->member_type_label}) telah mencapai batas maksimal {$maxBorrowLimit} eksemplar peminjaman aktif.");
+                }
+
                 // Update Tiket & Eksemplar
                 $ticket->update(['status' => 'validated']);
                 $bookCopy->update(['status' => 'borrowed']);
 
                 // Buat Transaksi Sirkulasi dengan Durasi Pinjam sesuai Pengaturan (Dosen/Tendik: 14 hari, Mahasiswa: 7 hari)
                 $borrowingCode = 'TRX-' . date('Ymd') . '-' . sprintf('%04d', Borrowing::count() + 1);
-                $borrower = $ticket->user;
-                $durationDays = $borrower ? $borrower->getBorrowDurationDays() : (int) Setting::get('borrow_duration_days', 7);
+                $durationDays = $borrower->getBorrowDurationDays();
 
                 return Borrowing::create([
                     'borrowing_code' => $borrowingCode,
@@ -147,13 +161,20 @@ class CirculationController extends Controller
 
             $borrowing->load(['user', 'bookCopy.book']);
 
+            // Buat Notifikasi Lonceng & Database untuk Anggota Peminjam
+            UserNotification::notifyBorrowing($borrowing->user, $borrowing);
+
             return back()->with('success_borrowing', [
+                'type' => 'borrowing_success',
+                'title' => 'Peminjaman Buku Berhasil Disahkan! 🎉',
                 'borrowing_code' => $borrowing->borrowing_code,
                 'user_name' => $borrowing->user->name,
                 'user_username' => $borrowing->user->username,
+                'user_nim' => $borrowing->user->username,
                 'book_title' => $borrowing->bookCopy->book->title,
                 'copy_code' => $borrowing->bookCopy->copy_code,
                 'due_date' => $borrowing->due_date->format('d M Y (H:i)'),
+                'borrowed_at' => $borrowing->borrowed_at ? $borrowing->borrowed_at->format('d M Y (H:i)') : now()->format('d M Y (H:i)'),
             ]);
 
         } catch (\Exception $e) {
@@ -226,9 +247,17 @@ class CirculationController extends Controller
 
                 $borrowing->load(['user', 'bookCopy.book']);
 
+                // Buat Notifikasi Lonceng & Database untuk Anggota Peminjam
+                if ($borrowing->user) {
+                    UserNotification::notifyReturn($borrowing->user, $borrowing, (float) $fineAmount);
+                }
+
                 return [
+                    'type' => 'return_success',
+                    'title' => 'Buku Berhasil Dikembalikan! ✅',
                     'borrowing_code' => $borrowing->borrowing_code,
                     'user_name' => $borrowing->user->name,
+                    'user_username' => $borrowing->user->username,
                     'user_nim' => $borrowing->user->username,
                     'book_title' => $borrowing->bookCopy->book->title,
                     'copy_code' => $borrowing->bookCopy->copy_code,

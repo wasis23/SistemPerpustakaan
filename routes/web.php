@@ -58,6 +58,11 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Notifikasi Pengguna (Lonceng & Popup)
+    Route::post('/notifications/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::delete('/notifications/{notification}', [\App\Http\Controllers\NotificationController::class, 'destroy'])->name('notifications.destroy');
+
     // Role Anggota (Mahasiswa & Dosen)
     Route::middleware('role:anggota')->prefix('anggota')->name('anggota.')->group(function () {
         Route::get('/dashboard', [AnggotaDashboardController::class, 'index'])->name('dashboard');
@@ -165,6 +170,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/national-journals/download-template', [PetugasNationalJournalController::class, 'downloadTemplate'])->name('national-journals.download-template');
         Route::post('/national-journals/import-csv', [PetugasNationalJournalController::class, 'importCsv'])->name('national-journals.import-csv');
         Route::get('/national-journals/export-csv', [PetugasNationalJournalController::class, 'exportCsv'])->name('national-journals.export-csv');
+        Route::get('/national-journals/export-visitors-csv', [PetugasNationalJournalController::class, 'exportVisitorsCsv'])->name('national-journals.export-visitors-csv');
         Route::post('/national-journals/{national_journal}/toggle-status', [PetugasNationalJournalController::class, 'toggleStatus'])->name('national-journals.toggle-status');
         Route::resource('national-journals', PetugasNationalJournalController::class);
 

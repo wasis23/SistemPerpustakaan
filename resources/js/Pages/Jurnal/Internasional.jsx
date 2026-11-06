@@ -16,8 +16,15 @@ import {
     ChevronRight,
     X,
     Sparkles,
-    ShieldCheck
+    ShieldCheck,
+    Users,
+    Eye,
+    KeyRound,
+    Copy,
+    Check
 } from 'lucide-react';
+import GaleLogo from '@/Components/GaleLogo';
+import GaleSubjectCard, { GALE_DATABASES } from '@/Components/GaleSubjectCard';
 
 export default function Internasional({ journals, filters, prodiList, indexList, availableYears, stats }) {
     const { auth } = usePage().props;
@@ -65,10 +72,14 @@ export default function Internasional({ journals, filters, prodiList, indexList,
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div>
-                            <div className="flex items-center space-x-1.5">
+                            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                                 <span className="font-extrabold text-slate-900 text-lg tracking-tight">Jurnal Ilmiah Internasional</span>
                                 <span className="px-2 py-0.5 text-[10px] font-extrabold bg-purple-600 text-white rounded-full">
                                     {stats?.total || 0} Jurnal
+                                </span>
+                                <span className="px-2 py-0.5 text-[10px] font-extrabold bg-slate-900 text-purple-300 rounded-full flex items-center space-x-1" title="Total kunjungan halaman ini">
+                                    <Eye className="w-3 h-3" />
+                                    <span>{stats?.visitor_count || 0} Pengunjung</span>
                                 </span>
                             </div>
                             <p className="text-xs text-slate-500 font-medium">Direktori publikasi ilmiah internasional bereputasi & terindeks global</p>
@@ -112,7 +123,7 @@ export default function Internasional({ journals, filters, prodiList, indexList,
             {/* Main Content */}
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
                 {/* Highlight Stats Strip */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-black">
                             <Globe className="w-5 h-5" />
@@ -148,6 +159,64 @@ export default function Internasional({ journals, filters, prodiList, indexList,
                             <p className="text-xs text-slate-500 font-semibold">Program Studi</p>
                             <p className="text-lg font-black text-slate-900">{stats?.total_prodi || 0}</p>
                         </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3 col-span-2 sm:col-span-1">
+                        <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-black">
+                            <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 font-semibold">Pengunjung Civitas</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.visitor_count || 0}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">
+                                {stats?.visitor_today || 0} hari ini
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* GALE E-RESOURCES FEATURED HUB */}
+                <div id="gale-section" className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-6 border border-slate-800 relative overflow-hidden">
+                    {/* Decorative background glows */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/10 pb-6">
+                        <div className="space-y-2 max-w-2xl">
+                            <div className="flex items-center space-x-2">
+                                <div className="px-3 py-1 bg-white rounded-lg shadow-sm">
+                                    <GaleLogo className="h-4 w-auto" />
+                                </div>
+                                <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-orange-500 text-white rounded-full">
+                                    Akses Berlisensi Institusi
+                                </span>
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                                Pangkalan Data Jurnal Internasional: GALE OneFile
+                            </h2>
+                            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                                Akses teks lengkap (Full-Text) ribuan artikel jurnal internasional bereputasi, majalah berkala akademik, sains teknologi terapan, dan keperawatan/kesehatan bagi civitas akademika Politeknik Indonusa Surakarta.
+                            </p>
+                        </div>
+
+                        {/* Petunjuk Akses Cepat */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 lg:max-w-md shrink-0 space-y-2 text-xs backdrop-blur-sm">
+                            <div className="flex items-center space-x-1.5 text-amber-400 font-bold">
+                                <ShieldCheck className="w-4 h-4 shrink-0" />
+                                <span>Petunjuk Akses Login GALE</span>
+                            </div>
+                            <ol className="list-decimal list-inside text-slate-300 text-[11px] space-y-1">
+                                <li>Klik tombol <span className="text-white font-semibold">"Masuk Akses Login GALE"</span> pada subjek pilihan.</li>
+                                <li>Salin kode akses (Access Code) yang tertera pada kotak subjek.</li>
+                                <li>Tempelkan kode akses pada kotak otentikasi login GALE untuk membuka portal pencarian penuh.</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    {/* 3 Subjek Gale Cards */}
+                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {GALE_DATABASES.map((db) => (
+                            <GaleSubjectCard key={db.id} db={db} />
+                        ))}
                     </div>
                 </div>
 

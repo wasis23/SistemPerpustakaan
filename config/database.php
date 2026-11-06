@@ -66,7 +66,7 @@ return [
 
         'siakad' => [
             'driver' => 'mysql',
-            'host' => env('DB_SIAKAD_HOST', '116.206.197.228'),
+            'host' => env('DB_SIAKAD_HOST', '192.168.5.253'),
             'port' => env('DB_SIAKAD_PORT', '3306'),
             'database' => env('DB_SIAKAD_DATABASE', 'siakaddb'),
             'username' => env('DB_SIAKAD_USERNAME', 'uti-check'),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { BookOpen, User, Lock, CheckCircle2, Clock, Sparkles, BookMarked, Library, FileText, ShieldCheck, ArrowRight, Building2, Phone, UserPlus, IdCard } from 'lucide-react';
+import { BookOpen, User, CheckCircle2, Clock, Sparkles, BookMarked, Library, FileText, ShieldCheck, ArrowRight, Building2, Phone, UserPlus, IdCard, QrCode } from 'lucide-react';
 
 export default function Kiosk({ recentVisitors, todayCount, todayMemberCount = 0, todayExternalCount = 0 }) {
     const { flash } = usePage().props;
@@ -12,7 +12,6 @@ export default function Kiosk({ recentVisitors, todayCount, todayMemberCount = 0
     const { data, setData, post, processing, errors, reset } = useForm({
         visitor_type: 'member',
         username: '',
-        password: '',
         visitor_name: '',
         visitor_institution: '',
         visitor_phone: '',
@@ -38,7 +37,7 @@ export default function Kiosk({ recentVisitors, todayCount, todayMemberCount = 0
                     if (prev <= 1) {
                         clearInterval(interval);
                         setSuccessVisitor(null);
-                        reset('username', 'password', 'visitor_name', 'visitor_institution', 'visitor_phone');
+                        reset('username', 'visitor_name', 'visitor_institution', 'visitor_phone');
                         if (usernameInputRef.current) {
                             usernameInputRef.current.focus();
                         }
@@ -241,12 +240,20 @@ export default function Kiosk({ recentVisitors, todayCount, todayMemberCount = 0
                         </div>
                     </div>
 
-                    {/* Step 2: Input Credentials / Data Pengunjung Eksternal */}
+                    {/* Step 2: Input NIM / Data Pengunjung */}
                     <div className="bg-white p-6 sm:p-8 rounded-3xl border border-amber-900/10 shadow-sm">
-                        <h2 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center space-x-2 mb-6">
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${isExternal ? 'bg-sky-500 text-white' : 'bg-amber-500 text-slate-950'}`}>2</span>
-                            <span>{isExternal ? 'Lengkapi Data Anggota Eksternal' : 'Masukkan Kredensial Pengguna'}</span>
-                        </h2>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center space-x-2">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${isExternal ? 'bg-sky-500 text-white' : 'bg-amber-500 text-slate-950'}`}>2</span>
+                                <span>{isExternal ? 'Lengkapi Data Anggota Eksternal' : 'Scan Kartu / Masukkan NIM Mahasiswa'}</span>
+                            </h2>
+                            {!isExternal && (
+                                <span className="inline-flex items-center space-x-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                                    <QrCode className="w-3.5 h-3.5" />
+                                    <span>Mendukung Barcode Scanner</span>
+                                </span>
+                            )}
+                        </div>
 
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {isExternal ? (
@@ -318,61 +325,38 @@ export default function Kiosk({ recentVisitors, todayCount, todayMemberCount = 0
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Username Input */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-                                            NIM / NIDN / Username
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                                <User className="w-4 h-4" />
-                                            </div>
-                                            <input
-                                                ref={usernameInputRef}
-                                                type="text"
-                                                value={data.username}
-                                                onChange={(e) => setData('username', e.target.value)}
-                                                placeholder="Contoh: mhs12345"
-                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
-                                                required
-                                                autoFocus
-                                            />
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                                        NIM Mahasiswa / NIDN Dosen
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                            <User className="w-5 h-5" />
                                         </div>
-                                        {errors.username && (
-                                            <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.username}</p>
-                                        )}
+                                        <input
+                                            ref={usernameInputRef}
+                                            type="text"
+                                            value={data.username}
+                                            onChange={(e) => setData('username', e.target.value)}
+                                            placeholder="Scan barcode KTM atau ketik NIM (Contoh: 2101001)..."
+                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white text-sm font-semibold tracking-wide transition-all shadow-inner"
+                                            required
+                                            autoFocus
+                                        />
                                     </div>
-
-                                    {/* Password Input */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-                                            Kata Sandi
-                                        </label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                                <Lock className="w-4 h-4" />
-                                            </div>
-                                            <input
-                                                type="password"
-                                                value={data.password}
-                                                onChange={(e) => setData('password', e.target.value)}
-                                                placeholder="••••••••"
-                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 text-xs font-medium transition-all"
-                                                required
-                                            />
-                                        </div>
-                                        {errors.password && (
-                                            <p className="text-xs text-rose-600 font-semibold mt-1.5">{errors.password}</p>
-                                        )}
-                                    </div>
+                                    {errors.username && (
+                                        <p className="text-xs text-rose-600 font-semibold mt-2">{errors.username}</p>
+                                    )}
+                                    <p className="text-[11px] text-slate-400 mt-2">
+                                        Arahkan scanner barcode ke KTM atau ketik NIM Anda lalu tekan <strong>Enter</strong>.
+                                    </p>
                                 </div>
                             )}
 
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className={`w-full py-4 px-6 font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 ${
+                                className={`w-full py-4 px-6 font-bold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer ${
                                     isExternal
                                         ? 'bg-sky-500 hover:bg-sky-400 text-white'
                                         : 'bg-amber-500 hover:bg-amber-400 text-slate-950'

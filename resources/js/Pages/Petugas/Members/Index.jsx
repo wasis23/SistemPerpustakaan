@@ -19,7 +19,9 @@ import {
     GraduationCap,
     Lock,
     Save,
-    RefreshCw
+    RefreshCw,
+    FileText,
+    Upload
 } from 'lucide-react';
 import PetugasLayout from '@/Layouts/PetugasLayout';
 
@@ -34,8 +36,24 @@ export default function Index({ members, prodiList, filters, stats }) {
 
     // Modals State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [editMember, setEditMember] = useState(null);
     const [passwordMember, setPasswordMember] = useState(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    // Form Impor File Anggota
+    const importForm = useForm({
+        file: null,
+    });
+
+    const handleSyncSiakad = () => {
+        if (confirm('Sinkronkan seluruh data mahasiswa aktif (angkatan 21–26) dan dosen aktif dari database SIAKAD ke SIMPUS? Data duplikat tidak akan dibuat ulang.')) {
+            setIsSyncing(true);
+            router.post('/petugas/members/sync-siakad', {}, {
+                onFinish: () => setIsSyncing(false),
+            });
+        }
+    };
 
     // Form Tambah Anggota
     const createForm = useForm({
@@ -111,6 +129,21 @@ export default function Index({ members, prodiList, filters, stats }) {
         passwordForm.reset();
     };
 
+    const handleImportSubmit = (e) => {
+        e.preventDefault();
+        if (!importForm.data.file) {
+            alert('Silakan pilih file Excel atau CSV terlebih dahulu.');
+            return;
+        }
+        importForm.post('/petugas/members/import-csv', {
+            forceFormData: true,
+            onSuccess: () => {
+                setIsImportOpen(false);
+                importForm.reset();
+            },
+        });
+    };
+
     const handleCreateSubmit = (e) => {
         e.preventDefault();
         createForm.post('/petugas/members', {
@@ -159,7 +192,7 @@ export default function Index({ members, prodiList, filters, stats }) {
 
             <div className="space-y-6 w-full">
                 {/* Header Action Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
                     <div>
                         <div className="flex items-center space-x-2">
                             <span className="p-2 bg-amber-500 text-slate-950 rounded-xl font-bold">
@@ -170,18 +203,49 @@ export default function Index({ members, prodiList, filters, stats }) {
                             </h1>
                         </div>
                         <p className="text-xs text-slate-500 font-medium mt-1">
-                            Manajemen akun mahasiswa & dosen, registrasi anggota baru, dan kelola kata sandi
+                            Manajemen akun mahasiswa & dosen, registrasi anggota baru, unggah massal Excel/CSV, dan kelola kata sandi
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setIsCreateOpen(true)}
-                        className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow-md transition-all flex items-center space-x-2 self-start sm:self-center cursor-pointer"
-                    >
-                        <UserPlus className="w-4 h-4 stroke-[2.5]" />
-                        <span>+ Tambah Anggota Baru</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <button
+                            type="button"
+                            onClick={handleSyncSiakad}
+                            disabled={isSyncing}
+                            className="px-4 py-2.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-2xl text-xs font-bold text-indigo-900 transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer disabled:opacity-60"
+                            title="Tarik & perbarui data mahasiswa aktif (21-26) dan dosen aktif dari SIAKAD"
+                        >
+                            <RefreshCw className={`w-4 h-4 text-indigo-600 ${isSyncing ? 'animate-spin' : ''}`} />
+                            <span>{isSyncing ? 'Menyinkronkan SIAKAD...' : 'Sinkronkan SIAKAD'}</span>
+                        </button>
+
+                        <a
+                            href="/petugas/members/download-template"
+                            className="px-4 py-2.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-2xl text-xs font-bold text-emerald-800 transition-all flex items-center space-x-1.5 shadow-sm"
+                            title="Unduh file format contoh CSV untuk impor anggota"
+                        >
+                            <FileText className="w-4 h-4 text-emerald-600" />
+                            <span>Download Template CSV</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsImportOpen(true)}
+                            className="px-4 py-2.5 bg-white border border-slate-300 hover:border-amber-500 rounded-2xl text-xs font-bold text-slate-700 hover:text-amber-800 transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                        >
+                            <Upload className="w-4 h-4 text-amber-600" />
+                            <span>Impor File (Excel/CSV)</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsCreateOpen(true)}
+                            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-2xl shadow transition-all flex items-center space-x-1.5 cursor-pointer"
+                        >
+                            <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                            <span>+ Tambah Anggota Baru</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Flash Messages */}
@@ -1003,6 +1067,113 @@ export default function Index({ members, prodiList, filters, stats }) {
                                     >
                                         <Lock className="w-4 h-4 text-amber-400" />
                                         <span>{passwordForm.processing ? 'Menyimpan...' : 'Perbarui Password'}</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* MODAL 4: Impor File Anggota (Excel / CSV) */}
+                {isImportOpen && (
+                    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                        <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-amber-900/10 space-y-5 animate-scale-in">
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shadow-sm">
+                                        <Upload className="w-5 h-5 stroke-[2.5]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-slate-950">Impor Data Anggota Massal</h3>
+                                        <p className="text-[11px] text-slate-500">Unggah file format Excel (.xlsx, .xls, .xlsm) atau .csv</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsImportOpen(false);
+                                        importForm.reset();
+                                    }}
+                                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 text-xs text-amber-900 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold flex items-center space-x-1.5 text-amber-950">
+                                        <FileText className="w-4 h-4 text-amber-700 shrink-0" />
+                                        <span>Susunan Format Kolom:</span>
+                                    </span>
+                                    <a
+                                        href="/petugas/members/download-template"
+                                        className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 underline flex items-center space-x-1"
+                                    >
+                                        <span>Download Template CSV</span>
+                                    </a>
+                                </div>
+                                <p className="text-[11px] text-amber-800 leading-relaxed font-mono">
+                                    NO | NIM_NIDN | NAMA_LENGKAP | PROGRAM_STUDI | NO_HP | EMAIL | PASSWORD | STATUS
+                                </p>
+                                <ul className="text-[10.5px] text-slate-600 list-disc list-inside space-y-0.5 pt-1">
+                                    <li>Kolom <strong className="text-slate-900">NIM / NIDN</strong> & <strong className="text-slate-900">Nama Lengkap</strong> wajib diisi.</li>
+                                    <li>Jika password kosong, sistem otomatis mengatur password sama dengan NIM / NIDN.</li>
+                                    <li>Jika NIM sudah terdaftar, data profil anggota akan diperbarui.</li>
+                                </ul>
+                            </div>
+
+                            <form onSubmit={handleImportSubmit} className="space-y-4">
+                                <div className="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl p-6 text-center bg-slate-50/70 hover:bg-amber-50/40 transition-all cursor-pointer">
+                                    <input
+                                        type="file"
+                                        id="member-import-file-input"
+                                        accept=".csv,.xlsx,.xls,.xlsm,.txt"
+                                        onChange={(e) => importForm.setData('file', e.target.files[0])}
+                                        className="hidden"
+                                    />
+                                    <label htmlFor="member-import-file-input" className="cursor-pointer block space-y-2">
+                                        <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                                            <Upload className="w-6 h-6 stroke-[2.5]" />
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-extrabold text-slate-900 block">
+                                                {importForm.data.file ? importForm.data.file.name : 'Pilih atau Tarik File Excel / CSV'}
+                                            </span>
+                                            <span className="text-[10.5px] text-slate-500 block mt-0.5 font-medium">
+                                                {importForm.data.file
+                                                    ? `${(importForm.data.file.size / 1024).toFixed(1)} KB`
+                                                    : 'Format didukung: .xlsx, .xls, .xlsm, .csv (Maksimal 20 MB)'}
+                                            </span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                {importForm.errors.file && (
+                                    <p className="text-xs font-bold text-rose-600 flex items-center space-x-1">
+                                        <AlertCircle className="w-3.5 h-3.5" />
+                                        <span>{importForm.errors.file}</span>
+                                    </p>
+                                )}
+
+                                <div className="pt-2 flex space-x-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsImportOpen(false);
+                                            importForm.reset();
+                                        }}
+                                        className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition-all cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={importForm.processing || !importForm.data.file}
+                                        className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-extrabold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                                    >
+                                        <Upload className="w-4 h-4 stroke-[2.5]" />
+                                        <span>{importForm.processing ? 'Mengunggah & Memproses...' : 'Upload & Impor Anggota'}</span>
                                     </button>
                                 </div>
                             </form>

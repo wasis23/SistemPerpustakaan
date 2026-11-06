@@ -42,14 +42,12 @@ class AttendanceController extends Controller
         $request->validate([
             'visitor_type' => ['nullable', 'in:member,external'],
             'username' => ['required_unless:visitor_type,external', 'nullable', 'string'],
-            'password' => ['required_unless:visitor_type,external', 'nullable', 'string'],
             'visitor_name' => ['required_if:visitor_type,external', 'nullable', 'string', 'max:255'],
             'visitor_institution' => ['nullable', 'string', 'max:255'],
             'visitor_phone' => ['nullable', 'string', 'max:30'],
             'visit_purpose' => ['required', 'in:reading,borrowing,research,computer'],
         ], [
-            'username.required_unless' => 'NIM / Username wajib diisi.',
-            'password.required_unless' => 'Kata sandi wajib diisi.',
+            'username.required_unless' => 'NIM / NIDN / Username wajib diisi.',
             'visitor_name.required_if' => 'Nama lengkap pengunjung eksternal wajib diisi.',
             'visit_purpose.required' => 'Pilih tujuan kunjungan Anda.',
         ]);
@@ -84,20 +82,13 @@ class AttendanceController extends Controller
         }
 
         $inputUsername = trim($request->username);
-        $inputPassword = $request->password;
 
-        // 1. Coba verifikasi akun lokal terlebih dahulu
-        $loginType = filter_var($inputUsername, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        $user = User::where($loginType, $inputUsername)->first();
-
-        if (! $user || ! Hash::check($inputPassword, $user->password)) {
-            // 2. Fallback: Verifikasi ke SIAKAD & auto-sync
-            $user = $siakadService->authenticate($inputUsername, $inputPassword);
-        }
+        // Cari data pengguna di DB SIMPUS atau sinkronisasi langsung dari SIAKAD
+        $user = $siakadService->findUser($inputUsername);
 
         if (! $user) {
             return back()->withErrors([
-                'username' => 'NIM/Username atau kata sandi tidak valid.',
+                'username' => 'NIM / NIDN tidak ditemukan di sistem perpustakaan atau SIAKAD.',
             ]);
         }
 

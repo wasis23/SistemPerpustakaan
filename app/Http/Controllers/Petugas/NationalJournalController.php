@@ -445,50 +445,114 @@ class NationalJournalController extends Controller
     }
 
     /**
-     * Impor Masal Publikasi Ilmiah via File (CSV / XLSX / TXT)
-     * Mendukung format Full All-in-One maupun format ringkas khusus Prosiding (NO, JUDUL, PENERBIT, TAHUN, LINK AKSES, PRODI)
+     * Impor Masal Publikasi Ilmiah via File (CSV / XLSX / TXT / XLS)
+     * Mendukung deteksi header otomatis, file Excel langsung (.xlsx/.xlsm), dan berbagai variasi kolom.
      */
     public function importCsv(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls,xlsm', 'max:20480'],
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls,xlsm,zip', 'max:20480'],
         ]);
 
         $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
         $filePath = $file->getRealPath();
 
         $rowsData = [];
-        $handle = fopen($filePath, 'r');
-        if ($handle) {
-            $firstLine = fgets($handle);
-            rewind($handle);
-            $delimiter = ',';
-            if ($firstLine !== false) {
-                $countSemicolon = substr_count($firstLine, ';');
-                $countComma = substr_count($firstLine, ',');
-                $countTab = substr_count($firstLine, "\t");
-                if ($countSemicolon > $countComma && $countSemicolon > $countTab) {
-                    $delimiter = ';';
-                } elseif ($countTab > $countComma && $countTab > $countSemicolon) {
-                    $delimiter = "\t";
-                }
-            }
 
-            while (($data = fgetcsv($handle, 8192, $delimiter)) !== false) {
-                if (!empty(array_filter($data, fn($x) => trim((string)$x) !== ''))) {
-                    $rowsData[] = array_map(fn($v) => trim((string)$v), $data);
+        // 1. Parsing File (XLSX / XLSM atau CSV / TXT)
+        if (in_array($extension, ['xlsx', 'xlsm', 'zip'])) {
+            $rowsData = $this->parseExcelXml($filePath);
+        } else {
+            $handle = fopen($filePath, 'r');
+            if ($handle) {
+                $firstLine = fgets($handle);
+                rewind($handle);
+                $delimiter = ',';
+                if ($firstLine !== false) {
+                    $countSemicolon = substr_count($firstLine, ';');
+                    $countComma = substr_count($firstLine, ',');
+                    $countTab = substr_count($firstLine, "\t");
+                    if ($countSemicolon > $countComma && $countSemicolon > $countTab) {
+                        $delimiter = ';';
+                    } elseif ($countTab > $countComma && $countTab > $countSemicolon) {
+                        $delimiter = "\t";
+                    }
                 }
+
+                while (($data = fgetcsv($handle, 8192, $delimiter)) !== false) {
+                    if (!empty(array_filter($data, fn($x) => trim((string)$x) !== ''))) {
+                        $cleanRow = array_map(function ($v) {
+                            $val = (string)$v;
+                            if (!mb_check_encoding($val, 'UTF-8')) {
+                                $val = mb_convert_encoding($val, 'UTF-8', 'Windows-1252, ISO-8859-1, ASCII');
+                            }
+                            $val = str_replace(["\x92", "\x91", '’', '‘', '`'], "'", $val);
+                            $val = str_replace(["\x93", "\x94", '“', '”'], '"', $val);
+                            return trim($val);
+                        }, $data);
+
+                        $rowsData[] = $cleanRow;
+                    }
+                }
+                fclose($handle);
             }
-            fclose($handle);
         }
 
         if (empty($rowsData)) {
             return back()->with('error', 'File yang diunggah kosong atau formatnya tidak didukung.');
         }
 
-        // Buang baris header jika terdeteksi
-        $firstRowStr = strtolower(implode(' ', $rowsData[0]));
-        if (str_contains($firstRowStr, 'judul') || str_contains($firstRowStr, 'title') || str_contains($firstRowStr, 'program_studi') || str_contains($firstRowStr, 'prodi') || str_contains($firstRowStr, 'jenis_publikasi') || str_contains($firstRowStr, 'jenis_jurnal')) {
+        // 2. Deteksi Kolom Berdasarkan Header (Header-based Mapping)
+        $headerMap = [];
+        $hasHeader = false;
+        $firstRow = $rowsData[0];
+        $firstRowStr = strtolower(implode(' ', $firstRow));
+
+        if (
+            str_contains($firstRowStr, 'judul') ||
+            str_contains($firstRowStr, 'title') ||
+            str_contains($firstRowStr, 'program_studi') ||
+            str_contains($firstRowStr, 'prodi') ||
+            str_contains($firstRowStr, 'jenis_publikasi') ||
+            str_contains($firstRowStr, 'jenis_jurnal') ||
+            str_contains($firstRowStr, 'penerbit') ||
+            str_contains($firstRowStr, 'publisher') ||
+            str_contains($firstRowStr, 'issn')
+        ) {
+            $hasHeader = true;
+            foreach ($firstRow as $idx => $headerName) {
+                $h = strtolower(trim((string)$headerName));
+                $hNorm = preg_replace('/[^a-z0-9]/', '', $h);
+
+                if (in_array($hNorm, ['jenispublikasi', 'jenisterbitan', 'tipepublikasi', 'kategori', 'jenis', 'tipe', 'type', 'journaltype'])) {
+                    $headerMap['journal_type'] = $idx;
+                } elseif (in_array($hNorm, ['programstudi', 'prodi', 'jurusan', 'departemen', 'department', 'studi'])) {
+                    $headerMap['prodi'] = $idx;
+                } elseif (in_array($hNorm, ['judul', 'judulpublikasi', 'namajurnal', 'juduljurnal', 'title', 'jurnal', 'prosiding', 'nama', 'journaltitle'])) {
+                    $headerMap['title'] = $idx;
+                } elseif (in_array($hNorm, ['penerbit', 'publisher', 'lppm', 'lembaga', 'institusi', 'penyelenggara'])) {
+                    $headerMap['publisher'] = $idx;
+                } elseif (in_array($hNorm, ['tahun', 'tahunterbit', 'year', 'publishyear', 'thn'])) {
+                    $headerMap['publish_year'] = $idx;
+                } elseif (in_array($hNorm, ['linkakses', 'link', 'url', 'website', 'web', 'laman', 'linkjurnal', 'aksesurl', 'accessurl'])) {
+                    $headerMap['access_url'] = $idx;
+                } elseif (in_array($hNorm, ['akreditasiindeksasi', 'akreditasi', 'sinta', 'indeksasi', 'indeks', 'indexing', 'peringkat', 'statusakreditasi'])) {
+                    $headerMap['sinta'] = $idx;
+                } elseif (in_array($hNorm, ['eissn', 'issnelektronik', 'issnonline', 'eissnno'])) {
+                    $headerMap['e_issn'] = $idx;
+                } elseif (in_array($hNorm, ['issn', 'issncetak', 'pissn', 'issnprint', 'pissnno', 'noissn'])) {
+                    if (!isset($headerMap['issn'])) {
+                        $headerMap['issn'] = $idx;
+                    }
+                } elseif (in_array($hNorm, ['frekuensiterbit', 'frekuensi', 'frekuensiterbitan', 'frequency', 'periode', 'periodeterbit'])) {
+                    $headerMap['frequency'] = $idx;
+                } elseif (in_array($hNorm, ['doiprefix', 'doi', 'prefixdoi'])) {
+                    $headerMap['doi_prefix'] = $idx;
+                } elseif (in_array($hNorm, ['fokusruanglingkup', 'fokus', 'ruanglingkup', 'deskripsi', 'description', 'scope', 'sinopsis', 'abstrak', 'keterangan', 'ket'])) {
+                    $headerMap['description'] = $idx;
+                }
+            }
             array_shift($rowsData);
         }
 
@@ -497,9 +561,9 @@ class NationalJournalController extends Controller
         foreach ($rowsData as $cols) {
             if (count($cols) < 2) continue;
 
-            $col0 = strtolower(trim($cols[0] ?? ''));
-            $col1 = strtolower(trim($cols[1] ?? ''));
-            if ($col0 === 'no' || $col0 === 'judul' || $col1 === 'judul' || $col1 === 'program_studi') continue;
+            $col0 = strtolower(trim((string)($cols[0] ?? '')));
+            $col1 = strtolower(trim((string)($cols[1] ?? '')));
+            if ($col0 === 'no' || $col0 === 'judul' || $col1 === 'judul' || $col1 === 'program_studi' || $col1 === 'prodi') continue;
 
             $journalType = 'Nasional';
             $prodi = 'D4-Manajemen Informasi Kesehatan';
@@ -514,93 +578,196 @@ class NationalJournalController extends Controller
             $doiPrefix = null;
             $description = null;
 
-            // KASUS 1: Format Standar Baru (13 Kolom):
-            // [0]NO, [1]JENIS_PUBLIKASI, [2]PROGRAM_STUDI, [3]JUDUL, [4]PENERBIT, [5]TAHUN, [6]LINK_AKSES, [7]AKREDITASI_INDEKSASI, [8]ISSN, [9]E_ISSN, [10]FREKUENSI, [11]DOI, [12]SCOPE
-            if (count($cols) >= 11 && in_array(strtolower(trim($cols[1])), ['nasional', 'internasional', 'prosiding', 'proceeding'])) {
-                $rawType = strtolower(trim($cols[1]));
-                if ($rawType === 'proceeding' || $rawType === 'prosiding') {
-                    $journalType = 'Prosiding';
-                } elseif ($rawType === 'internasional') {
-                    $journalType = 'Internasional';
-                } else {
-                    $journalType = 'Nasional';
+            // JIKA MAPPING HEADER BERHASIL MENEMUKAN MINIMAL JUDUL / PRODI:
+            if (!empty($headerMap) && (isset($headerMap['title']) || isset($headerMap['prodi']))) {
+                if (isset($headerMap['title'])) $title = trim((string)($cols[$headerMap['title']] ?? ''));
+                if (isset($headerMap['prodi'])) $prodi = trim((string)($cols[$headerMap['prodi']] ?? ''));
+                if (isset($headerMap['publisher'])) $publisher = trim((string)($cols[$headerMap['publisher']] ?? ''));
+                if (isset($headerMap['journal_type'])) $journalType = trim((string)($cols[$headerMap['journal_type']] ?? ''));
+                if (isset($headerMap['access_url'])) $accessUrl = trim((string)($cols[$headerMap['access_url']] ?? ''));
+                if (isset($headerMap['sinta'])) $indexing = trim((string)($cols[$headerMap['sinta']] ?? ''));
+                if (isset($headerMap['issn'])) $issn = trim((string)($cols[$headerMap['issn']] ?? ''));
+                if (isset($headerMap['e_issn'])) $eIssn = trim((string)($cols[$headerMap['e_issn']] ?? ''));
+                if (isset($headerMap['frequency'])) $frequency = trim((string)($cols[$headerMap['frequency']] ?? ''));
+                if (isset($headerMap['doi_prefix'])) $doiPrefix = trim((string)($cols[$headerMap['doi_prefix']] ?? ''));
+                if (isset($headerMap['description'])) $description = trim((string)($cols[$headerMap['description']] ?? ''));
+                if (isset($headerMap['publish_year'])) {
+                    $rawYear = trim((string)($cols[$headerMap['publish_year']] ?? ''));
+                    $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : (int)date('Y');
                 }
-
-                $prodi = trim($cols[2] ?? 'D4-Manajemen Informasi Kesehatan');
-                $title = trim($cols[3] ?? '');
-                $publisher = trim($cols[4] ?? 'Politeknik Indonusa Surakarta');
-                $rawYear = trim($cols[5] ?? '');
-                $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : null;
-                $accessUrl = trim($cols[6] ?? '');
-                $indexing = trim($cols[7] ?? '');
-                $issn = trim($cols[8] ?? '');
-                $eIssn = trim($cols[9] ?? '');
-                $frequency = trim($cols[10] ?? '');
-                $doiPrefix = trim($cols[11] ?? '');
-                $description = trim($cols[12] ?? '');
+            } else {
+                // FALLBACK POSISIONAL HEURISTIK:
+                // Kasus A: Format Template Baru (NO, JENIS, PRODI, JUDUL, PENERBIT, TAHUN, LINK, INDEKS, ISSN, E_ISSN, FREQ, DOI, SCOPE)
+                if (count($cols) >= 11 && in_array(strtolower(trim($cols[1] ?? '')), ['nasional', 'internasional', 'prosiding', 'proceeding'])) {
+                    $journalType = trim($cols[1]);
+                    $prodi = trim($cols[2] ?? 'D4-Manajemen Informasi Kesehatan');
+                    $title = trim($cols[3] ?? '');
+                    $publisher = trim($cols[4] ?? 'Politeknik Indonusa Surakarta');
+                    $rawYear = trim($cols[5] ?? '');
+                    $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : (int)date('Y');
+                    $accessUrl = trim($cols[6] ?? '');
+                    $indexing = trim($cols[7] ?? '');
+                    $issn = trim($cols[8] ?? '');
+                    $eIssn = trim($cols[9] ?? '');
+                    $frequency = trim($cols[10] ?? '');
+                    $doiPrefix = trim($cols[11] ?? '');
+                    $description = trim($cols[12] ?? '');
+                }
+                // Kasus B: Format Prodi di Kolom 1 dan Jenis di Kolom 2: (NO, PRODI, JENIS, JUDUL, PENERBIT, [TAHUN], LINK, INDEKS, ISSN...)
+                elseif (count($cols) >= 8 && in_array(strtolower(trim($cols[2] ?? '')), ['nasional', 'internasional', 'prosiding', 'proceeding', 'jurnal nasional', 'jurnal internasional', 'prosiding seminar'])) {
+                    $prodi = trim($cols[1] ?? 'D4-Manajemen Informasi Kesehatan');
+                    $journalType = trim($cols[2] ?? 'Nasional');
+                    $title = trim($cols[3] ?? '');
+                    $publisher = trim($cols[4] ?? 'Politeknik Indonusa Surakarta');
+                    
+                    // Kolom 5 bisa berupa Tahun atau Link Akses
+                    $col5 = trim($cols[5] ?? '');
+                    if (is_numeric($col5) && (int)$col5 > 1900) {
+                        $publishYear = (int)$col5;
+                        $accessUrl = trim($cols[6] ?? '');
+                        $indexing = trim($cols[7] ?? '');
+                        $issn = trim($cols[8] ?? '');
+                        $eIssn = trim($cols[9] ?? '');
+                        $frequency = trim($cols[10] ?? '');
+                        $doiPrefix = trim($cols[11] ?? '');
+                        $description = trim($cols[12] ?? '');
+                    } else {
+                        // Tidak ada kolom tahun di tengah
+                        $accessUrl = str_starts_with($col5, 'http') ? $col5 : trim($cols[6] ?? '');
+                        $indexing = trim($cols[6] ?? '');
+                        $issn = trim($cols[7] ?? '');
+                        $eIssn = trim($cols[8] ?? '');
+                        $frequency = trim($cols[9] ?? '');
+                        $doiPrefix = trim($cols[10] ?? '');
+                        $description = trim($cols[11] ?? '');
+                    }
+                }
+                // Kasus C: Format Prosiding Sederhana (NO, JUDUL, PENERBIT, TAHUN, LINK, PRODI)
+                elseif (count($cols) <= 7 && (str_contains(strtolower($cols[1] ?? $cols[0]), 'prosiding') || str_contains(strtolower($cols[1] ?? $cols[0]), 'seminar') || str_contains(strtolower($cols[1] ?? $cols[0]), 'conference') || is_numeric(trim($cols[3] ?? '')))) {
+                    $journalType = 'Prosiding';
+                    $title = is_numeric($cols[0]) ? trim($cols[1] ?? '') : trim($cols[0] ?? '');
+                    $publisher = is_numeric($cols[0]) ? trim($cols[2] ?? 'Politeknik Indonusa Surakarta') : trim($cols[1] ?? 'Politeknik Indonusa Surakarta');
+                    $rawYear = is_numeric($cols[0]) ? trim($cols[3] ?? '') : trim($cols[2] ?? '');
+                    $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : (int)date('Y');
+                    $accessUrl = is_numeric($cols[0]) ? trim($cols[4] ?? '') : trim($cols[3] ?? '');
+                    $prodi = is_numeric($cols[0]) ? trim($cols[5] ?? 'Institusi / LPPM') : trim($cols[4] ?? 'Institusi / LPPM');
+                    $indexing = 'Prosiding Seminar';
+                }
+                // Kasus D: Format Legacy Jurnal: [0]NO, [1]PROGRAM_STUDI, [2]JUDUL_JURNAL, [3]PENERBIT, [4]LINK_AKSES, [5]SINTA/INDEKSASI, [6]ISSN, [7]E_ISSN, [8]FREKUENSI, [9]DOI, [10]SCOPE
+                else {
+                    $prodi = !empty($cols[1]) && is_numeric($cols[0]) ? trim($cols[1]) : trim($cols[0]);
+                    $title = !empty($cols[2]) && is_numeric($cols[0]) ? trim($cols[2]) : trim($cols[1] ?? '');
+                    $publisher = !empty($cols[3]) && is_numeric($cols[0]) ? trim($cols[3]) : trim($cols[2] ?? 'Politeknik Indonusa Surakarta');
+                    $accessUrl = !empty($cols[4]) && is_numeric($cols[0]) ? trim($cols[4]) : trim($cols[3] ?? '');
+                    $indexing = !empty($cols[5]) && is_numeric($cols[0]) ? trim($cols[5]) : trim($cols[4] ?? 'Non-SINTA');
+                    $issn = !empty($cols[6]) && is_numeric($cols[0]) ? trim($cols[6]) : trim($cols[5] ?? '');
+                    $eIssn = !empty($cols[7]) && is_numeric($cols[0]) ? trim($cols[7]) : trim($cols[6] ?? '');
+                    $frequency = !empty($cols[8]) && is_numeric($cols[0]) ? trim($cols[8]) : trim($cols[7] ?? '');
+                    $doiPrefix = !empty($cols[9]) && is_numeric($cols[0]) ? trim($cols[9]) : trim($cols[8] ?? '');
+                    $description = !empty($cols[10]) && is_numeric($cols[0]) ? trim($cols[10]) : trim($cols[9] ?? '');
+                }
             }
-            // KASUS 2: Format Khusus Prosiding Sederhana (NO, JUDUL, PENERBIT, TAHUN, LINK AKSES, PRODI):
-            elseif (count($cols) <= 7 && (str_contains(strtolower($cols[1] ?? $cols[0]), 'prosiding') || str_contains(strtolower($cols[1] ?? $cols[0]), 'seminar') || str_contains(strtolower($cols[1] ?? $cols[0]), 'conference') || is_numeric(trim($cols[3] ?? '')))) {
+
+            // Sanitasi nilai tanda strip '-' atau kosong
+            $cleanVal = fn($val) => in_array(trim((string)$val), ['-', '--', 'N/A', 'n/a', 'null', 'NULL', 'None', 'none', '']) ? null : trim((string)$val);
+            
+            $title = trim((string)$title);
+            $publisher = $cleanVal($publisher) ?? 'LPPM Politeknik Indonusa Surakarta';
+            $prodi = $cleanVal($prodi) ?? 'D4-Manajemen Informasi Kesehatan';
+            $accessUrl = $cleanVal($accessUrl) ?? 'https://ojs.poltekindonusa.ac.id';
+            $indexing = $cleanVal($indexing);
+            $issn = $cleanVal($issn);
+            $eIssn = $cleanVal($eIssn);
+            $frequency = $cleanVal($frequency);
+            $doiPrefix = $cleanVal($doiPrefix);
+            $description = $cleanVal($description);
+
+            // Deteksi cerdas jika URL masuk ke kolom ISSN / Indeksasi karena pergeseran kolom
+            foreach ([$issn, $eIssn, $indexing, $publisher] as $checkCandidate) {
+                if (!empty($checkCandidate) && (str_starts_with($checkCandidate, 'http://') || str_starts_with($checkCandidate, 'https://'))) {
+                    if ($accessUrl === 'https://ojs.poltekindonusa.ac.id' || empty($accessUrl)) {
+                        $accessUrl = $checkCandidate;
+                    }
+                }
+            }
+
+            // Bersihkan ISSN jika tertukar dengan URL
+            if (!empty($issn) && (str_starts_with($issn, 'http://') || str_starts_with($issn, 'https://') || strlen($issn) > 50)) {
+                $issn = null;
+            }
+            if (!empty($eIssn) && (str_starts_with($eIssn, 'http://') || str_starts_with($eIssn, 'https://') || strlen($eIssn) > 50)) {
+                $eIssn = null;
+            }
+
+            // Normalisasi Jenis Publikasi
+            $rawType = strtolower(trim((string)$journalType));
+            if (str_contains($rawType, 'prosiding') || str_contains($rawType, 'proceeding') || str_contains($rawType, 'seminar')) {
                 $journalType = 'Prosiding';
-                // [0]NO, [1]JUDUL, [2]PENERBIT, [3]TAHUN, [4]LINK_AKSES, [5]PRODI (opsional)
-                $title = is_numeric($cols[0]) ? trim($cols[1] ?? '') : trim($cols[0] ?? '');
-                $publisher = is_numeric($cols[0]) ? trim($cols[2] ?? 'Politeknik Indonusa Surakarta') : trim($cols[1] ?? 'Politeknik Indonusa Surakarta');
-                $rawYear = is_numeric($cols[0]) ? trim($cols[3] ?? '') : trim($cols[2] ?? '');
-                $publishYear = is_numeric($rawYear) && (int)$rawYear > 1900 ? (int)$rawYear : (int)date('Y');
-                $accessUrl = is_numeric($cols[0]) ? trim($cols[4] ?? '') : trim($cols[3] ?? '');
-                $prodi = is_numeric($cols[0]) ? trim($cols[5] ?? 'Institusi / LPPM') : trim($cols[4] ?? 'Institusi / LPPM');
-                $indexing = 'Prosiding Seminar';
+            } elseif (str_contains($rawType, 'internasional') || str_contains($rawType, 'international')) {
+                $journalType = 'Internasional';
+            } else {
+                $journalType = 'Nasional';
             }
-            // KASUS 3: Format Legacy Jurnal: [0]NO, [1]PROGRAM_STUDI, [2]JUDUL_JURNAL, [3]PENERBIT, [4]LINK_AKSES, [5]SINTA/INDEKSASI, [6]ISSN, [7]E_ISSN, [8]FREKUENSI, [9]DOI, [10]SCOPE
-            else {
-                $prodi = !empty($cols[1]) && is_numeric($cols[0]) ? trim($cols[1]) : trim($cols[0]);
-                $title = !empty($cols[2]) && is_numeric($cols[0]) ? trim($cols[2]) : trim($cols[1] ?? '');
-                $publisher = !empty($cols[3]) && is_numeric($cols[0]) ? trim($cols[3]) : trim($cols[2] ?? 'Politeknik Indonusa Surakarta');
-                $accessUrl = !empty($cols[4]) && is_numeric($cols[0]) ? trim($cols[4]) : trim($cols[3] ?? '');
-                $indexing = !empty($cols[5]) && is_numeric($cols[0]) ? trim($cols[5]) : trim($cols[4] ?? 'Non-SINTA');
-                $issn = !empty($cols[6]) && is_numeric($cols[0]) ? trim($cols[6]) : trim($cols[5] ?? '');
-                $eIssn = !empty($cols[7]) && is_numeric($cols[0]) ? trim($cols[7]) : trim($cols[6] ?? '');
-                $frequency = !empty($cols[8]) && is_numeric($cols[0]) ? trim($cols[8]) : trim($cols[7] ?? '');
-                $doiPrefix = !empty($cols[9]) && is_numeric($cols[0]) ? trim($cols[9]) : trim($cols[8] ?? '');
-                $description = !empty($cols[10]) && is_numeric($cols[0]) ? trim($cols[10]) : trim($cols[9] ?? '');
 
-                // Auto-detect tipe
-                $titleLower = strtolower($title);
-                $idxLower = strtolower($indexing);
+            // Auto-detect tipe publikasi tambahan jika indexing / judul mengindikasikan prosiding/internasional
+            $titleLower = strtolower($title);
+            $idxLower = strtolower($indexing ?? '');
+            if ($journalType === 'Nasional') {
                 if (str_contains($titleLower, 'prosiding') || str_contains($titleLower, 'proceeding') || str_contains($titleLower, 'seminar nasional') || str_contains($titleLower, 'conference')) {
                     $journalType = 'Prosiding';
-                    $indexing = 'Prosiding Seminar';
                 } elseif (str_contains($idxLower, 'scopus') || str_contains($idxLower, 'wos') || str_contains($idxLower, 'doaj') || str_contains($idxLower, 'copernicus') || str_contains($idxLower, 'ebsco') || str_contains($idxLower, 'internasional') || str_contains($idxLower, 'q1') || str_contains($idxLower, 'q2') || str_contains($idxLower, 'q3') || str_contains($idxLower, 'q4')) {
                     $journalType = 'Internasional';
-                } else {
-                    $journalType = 'Nasional';
                 }
+            }
+
+            if (empty($indexing)) {
+                $indexing = $journalType === 'Prosiding' ? 'Prosiding Seminar' : 'Non-SINTA';
+            }
+
+            if (empty($frequency)) {
+                $frequency = $journalType === 'Prosiding' ? 'Tahunan (Annual)' : '2 Kali Setahun';
             }
 
             if (empty($title)) continue;
-            if (empty($accessUrl)) $accessUrl = 'https://ojs.poltekindonusa.ac.id';
 
-            NationalJournal::updateOrCreate(
-                [
-                    'title' => $title,
-                    'prodi' => !empty($prodi) ? $prodi : 'D4-Manajemen Informasi Kesehatan',
-                    'publish_year' => $publishYear,
-                    'journal_type' => $journalType,
-                ],
-                [
-                    'publisher' => !empty($publisher) ? $publisher : 'LPPM Politeknik Indonusa Surakarta',
-                    'access_url' => $accessUrl,
-                    'sinta' => !empty($indexing) ? $indexing : ($journalType === 'Prosiding' ? 'Prosiding Seminar' : 'Non-SINTA'),
-                    'issn' => !empty($issn) ? $issn : null,
-                    'e_issn' => !empty($eIssn) ? $eIssn : null,
-                    'frequency' => !empty($frequency) ? $frequency : ($journalType === 'Prosiding' ? 'Tahunan (Annual)' : '2 Kali Setahun'),
-                    'doi_prefix' => !empty($doiPrefix) ? $doiPrefix : null,
-                    'description' => !empty($description) ? $description : null,
-                    'is_active' => true,
-                ]
-            );
+            // Potong string agar sesuai dengan batas kolom database
+            $safeTitle = mb_substr($title, 0, 500);
+            $safeProdi = mb_substr($prodi, 0, 255);
+            $safePublisher = mb_substr($publisher, 0, 500);
+            $safeIndexing = mb_substr($indexing, 0, 255);
+            $safeIssn = $issn ? mb_substr($issn, 0, 50) : null;
+            $safeEIssn = $eIssn ? mb_substr($eIssn, 0, 50) : null;
+            $safeFrequency = $frequency ? mb_substr($frequency, 0, 255) : null;
+            $safeDoi = $doiPrefix ? mb_substr($doiPrefix, 0, 255) : null;
 
-            $importedCount++;
+            try {
+                NationalJournal::updateOrCreate(
+                    [
+                        'title' => $safeTitle,
+                        'prodi' => $safeProdi,
+                        'publish_year' => $publishYear,
+                        'journal_type' => $journalType,
+                    ],
+                    [
+                        'publisher' => $safePublisher,
+                        'access_url' => $accessUrl,
+                        'sinta' => $safeIndexing,
+                        'issn' => $safeIssn,
+                        'e_issn' => $safeEIssn,
+                        'frequency' => $safeFrequency,
+                        'doi_prefix' => $safeDoi,
+                        'description' => $description,
+                        'is_active' => true,
+                    ]
+                );
+
+                $importedCount++;
+            } catch (\Throwable $e) {
+                Log::warning("Gagal mengimpor baris publikasi: " . $e->getMessage(), [
+                    'title' => $safeTitle,
+                    'prodi' => $safeProdi,
+                ]);
+            }
         }
 
         return redirect()->route('petugas.national-journals.index')->with('success', "Berhasil mengimpor {$importedCount} data publikasi ilmiah (Jurnal & Prosiding)!");
@@ -650,4 +817,111 @@ class NationalJournalController extends Controller
             fclose($handle);
         }, 200, $headers);
     }
+
+    /**
+     * Konversi referensi sel Excel (seperti 'A1', 'B2', 'AA1') menjadi index kolom berbasis 0
+     */
+    private function cellRefToColIndex($cellRef)
+    {
+        if (empty($cellRef)) {
+            return -1;
+        }
+        $colLetters = preg_replace('/[0-9]/', '', strtoupper($cellRef));
+        if (empty($colLetters)) {
+            return -1;
+        }
+        $col = 0;
+        $len = strlen($colLetters);
+        for ($i = 0; $i < $len; $i++) {
+            $col = $col * 26 + (ord($colLetters[$i]) - 64);
+        }
+        return $col - 1;
+    }
+
+    /**
+     * Parser XML bawaan untuk membaca sheet file Excel (.xlsx / .xlsm)
+     */
+    private function parseExcelXml($filePath)
+    {
+        $rows = [];
+        $zip = new \ZipArchive();
+        if ($zip->open($filePath) === true) {
+            $sharedStrings = [];
+            if (($index = $zip->locateName('xl/sharedStrings.xml')) !== false) {
+                $xmlStr = $zip->getFromIndex($index);
+                if ($xmlStr) {
+                    $xml = @simplexml_load_string($xmlStr);
+                    if ($xml && isset($xml->si)) {
+                        foreach ($xml->si as $si) {
+                            $text = '';
+                            if (isset($si->t)) {
+                                $text = (string)$si->t;
+                            } elseif (isset($si->r)) {
+                                foreach ($si->r as $r) {
+                                    $text .= (string)$r->t;
+                                }
+                            }
+                            $sharedStrings[] = $text;
+                        }
+                    }
+                }
+            }
+
+            $sheetXmlStr = null;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                if (str_contains($stat['name'], 'xl/worksheets/sheet')) {
+                    $sheetXmlStr = $zip->getFromIndex($i);
+                    break;
+                }
+            }
+
+            if ($sheetXmlStr) {
+                $xml = @simplexml_load_string($sheetXmlStr);
+                if ($xml && isset($xml->sheetData->row)) {
+                    foreach ($xml->sheetData->row as $row) {
+                        $rowMap = [];
+                        $maxCol = 0;
+
+                        foreach ($row->c as $c) {
+                            $ref = (string)($c['r'] ?? '');
+                            $colIdx = $this->cellRefToColIndex($ref);
+                            if ($colIdx < 0) {
+                                continue;
+                            }
+                            if ($colIdx > $maxCol) {
+                                $maxCol = $colIdx;
+                            }
+
+                            $cellType = (string)($c['t'] ?? '');
+                            $v = '';
+                            if ($cellType === 'inlineStr' && isset($c->is->t)) {
+                                $v = (string)$c->is->t;
+                            } elseif ($cellType === 's' && isset($c->v)) {
+                                $strIdx = (int)(string)$c->v;
+                                $v = $sharedStrings[$strIdx] ?? '';
+                            } elseif (isset($c->v)) {
+                                $v = (string)$c->v;
+                            }
+
+                            $rowMap[$colIdx] = trim($v);
+                        }
+
+                        if (!empty($rowMap)) {
+                            $rowVals = [];
+                            for ($k = 0; $k <= $maxCol; $k++) {
+                                $rowVals[$k] = $rowMap[$k] ?? '';
+                            }
+                            if (!empty(array_filter($rowVals, fn($val) => $val !== ''))) {
+                                $rows[] = $rowVals;
+                            }
+                        }
+                    }
+                }
+            }
+            $zip->close();
+        }
+        return $rows;
+    }
 }
+
